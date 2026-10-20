@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary: #9e0027;
+    --primary-container: #c41e3a;
+    --crimson-pressed: #a3182f;
+    --rose-tint: #fdecef;
+    --canvas: #f7f7f9;
+    --surface: #ffffff;
+    --tertiary: #005938;
+    --tertiary-container: #00744b;
+    --tertiary-fixed: #97f6c2;
+    --status-amber: #e89a00;
+    --accent-gold: #c9962b;
+    --secondary: #0d58c9;
+    --secondary-fixed: #d9e2ff;
+    --slate-muted: #5b5f6b;
+    --on-surface: #1b1b1f;
+    --border-subtle: #e4e6eb;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    overflow-x: clip;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background-color: var(--canvas);
+    color: var(--on-surface);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Bengali', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: clip;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+/* Custom Utilities for Native Mobile Feel */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Tabular Numerals for Analytics & Clocks */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle Tap Active Effect */
+.active-press {
+  transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.12s ease;
+}
+.active-press:active {
+  transform: scale(0.97);
+}

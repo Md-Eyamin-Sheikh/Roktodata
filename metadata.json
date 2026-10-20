@@ -1,0 +1,6 @@
+{
+  "name": "রক্তদাতা — মানবিক রক্তদান প্ল্যাটফর্ম",
+  "description": "প্রিমিয়াম মোবাইল-ফার্স্ট রক্তদান প্ল্যাটফর্ম: জরুরি রক্তের অনুরোধ, লাইভ ট্র্যাকিং, ডোনার ডিরেক্টরি ও মানবিক প্রভাব বিশ্লেষণ।",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
