@@ -69,6 +69,7 @@ import {
   logoutRealUser,
   updateAuthenticatedUser,
   subscribeAuth,
+  syncSupabaseAuthSession,
 } from '@/lib/services/authService';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
@@ -110,6 +111,15 @@ export const AppShell: React.FC = () => {
   const [ambulances, setAmbulances] = useState<AmbulanceService[]>(initialAmbulances);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
+
+  // Sync live Supabase Auth session on app launch (captures Google / Facebook OAuth redirects)
+  React.useEffect(() => {
+    syncSupabaseAuthSession().then((synced) => {
+      if (synced && (!synced.phone || synced.phone.length < 5)) {
+        setIsAuthOpen(true);
+      }
+    });
+  }, []);
 
   // District-based Real-time and Data Synchronization
   React.useEffect(() => {

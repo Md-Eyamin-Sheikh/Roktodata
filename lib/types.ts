@@ -157,6 +157,7 @@ export interface DonationRecord {
 
 export interface UserProfile {
   name: string;
+  email?: string;
   bloodGroup: BloodGroup;
   donorId: string;
   phone: string;

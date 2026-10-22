@@ -5,31 +5,36 @@ import {
   X,
   ArrowLeft,
   ShieldCheck,
-  Send,
-  Droplet,
-  CheckCircle2,
+  Mail,
   Lock,
-  Smartphone,
-  ChevronRight,
-  Compass,
-  Edit2,
-  KeyRound,
+  Eye,
+  EyeOff,
+  User,
+  Phone,
+  Droplet,
+  MapPin,
+  CheckCircle2,
   AlertCircle,
-  Copy,
-  Info,
-  UserCheck
+  Sparkles,
+  Heart,
+  ChevronRight,
+  Send,
+  RefreshCw,
 } from 'lucide-react';
-import { toBengaliDigits } from '@/lib/bengali-utils';
 import { BloodGroup, UserProfile } from '@/lib/types';
 import { districtList } from '@/lib/data';
 import {
-  requestPhoneOtp,
-  verifyPhoneOtp,
-  registerRealUser,
-  loginRealUser,
+  loginWithEmail,
+  registerWithEmail,
+  loginWithOAuth,
+  sendPasswordResetEmail,
+  completeDonorContactInfo,
+  normalizePhoneNumber,
   isValidBdPhoneNumber,
-  normalizePhoneNumber
+  isValidEmail,
+  formatBdPhoneDisplay,
 } from '@/lib/services/authService';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -44,371 +49,1017 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   onSuccessLogin,
   initialMode = 'login',
-  currentDistrict = 'বগুড়া',
+  currentDistrict = 'বগুড়া সদর',
 }) => {
-  const [authMode, setAuthMode] = useState<'login' | 'register'>(initialMode);
-  const [step, setStep] = useState<'input' | 'otp'>('input');
+  const { language, formatDigits } = useLanguage();
 
-  // Input states - strictly empty by default, no fake data!
-  const [phoneInput, setPhoneInput] = useState('');
-  const [fullName, setFullName] = useState('');
+  // Mode: 'login' | 'register' | 'forgot' | 'complete_contact'
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'complete_contact'>(initialMode);
+  // Multi-step Registration Wizard: Step 1 (Personal & Contact), Step 2 (Blood & Location), Step 3 (Security & Confirm)
+  const [registerStep, setRegisterStep] = useState<1 | 2 | 3>(1);
+
+  // Form Fields
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
   const [bloodGroup, setBloodGroup] = useState<BloodGroup>('B+');
   const [selectedDistrict, setSelectedDistrict] = useState(currentDistrict);
-  const [userRole, setUserRole] = useState<'donor' | 'recipient'>('donor');
+  const [isDonor, setIsDonor] = useState(true);
 
-  // OTP states
-  const [otpInput, setOtpInput] = useState('');
-  const [timerSeconds, setTimerSeconds] = useState(60);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
+  // Feedback states
+  const [isLoading, setIsLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Timer countdown
+  // Reset states on open/close
   useEffect(() => {
-    if (step === 'otp' && timerSeconds > 0) {
-      const t = setInterval(() => setTimerSeconds((s) => s - 1), 1000);
-      return () => clearInterval(t);
+    if (isOpen) {
+      setMode(initialMode);
+      setRegisterStep(1);
+      setErrorMessage(null);
+      setSuccessMessage(null);
+      setIsLoading(false);
+      setSocialLoading(null);
     }
-  }, [step, timerSeconds]);
+  }, [isOpen, initialMode]);
 
   if (!isOpen) return null;
 
   const bloodGroups: BloodGroup[] = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
 
-  // Handle Login
-  const handleLoginSubmit = async (e: React.FormEvent) => {
+  // Handle Email Login
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    const normPhone = normalizePhoneNumber(phoneInput);
-    if (!isValidBdPhoneNumber(normPhone)) {
-      setErrorMessage('সঠিক ১১ ডিজিটের মোবাইল নম্বর লিখুন (যেমন: ০১৭১২-৩৪৫৬৭৮)');
+    if (!isValidEmail(email)) {
+      setErrorMessage(
+        language === 'bn'
+          ? 'অনুগ্রহ করে একটি সঠিক ইমেইল ঠিকানা দিন।'
+          : 'Please enter a valid email address.'
+      );
       return;
     }
 
-    setIsSubmitting(true);
-    const res = await loginRealUser(normPhone, password);
-    setIsSubmitting(false);
+    if (!password) {
+      setErrorMessage(
+        language === 'bn'
+          ? 'অনুগ্রহ করে পাসওয়ার্ড লিখুন।'
+          : 'Please enter your password.'
+      );
+      return;
+    }
+
+    setIsLoading(true);
+    const res = await loginWithEmail(email, password);
+    setIsLoading(false);
 
     if (res.success && res.user) {
-      setSuccessMessage(res.message || 'সফলভাবে লগইন হয়েছে!');
+      setSuccessMessage(res.message || (language === 'bn' ? 'লগইন সফল হয়েছে!' : 'Login successful!'));
+      if (res.needsContactDetails) {
+        setTimeout(() => {
+          setMode('complete_contact');
+        }, 600);
+      } else {
+        setTimeout(() => {
+          onSuccessLogin(res.user!);
+          onClose();
+        }, 700);
+      }
+    } else {
+      setErrorMessage(res.error || (language === 'bn' ? 'লগইন ব্যর্থ হয়েছে।' : 'Login failed.'));
+    }
+  };
+
+  // Multi-step Registration Navigation & Validation
+  const handleStep1Next = () => {
+    setErrorMessage(null);
+    if (!fullName || fullName.trim().length < 2) {
+      setErrorMessage(
+        language === 'bn'
+          ? 'অনুগ্রহ করে আপনার আসল পূর্ণ নাম লিখুন।'
+          : 'Please enter your full legal name.'
+      );
+      return;
+    }
+
+    const normPhone = normalizePhoneNumber(phone);
+    if (!isValidBdPhoneNumber(normPhone)) {
+      setErrorMessage(
+        language === 'bn'
+          ? 'জরুরি যোগাযোগের জন্য সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: ০১৭১২-৩৪৫৬৭৮)।'
+          : 'Please provide a valid 11-digit Bangladesh mobile number (e.g., 01712-345678).'
+      );
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setErrorMessage(
+        language === 'bn'
+          ? 'অনুগ্রহ করে একটি সঠিক ইমেইল ঠিকানা প্রদান করুন।'
+          : 'Please enter a valid email address.'
+      );
+      return;
+    }
+
+    setRegisterStep(2);
+  };
+
+  const handleStep2Next = () => {
+    setErrorMessage(null);
+    if (!bloodGroup) {
+      setErrorMessage(
+        language === 'bn'
+          ? 'অনুগ্রহ করে আপনার রক্তের গ্রুপ নির্বাচন করুন।'
+          : 'Please select your blood group.'
+      );
+      return;
+    }
+    if (!selectedDistrict) {
+      setErrorMessage(
+        language === 'bn'
+          ? 'অনুগ্রহ করে আপনার জেলা / এলাকা নির্বাচন করুন।'
+          : 'Please select your district / area.'
+      );
+      return;
+    }
+    setRegisterStep(3);
+  };
+
+  // Handle Email Registration (Final Submission in Step 3)
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    // Validate Step 1 fields
+    if (!fullName || fullName.trim().length < 2) {
+      setRegisterStep(1);
+      setErrorMessage(
+        language === 'bn'
+          ? 'অনুগ্রহ করে আপনার আসল পূর্ণ নাম লিখুন।'
+          : 'Please enter your full legal name.'
+      );
+      return;
+    }
+
+    const normPhone = normalizePhoneNumber(phone);
+    if (!isValidBdPhoneNumber(normPhone)) {
+      setRegisterStep(1);
+      setErrorMessage(
+        language === 'bn'
+          ? 'জরুরি যোগাযোগের জন্য সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: ০১৭১২-৩৪৫৬৭৮)।'
+          : 'Please provide a valid 11-digit Bangladesh mobile number (e.g., 01712-345678).'
+      );
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setRegisterStep(1);
+      setErrorMessage(
+        language === 'bn'
+          ? 'অনুগ্রহ করে একটি সঠিক ইমেইল ঠিকানা প্রদান করুন।'
+          : 'Please enter a valid email address.'
+      );
+      return;
+    }
+
+    // Validate Step 3 fields
+    if (!password || password.length < 6) {
+      setErrorMessage(
+        language === 'bn'
+          ? 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।'
+          : 'Password must be at least 6 characters long.'
+      );
+      return;
+    }
+
+    if (confirmPassword && password !== confirmPassword) {
+      setErrorMessage(
+        language === 'bn'
+          ? 'পাসওয়ার্ড দুটি মেলেনি। অনুগ্রহ করে আবার পরীক্ষা করুন।'
+          : 'Passwords do not match. Please verify.'
+      );
+      return;
+    }
+
+    setIsLoading(true);
+    const res = await registerWithEmail({
+      name: fullName.trim(),
+      email: email.trim(),
+      password,
+      phone: normPhone,
+      bloodGroup,
+      district: selectedDistrict,
+      role: isDonor ? 'donor' : 'recipient',
+    });
+    setIsLoading(false);
+
+    if (res.success && res.user) {
+      setSuccessMessage(
+        res.message ||
+          (language === 'bn'
+            ? 'অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে এবং সুপারবেসে সংরক্ষিত হয়েছে!'
+            : 'Account created successfully and synced to Supabase!')
+      );
+      setTimeout(() => {
+        onSuccessLogin(res.user!);
+        onClose();
+      }, 900);
+    } else {
+      setErrorMessage(res.error || (language === 'bn' ? 'নিবন্ধন ব্যর্থ হয়েছে।' : 'Registration failed.'));
+    }
+  };
+
+  // Handle Social Login (Google / Facebook)
+  const handleSocialLogin = async (provider: 'google' | 'facebook') => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setSocialLoading(provider);
+
+    const res = await loginWithOAuth(provider);
+    setSocialLoading(null);
+
+    if (!res.success) {
+      setErrorMessage(res.error || 'সোশ্যাল লগইন প্রক্রিয়াকরণে সমস্যা হয়েছে।');
+    } else {
+      setSuccessMessage(
+        language === 'bn'
+          ? `${provider === 'google' ? 'গুগল' : 'ফেসবুক'} এর সাথে সংযোগ করা হচ্ছে...`
+          : `Connecting to ${provider === 'google' ? 'Google' : 'Facebook'}...`
+      );
+    }
+  };
+
+  // Handle Forgot Password
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    if (!isValidEmail(email)) {
+      setErrorMessage(
+        language === 'bn'
+          ? 'অনুগ্রহ করে সঠিক ইমেইল ঠিকানা দিন।'
+          : 'Please enter a valid email address.'
+      );
+      return;
+    }
+
+    setIsLoading(true);
+    const res = await sendPasswordResetEmail(email);
+    setIsLoading(false);
+
+    if (res.success) {
+      setSuccessMessage(
+        res.message ||
+          (language === 'bn'
+            ? 'পাসওয়ার্ড রিসেট লিংক আপনার ইমেইলে পাঠানো হয়েছে।'
+            : 'Password reset link sent to your email.')
+      );
+    } else {
+      setErrorMessage(res.error || 'রিসেট লিংক পাঠাতে সমস্যা হয়েছে।');
+    }
+  };
+
+  // Handle Social Login Contact Completion
+  const handleCompleteContact = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const normPhone = normalizePhoneNumber(phone);
+    if (!isValidBdPhoneNumber(normPhone)) {
+      setErrorMessage(
+        language === 'bn'
+          ? 'জরুরি রক্তদানের যোগাযোগের জন্য সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: ০১৭১২-৩৪৫৬৭৮)।'
+          : 'Please enter a valid 11-digit Bangladesh mobile number.'
+      );
+      return;
+    }
+
+    setIsLoading(true);
+    const res = await completeDonorContactInfo(normPhone, bloodGroup, selectedDistrict);
+    setIsLoading(false);
+
+    if (res.success && res.user) {
+      setSuccessMessage(
+        language === 'bn'
+          ? 'মোবাইল নম্বর ও তথ্য সফলভাবে সংরক্ষিত হয়েছে!'
+          : 'Contact information saved successfully!'
+      );
       setTimeout(() => {
         onSuccessLogin(res.user!);
         onClose();
       }, 700);
     } else {
-      // If no account found, suggest registration or send OTP
-      setErrorMessage(res.error || 'লগইন ব্যর্থ হয়েছে। তথ্য যাচাই করুন।');
-    }
-  };
-
-  // Handle Registration Submit (sends OTP for verification)
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage(null);
-    setSuccessMessage(null);
-
-    if (!fullName || fullName.trim().length < 2) {
-      setErrorMessage('অনুগ্রহ করে আপনার আসল নাম লিখুন');
-      return;
-    }
-
-    const normPhone = normalizePhoneNumber(phoneInput);
-    if (!isValidBdPhoneNumber(normPhone)) {
-      setErrorMessage('সঠিক ১১ ডিজিটের মোবাইল নম্বর লিখুন (যেমন: ০১৭১২-৩৪৫৬৭৮)');
-      return;
-    }
-
-    setIsSubmitting(true);
-    const otpRes = await requestPhoneOtp(normPhone);
-    setIsSubmitting(false);
-
-    if (otpRes.success) {
-      setGeneratedOtp(otpRes.otpCode || '123456');
-      setStep('otp');
-      setTimerSeconds(60);
-      setSuccessMessage('সিকিউর ভেরিফিকেশন কোড প্রস্তুত করা হয়েছে।');
-    } else {
-      setErrorMessage(otpRes.error || 'ওটিপি পাঠাতে সমস্যা হয়েছে।');
-    }
-  };
-
-  // Handle OTP Verification & Registration completion
-  const handleVerifyAndComplete = async () => {
-    setErrorMessage(null);
-    if (!otpInput || otpInput.trim().length < 4) {
-      setErrorMessage('অনুগ্রহ করে ৬ সংখ্যার সম্পূর্ণ ওটিপি কোডটি লিখুন');
-      return;
-    }
-
-    setIsVerifying(true);
-    const isValid = await verifyPhoneOtp(phoneInput, otpInput);
-
-    if (!isValid) {
-      setIsVerifying(false);
-      setErrorMessage('ওটিপি কোডটি ভুল হয়েছে। আবার চেষ্টা করুন।');
-      return;
-    }
-
-    // Complete real registration in Supabase
-    const regRes = await registerRealUser({
-      name: fullName,
-      phone: phoneInput,
-      bloodGroup,
-      district: selectedDistrict,
-      role: userRole,
-      password: password || undefined,
-    });
-
-    setIsVerifying(false);
-
-    if (regRes.success && regRes.user) {
-      setSuccessMessage('আপনার অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে এবং ক্লাউড ডেটাবেসে সংরক্ষিত হয়েছে!');
-      setTimeout(() => {
-        onSuccessLogin(regRes.user!);
-        onClose();
-      }, 800);
-    } else {
-      setErrorMessage(regRes.error || 'নিবন্ধন সম্পন্ন করতে ব্যর্থ হয়েছে।');
-    }
-  };
-
-  // 1-Click Paste OTP Code Helper
-  const handlePasteOtp = () => {
-    if (generatedOtp) {
-      setOtpInput(generatedOtp);
+      setErrorMessage(res.error || 'তথ্য সংরক্ষণ করা সম্ভব হয়নি।');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-md p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto border border-[#E4E6EB]/80 animate-in zoom-in-95 duration-200">
         
-        {/* Modal Top Bar */}
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white">
-          <div className="flex items-center gap-2.5">
-            {step === 'otp' ? (
-              <button
-                onClick={() => setStep('input')}
-                className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition-colors cursor-pointer"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-            ) : (
-              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-                <ShieldCheck className="w-4 h-4 text-white" />
+        {/* ================= MODAL TOP GRADIENT HEADER ================= */}
+        <div className="relative px-5 py-4 bg-gradient-to-r from-[#9E0027] via-[#C41E3A] to-[#BA1A1A] text-white overflow-hidden shrink-0">
+          {/* Subtle Ambient Decorative Circles */}
+          <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/10 blur-xl pointer-events-none" />
+          <div className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-black/10 blur-md pointer-events-none" />
+
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              {mode === 'forgot' || mode === 'complete_contact' || (mode === 'register' && registerStep > 1) ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (mode === 'register' && registerStep > 1) {
+                      setRegisterStep((prev) => (prev - 1) as 1 | 2 | 3);
+                      setErrorMessage(null);
+                    } else {
+                      setMode('login');
+                    }
+                  }}
+                  className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+              ) : (
+                <div className="w-9 h-9 rounded-2xl bg-white/20 flex items-center justify-center shadow-xs">
+                  <Droplet className="w-5 h-5 fill-current text-white" />
+                </div>
+              )}
+
+              <div>
+                <h2 className="font-extrabold text-[16px] sm:text-[17px] leading-tight flex items-center gap-1.5">
+                  <span>
+                    {mode === 'login' && (language === 'bn' ? 'রক্তদাতা অ্যাকাউন্টে প্রবেশ' : 'Sign in to Roktodata')}
+                    {mode === 'register' &&
+                      (language === 'bn'
+                        ? `নতুন অ্যাকাউন্ট (ধাপ ${formatDigits(registerStep)}/৩)`
+                        : `Create Account (Step ${registerStep}/3)`)}
+                    {mode === 'forgot' && (language === 'bn' ? 'পাসওয়ার্ড উদ্ধার' : 'Reset Password')}
+                    {mode === 'complete_contact' && (language === 'bn' ? 'যোগাযোগের তথ্য নিশ্চিতকরণ' : 'Complete Contact Info')}
+                  </span>
+                </h2>
+                <span className="text-[11px] text-white/85 flex items-center gap-1 mt-0.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>
+                    {language === 'bn' ? 'সুপারবেস ক্লাউড ডেটাবেস দ্বারা সুরক্ষিত' : 'Secured by Supabase Cloud'}
+                  </span>
+                </span>
               </div>
-            )}
-            <div>
-              <h2 className="font-bold text-sm leading-tight">
-                {step === 'otp'
-                  ? 'নিরাপত্তা ওটিপি যাচাই'
-                  : authMode === 'login'
-                  ? 'রক্তদাতা সিস্টেমে লগইন'
-                  : 'নতুন রক্তদাতা নিবন্ধন'}
-              </h2>
-              <span className="text-[11px] text-white/80">
-                সুপারবেস ক্লাউড ডেটাবেস দ্বারা সুরক্ষিত
-              </span>
             </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="বন্ধ করুন"
+              className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="বন্ধ করুন"
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
-        {/* Auth Mode Toggle Tabs (Login vs Register) */}
-        {step === 'input' && (
-          <div className="p-3 bg-gray-50 border-b border-gray-200/80">
-            <div className="grid grid-cols-2 gap-1.5 p-1 bg-gray-200/70 rounded-2xl">
+        {/* ================= MODE SWITCHER TABS (Login vs Register) ================= */}
+        {(mode === 'login' || mode === 'register') && (
+          <div className="p-2.5 bg-[#FAF9FB] border-b border-[#E4E6EB]/80">
+            <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#EBE9EE] rounded-2xl">
               <button
                 type="button"
                 onClick={() => {
-                  setAuthMode('login');
+                  setMode('login');
                   setErrorMessage(null);
+                  setSuccessMessage(null);
                 }}
-                className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  authMode === 'login'
-                    ? 'bg-white text-gray-900 shadow-xs'
-                    : 'text-gray-600 hover:text-gray-900'
+                className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  mode === 'login'
+                    ? 'bg-white text-[#9E0027] shadow-xs'
+                    : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
                 }`}
               >
-                লগইন করুন
+                <span>{language === 'bn' ? 'লগইন করুন' : 'Sign In'}</span>
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  setAuthMode('register');
+                  setMode('register');
+                  setRegisterStep(1);
                   setErrorMessage(null);
+                  setSuccessMessage(null);
                 }}
-                className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  authMode === 'register'
-                    ? 'bg-red-600 text-white shadow-xs'
-                    : 'text-gray-600 hover:text-gray-900'
+                className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  mode === 'register'
+                    ? 'bg-white text-[#9E0027] shadow-xs'
+                    : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
                 }`}
               >
-                নতুন অ্যাকাউন্ট তৈরি
+                <Sparkles className="w-3.5 h-3.5 text-[#C41E3A]" />
+                <span>{language === 'bn' ? 'নতুন অ্যাকাউন্ট' : 'Register'}</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* Content Body */}
-        <div className="p-5 flex-1 overflow-y-auto space-y-4">
+        {/* ================= MODAL BODY CONTENT ================= */}
+        <div className="p-4 sm:p-5 space-y-4 max-h-[75vh] overflow-y-auto">
           
-          {/* Error Message Alert */}
-          {errorMessage && (
-            <div className="p-3 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-2.5 text-xs text-red-700 animate-in fade-in">
-              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-              <p className="leading-relaxed">{errorMessage}</p>
-            </div>
-          )}
-
-          {/* Success Message Alert */}
+          {/* Success Banner */}
           {successMessage && (
-            <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start gap-2.5 text-xs text-emerald-800 animate-in fade-in">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-              <p className="leading-relaxed">{successMessage}</p>
+            <div className="p-3 rounded-2xl bg-[#E8F5E9] border border-[#C8E6C9] flex items-center gap-2 text-xs text-[#005938] animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-[#00744B] shrink-0" />
+              <span className="font-semibold leading-relaxed">{successMessage}</span>
             </div>
           )}
 
-          {/* ================= STEP 1: LOGIN FORM ================= */}
-          {step === 'input' && authMode === 'login' && (
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
-              <div className="text-center py-1">
-                <div className="w-14 h-14 mx-auto rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mb-2">
-                  <Droplet className="w-7 h-7 fill-current" />
-                </div>
-                <h3 className="font-extrabold text-base text-gray-900">স্বাগতম রক্তদাতা প্ল্যাটফর্মে</h3>
-                <p className="text-xs text-gray-500 mt-0.5">আপনার নিবন্ধিত মোবাইল নম্বর দিয়ে লগইন করুন</p>
+          {/* Error Banner */}
+          {errorMessage && (
+            <div className="p-3 rounded-2xl bg-[#FFDAD6]/60 border border-[#FFDAD6] flex items-center gap-2 text-xs text-[#BA1A1A] animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-[#BA1A1A] shrink-0" />
+              <span className="font-semibold leading-relaxed">{errorMessage}</span>
+            </div>
+          )}
+
+          {/* ================= 1. SOCIAL LOGIN BUTTONS (Google & Facebook) ================= */}
+          {(mode === 'login' || (mode === 'register' && registerStep === 1)) && (
+            <div className="space-y-2.5">
+              <div className="grid grid-cols-2 gap-2.5">
+                {/* Google Button */}
+                <button
+                  type="button"
+                  onClick={() => handleSocialLogin('google')}
+                  disabled={Boolean(socialLoading) || isLoading}
+                  className="w-full h-11 px-3 rounded-2xl bg-white hover:bg-[#F7F7F9] border border-[#E4E6EB] hover:border-[#D1D5DB] text-[#1B1B1F] text-xs font-bold flex items-center justify-center gap-2 shadow-2xs active:scale-97 transition-all cursor-pointer disabled:opacity-60"
+                >
+                  {socialLoading === 'google' ? (
+                    <RefreshCw className="w-4 h-4 text-[#C41E3A] animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                      <path
+                        fill="#4285F4"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                      />
+                    </svg>
+                  )}
+                  <span>Google</span>
+                </button>
+
+                {/* Facebook Button */}
+                <button
+                  type="button"
+                  onClick={() => handleSocialLogin('facebook')}
+                  disabled={Boolean(socialLoading) || isLoading}
+                  className="w-full h-11 px-3 rounded-2xl bg-[#1877F2] hover:bg-[#166FE5] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-2xs active:scale-97 transition-all cursor-pointer disabled:opacity-60"
+                >
+                  {socialLoading === 'facebook' ? (
+                    <RefreshCw className="w-4 h-4 text-white animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                    </svg>
+                  )}
+                  <span>Facebook</span>
+                </button>
               </div>
 
-              {/* Mobile Phone Field */}
-              <div className="space-y-1.5 text-left">
-                <label className="text-xs font-bold text-gray-700 block">মোবাইল নম্বর</label>
-                <div className="h-12 bg-gray-50 rounded-2xl flex items-center px-3 gap-2.5 border border-gray-200 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-100 transition-all">
-                  <span className="font-bold text-xs text-gray-600 shrink-0 flex items-center gap-1">
-                    🇧🇩 +৮৮
-                  </span>
-                  <div className="w-px h-5 bg-gray-300" />
+              {/* Divider */}
+              <div className="flex items-center gap-2 pt-1 pb-1">
+                <div className="flex-1 h-px bg-[#E4E6EB]" />
+                <span className="text-[11px] font-semibold text-[#5B5F6B] uppercase tracking-wider">
+                  {mode === 'register'
+                    ? (language === 'bn' ? 'অথবা ৩টি সহজ ধাপে ইমেইল দিয়ে' : 'Or step-by-step with Email')
+                    : (language === 'bn' ? 'অথবা ইমেইল দিয়ে' : 'Or with Email')}
+                </span>
+                <div className="flex-1 h-px bg-[#E4E6EB]" />
+              </div>
+            </div>
+          )}
+
+          {/* ================= 2. EMAIL LOGIN VIEW ================= */}
+          {mode === 'login' && (
+            <form onSubmit={handleLogin} className="space-y-3.5">
+              {/* Email */}
+              <div>
+                <label className="block text-xs font-bold text-[#1B1B1F] mb-1">
+                  {language === 'bn' ? 'ইমেইল ঠিকানা' : 'Email Address'} *
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
                   <input
-                    type="tel"
-                    placeholder="০১৭১২-৩৪৫৬৭৮"
-                    value={phoneInput}
-                    onChange={(e) => setPhoneInput(e.target.value)}
+                    type="email"
                     required
-                    className="w-full bg-transparent font-bold text-sm text-gray-900 outline-none placeholder:text-gray-400 placeholder:font-normal"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="example@mail.com"
+                    className="w-full h-11 pl-10 pr-3 rounded-2xl bg-[#F7F7F9] border border-[#E4E6EB] text-xs text-[#1B1B1F] outline-none focus:border-[#C41E3A] focus:bg-white transition-colors"
                   />
                 </div>
-                <span className="text-[11px] text-gray-400">১১ ডিজিটের বাংলাদেশি মোবাইল নম্বর লিখুন</span>
               </div>
 
-              {/* Optional Password or PIN */}
-              <div className="space-y-1.5 text-left">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-gray-700">পাসওয়ার্ড বা পিন (ঐচ্ছিক)</label>
-                  <span className="text-[10px] text-gray-400">নিরাপদ প্রবেশাধিকার</span>
+              {/* Password */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-[#1B1B1F]">
+                    {language === 'bn' ? 'পাসওয়ার্ড' : 'Password'} *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('forgot');
+                      setErrorMessage(null);
+                      setSuccessMessage(null);
+                    }}
+                    className="text-[11px] text-[#C41E3A] hover:underline font-semibold cursor-pointer"
+                  >
+                    {language === 'bn' ? 'পাসওয়ার্ড ভুলে গেছেন?' : 'Forgot password?'}
+                  </button>
                 </div>
-                <div className="h-12 bg-gray-50 rounded-2xl flex items-center px-3 gap-2.5 border border-gray-200 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-100 transition-all">
-                  <Lock className="w-4 h-4 text-gray-400 shrink-0" />
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
                   <input
-                    type="password"
-                    placeholder="পাসওয়ার্ড বা ৪-৬ ডিজিট পিন"
+                    type={showPassword ? 'text' : 'password'}
+                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-transparent font-medium text-sm text-gray-900 outline-none placeholder:text-gray-400"
+                    placeholder="••••••••"
+                    className="w-full h-11 pl-10 pr-10 rounded-2xl bg-[#F7F7F9] border border-[#E4E6EB] text-xs text-[#1B1B1F] outline-none focus:border-[#C41E3A] focus:bg-white transition-colors"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
-              {/* Login CTA */}
+              {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full h-12 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                disabled={isLoading}
+                className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#9E0027] to-[#C41E3A] hover:from-[#80001F] hover:to-[#B01A33] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs active:scale-98 transition-all cursor-pointer disabled:opacity-50 mt-1"
               >
-                {isSubmitting ? (
+                {isLoading ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>যাচাই করা হচ্ছে...</span>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>{language === 'bn' ? 'লগইন হচ্ছে...' : 'Signing in...'}</span>
                   </>
                 ) : (
                   <>
-                    <span>লগইন করুন</span>
+                    <span>{language === 'bn' ? 'লগইন করুন' : 'Sign In'}</span>
                     <ChevronRight className="w-4 h-4" />
                   </>
                 )}
               </button>
-
-              {/* Switch to Register link */}
-              <div className="pt-2 text-center text-xs text-gray-500">
-                <span>নতুন ব্যবহারকারী? </span>
-                <button
-                  type="button"
-                  onClick={() => setAuthMode('register')}
-                  className="font-bold text-red-600 hover:underline cursor-pointer"
-                >
-                  নতুন অ্যাকাউন্ট খুলুন
-                </button>
-              </div>
             </form>
           )}
 
-          {/* ================= STEP 1: REGISTRATION FORM ================= */}
-          {step === 'input' && authMode === 'register' && (
-            <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
-              
-              {/* Full Name */}
-              <div className="space-y-1 text-left">
-                <label className="text-xs font-bold text-gray-700">আপনার পূর্ণ নাম *</label>
-                <input
-                  type="text"
-                  placeholder="যেমন: মো. শাকিল আহমেদ"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  className="w-full h-11 px-3.5 bg-gray-50 rounded-xl border border-gray-200 text-sm font-semibold text-gray-900 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100 placeholder:text-gray-400 placeholder:font-normal"
-                />
+          {/* ================= 3. REGISTRATION VIEW (3-STEP WIZARD) ================= */}
+          {mode === 'register' && (
+            <div className="space-y-4">
+              {/* Step Progress Indicator Bar */}
+              <div className="bg-[#FAF9FB] p-3 rounded-2xl border border-[#E4E6EB]/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-[#9E0027] bg-[#FDECEF] px-2.5 py-0.5 rounded-full">
+                      {language === 'bn' ? `ধাপ ${formatDigits(registerStep)} / ৩` : `Step ${registerStep} of 3`}
+                    </span>
+                    <span className="text-xs font-bold text-[#1B1B1F]">
+                      {registerStep === 1 && (language === 'bn' ? 'ব্যক্তিগত ও যোগাযোগ' : 'Identity & Contact')}
+                      {registerStep === 2 && (language === 'bn' ? 'রক্তের গ্রুপ ও এলাকা' : 'Blood & Location')}
+                      {registerStep === 3 && (language === 'bn' ? 'নিরাপত্তা ও নিশ্চিতকরণ' : 'Security & Confirm')}
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold text-[#9E0027]">
+                    {registerStep === 1 && (language === 'bn' ? '১/৩' : 'Step 1')}
+                    {registerStep === 2 && (language === 'bn' ? '২/৩' : 'Step 2')}
+                    {registerStep === 3 && (language === 'bn' ? '৩/৩' : 'Step 3')}
+                  </span>
+                </div>
+
+                {/* Visual Step Progress Line */}
+                <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                  <div className={`h-1.5 rounded-full transition-all duration-300 ${registerStep >= 1 ? 'bg-[#C41E3A]' : 'bg-[#E4E6EB]'}`} />
+                  <div className={`h-1.5 rounded-full transition-all duration-300 ${registerStep >= 2 ? 'bg-[#C41E3A]' : 'bg-[#E4E6EB]'}`} />
+                  <div className={`h-1.5 rounded-full transition-all duration-300 ${registerStep >= 3 ? 'bg-[#C41E3A]' : 'bg-[#E4E6EB]'}`} />
+                </div>
               </div>
 
-              {/* Mobile Phone */}
-              <div className="space-y-1 text-left">
-                <label className="text-xs font-bold text-gray-700">মোবাইল নম্বর *</label>
-                <div className="h-11 bg-gray-50 rounded-xl flex items-center px-3 gap-2 border border-gray-200 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-100">
-                  <span className="font-bold text-xs text-gray-600 shrink-0">🇧🇩 +৮৮</span>
-                  <div className="w-px h-4 bg-gray-300" />
+              {/* ----------------- STEP 1: IDENTITY & CONTACT ----------------- */}
+              {registerStep === 1 && (
+                <div className="space-y-3.5 animate-in fade-in slide-in-from-right-3 duration-200">
+                  {/* Full Name */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#1B1B1F] mb-1">
+                      {language === 'bn' ? 'আপনার পূর্ণ নাম' : 'Full Name'} *
+                    </label>
+                    <div className="relative">
+                      <User className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                      <input
+                        type="text"
+                        required
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder={language === 'bn' ? 'যেমন: মো: আরিফুল ইসলাম' : 'e.g. John Doe'}
+                        className="w-full h-11 pl-10 pr-3 rounded-2xl bg-[#F7F7F9] border border-[#E4E6EB] text-xs text-[#1B1B1F] outline-none focus:border-[#C41E3A] focus:bg-white transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mandatory Mobile Number */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-bold text-[#1B1B1F] flex items-center gap-1">
+                        <span>{language === 'bn' ? 'সচল মোবাইল নম্বর' : 'Mobile Number'}</span>
+                        <span className="text-[#C41E3A]">*</span>
+                      </label>
+                      <span className="text-[10px] bg-[#FDECEF] text-[#C41E3A] px-2 py-0.5 rounded-full font-bold">
+                        {language === 'bn' ? 'জরুরি যোগাযোগের জন্য' : 'Required for Contact'}
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                      <input
+                        type="tel"
+                        required
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="017XXXXXXXX"
+                        className="w-full h-11 pl-10 pr-3 rounded-2xl bg-[#F7F7F9] border border-[#E4E6EB] text-xs text-[#1B1B1F] outline-none focus:border-[#C41E3A] focus:bg-white transition-colors font-medium"
+                      />
+                    </div>
+                    <p className="text-[10.5px] text-[#5B5F6B] mt-1 leading-normal">
+                      {language === 'bn'
+                        ? 'রক্তদানের জরুরি প্রয়োজনে যাতে রোগী বা হাসপাতালের স্বজন সরাসরি যোগাযোগ করতে পারে।'
+                        : 'Needed for emergency communication between patient family and donor.'}
+                    </p>
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#1B1B1F] mb-1">
+                      {language === 'bn' ? 'ইমেইল ঠিকানা' : 'Email Address'} *
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="example@mail.com"
+                        className="w-full h-11 pl-10 pr-3 rounded-2xl bg-[#F7F7F9] border border-[#E4E6EB] text-xs text-[#1B1B1F] outline-none focus:border-[#C41E3A] focus:bg-white transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Step 1 Next Button */}
+                  <button
+                    type="button"
+                    onClick={handleStep1Next}
+                    className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#9E0027] to-[#C41E3A] hover:from-[#80001F] hover:to-[#B01A33] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs active:scale-98 transition-all cursor-pointer mt-2"
+                  >
+                    <span>{language === 'bn' ? 'পরবর্তী ধাপ (রক্তের গ্রুপ ও এলাকা)' : 'Next (Blood & Location)'}</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* ----------------- STEP 2: BLOOD GROUP & LOCATION ----------------- */}
+              {registerStep === 2 && (
+                <div className="space-y-3.5 animate-in fade-in slide-in-from-right-3 duration-200">
+                  {/* Blood Group Selection */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-[#1B1B1F]">
+                        {language === 'bn' ? 'রক্তের গ্রুপ নির্বাচন করুন' : 'Select Blood Group'} *
+                      </label>
+                      <span className="text-[11px] font-bold text-[#C41E3A] bg-[#FDECEF] px-2 py-0.5 rounded-md">
+                        {bloodGroup}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {bloodGroups.map((bg) => (
+                        <button
+                          key={bg}
+                          type="button"
+                          onClick={() => setBloodGroup(bg)}
+                          className={`h-10 rounded-xl font-black text-xs transition-all cursor-pointer flex items-center justify-center ${
+                            bloodGroup === bg
+                              ? 'bg-[#C41E3A] text-white shadow-xs scale-102 ring-2 ring-[#C41E3A]/30'
+                              : 'bg-[#F7F7F9] text-[#1B1B1F] hover:bg-[#EBE9EE] border border-[#E4E6EB]'
+                          }`}
+                        >
+                          {bg}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* District Selection */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#1B1B1F] mb-1">
+                      {language === 'bn' ? 'আপনার জেলা / এলাকা' : 'District / Area'} *
+                    </label>
+                    <div className="relative">
+                      <MapPin className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                      <select
+                        value={selectedDistrict}
+                        onChange={(e) => setSelectedDistrict(e.target.value)}
+                        className="w-full h-11 pl-10 pr-4 rounded-2xl bg-[#F7F7F9] border border-[#E4E6EB] text-xs text-[#1B1B1F] outline-none focus:border-[#C41E3A] focus:bg-white transition-colors cursor-pointer"
+                      >
+                        {districtList.map((dist) => (
+                          <option key={dist} value={dist}>
+                            {dist}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Role Checkbox */}
+                  <label className="flex items-start gap-2.5 p-3 rounded-2xl bg-[#F7F7F9] border border-[#E4E6EB] cursor-pointer hover:bg-white transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={isDonor}
+                      onChange={(e) => setIsDonor(e.target.checked)}
+                      className="w-4 h-4 mt-0.5 rounded text-[#C41E3A] accent-[#C41E3A] cursor-pointer shrink-0"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-xs text-[#1B1B1F] font-bold">
+                        {language === 'bn'
+                          ? 'স্বেচ্ছাসেবী রক্তদাতা হিসেবে যুক্ত হতে প্রস্তুত'
+                          : 'List me as an active voluntary blood donor'}
+                      </span>
+                      <span className="text-[10.5px] text-[#5B5F6B] mt-0.5">
+                        {language === 'bn'
+                          ? 'আপনার জেলায় রক্তের জরুরি প্রয়োজনে রোগীরা আপনাকে খুঁজে পাবে।'
+                          : 'Patients in your district can reach out when your blood type is needed.'}
+                      </span>
+                    </div>
+                  </label>
+
+                  {/* Navigation Buttons */}
+                  <div className="grid grid-cols-2 gap-2.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setErrorMessage(null);
+                        setRegisterStep(1);
+                      }}
+                      className="h-12 rounded-2xl bg-[#F7F7F9] hover:bg-[#EBE9EE] text-[#1B1B1F] font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 border border-[#E4E6EB] active:scale-98 transition-all cursor-pointer"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>{language === 'bn' ? 'পূর্ববর্তী' : 'Back'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleStep2Next}
+                      className="h-12 rounded-2xl bg-gradient-to-r from-[#9E0027] to-[#C41E3A] hover:from-[#80001F] hover:to-[#B01A33] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-xs active:scale-98 transition-all cursor-pointer"
+                    >
+                      <span>{language === 'bn' ? 'পরবর্তী (পাসওয়ার্ড)' : 'Next (Security)'}</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ----------------- STEP 3: SECURITY & CONFIRMATION ----------------- */}
+              {registerStep === 3 && (
+                <form onSubmit={handleRegister} className="space-y-3.5 animate-in fade-in slide-in-from-right-3 duration-200">
+                  {/* Password */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#1B1B1F] mb-1">
+                      {language === 'bn' ? 'গোপন পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)' : 'Password (min 6 chars)'} *
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        minLength={6}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full h-11 pl-10 pr-10 rounded-2xl bg-[#F7F7F9] border border-[#E4E6EB] text-xs text-[#1B1B1F] outline-none focus:border-[#C41E3A] focus:bg-white transition-colors"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#1B1B1F] mb-1">
+                      {language === 'bn' ? 'পাসওয়ার্ড নিশ্চিত করুন' : 'Confirm Password'} *
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        required
+                        minLength={6}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full h-11 pl-10 pr-10 rounded-2xl bg-[#F7F7F9] border border-[#E4E6EB] text-xs text-[#1B1B1F] outline-none focus:border-[#C41E3A] focus:bg-white transition-colors"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Summary Review Card */}
+                  <div className="p-3 bg-[#FCF9F9] rounded-2xl border border-red-100 space-y-1.5 text-xs">
+                    <span className="font-extrabold text-[11px] text-[#9E0027] uppercase tracking-wider block mb-1">
+                      {language === 'bn' ? '📋 আপনার তথ্যের সারসংক্ষেপ' : '📋 Profile Summary'}
+                    </span>
+                    <div className="flex justify-between items-center text-[#1B1B1F]">
+                      <span className="text-[#5B5F6B]">{language === 'bn' ? 'নাম:' : 'Name:'}</span>
+                      <span className="font-bold">{fullName}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[#1B1B1F]">
+                      <span className="text-[#5B5F6B]">{language === 'bn' ? 'মোবাইল:' : 'Phone:'}</span>
+                      <span className="font-bold font-mono">{formatBdPhoneDisplay(phone)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[#1B1B1F]">
+                      <span className="text-[#5B5F6B]">{language === 'bn' ? 'রক্তের গ্রুপ:' : 'Blood Group:'}</span>
+                      <span className="font-black bg-[#C41E3A] text-white px-2 py-0.5 rounded-md text-[11px]">
+                        {bloodGroup}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-[#1B1B1F]">
+                      <span className="text-[#5B5F6B]">{language === 'bn' ? 'এলাকা:' : 'Area:'}</span>
+                      <span className="font-bold">{selectedDistrict}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[#1B1B1F]">
+                      <span className="text-[#5B5F6B]">{language === 'bn' ? 'ভূমিকা:' : 'Role:'}</span>
+                      <span className="font-semibold text-emerald-700">
+                        {isDonor
+                          ? (language === 'bn' ? 'স্বেচ্ছাসেবী রক্তদাতা' : 'Voluntary Donor')
+                          : (language === 'bn' ? 'সাধারণ সদস্য' : 'Standard Member')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Navigation & Submit Buttons */}
+                  <div className="grid grid-cols-2 gap-2.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setErrorMessage(null);
+                        setRegisterStep(2);
+                      }}
+                      className="h-12 rounded-2xl bg-[#F7F7F9] hover:bg-[#EBE9EE] text-[#1B1B1F] font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 border border-[#E4E6EB] active:scale-98 transition-all cursor-pointer"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>{language === 'bn' ? 'পূর্ববর্তী' : 'Back'}</span>
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="h-12 rounded-2xl bg-gradient-to-r from-[#9E0027] to-[#C41E3A] hover:from-[#80001F] hover:to-[#B01A33] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {isLoading ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>{language === 'bn' ? 'অ্যাকাউন্ট তৈরি হচ্ছে...' : 'Creating...'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Heart className="w-4 h-4 fill-current text-white" />
+                          <span>{language === 'bn' ? 'অ্যাকাউন্ট তৈরি করুন' : 'Create Account'}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* ================= 4. FORGOT PASSWORD VIEW ================= */}
+          {mode === 'forgot' && (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <p className="text-xs text-[#5B5F6B] leading-relaxed">
+                {language === 'bn'
+                  ? 'আপনার অ্যাকাউন্টের নিবন্ধিত ইমেইল ঠিকানাটি নিচে লিখুন। আমরা আপনাকে পাসওয়ার্ড পরিবর্তন করার জন্য একটি সুরক্ষিত লিংক পাঠাব।'
+                  : 'Enter your registered email address below. We will send you a secure password reset link.'}
+              </p>
+
+              <div>
+                <label className="block text-xs font-bold text-[#1B1B1F] mb-1">
+                  {language === 'bn' ? 'ইমেইল ঠিকানা' : 'Email Address'} *
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
                   <input
-                    type="tel"
-                    placeholder="০১৭১২-৩৪৫৬৭৮"
-                    value={phoneInput}
-                    onChange={(e) => setPhoneInput(e.target.value)}
+                    type="email"
                     required
-                    className="w-full bg-transparent font-bold text-sm text-gray-900 outline-none placeholder:text-gray-400 placeholder:font-normal"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="example@mail.com"
+                    className="w-full h-11 pl-10 pr-3 rounded-2xl bg-[#F7F7F9] border border-[#E4E6EB] text-xs text-[#1B1B1F] outline-none focus:border-[#C41E3A] focus:bg-white transition-colors"
                   />
                 </div>
               </div>
 
-              {/* Blood Group Grid */}
-              <div className="space-y-1 text-left">
-                <label className="text-xs font-bold text-gray-700">রক্তের গ্রুপ *</label>
-                <div className="grid grid-cols-4 gap-1.5">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12 rounded-2xl bg-[#9E0027] hover:bg-[#80001F] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                <span>{language === 'bn' ? 'রিসেট লিংক পাঠান' : 'Send Reset Link'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMode('login')}
+                className="w-full py-2 text-xs font-bold text-[#5B5F6B] hover:text-[#1B1B1F] text-center cursor-pointer"
+              >
+                {language === 'bn' ? '← লগইনে ফিরে যান' : '← Back to Sign In'}
+              </button>
+            </form>
+          )}
+
+          {/* ================= 5. COMPLETE SOCIAL LOGIN CONTACT INFO ================= */}
+          {mode === 'complete_contact' && (
+            <form onSubmit={handleCompleteContact} className="space-y-4">
+              <div className="p-3 bg-[#FDECEF] rounded-2xl border border-[#FFDAD6] text-xs text-[#9E0027] leading-relaxed">
+                {language === 'bn'
+                  ? 'মানবিক রক্তদান কার্যক্রমে জরুরি প্রয়োজনে রোগী ও হাসপাতালের সাথে সরাসরি যোগাযোগের জন্য আপনার সচল মোবাইল নম্বর ও রক্তের গ্রুপ নিশ্চিত করুন।'
+                  : 'Please provide your active mobile number and blood group for emergency hospital and patient coordination.'}
+              </div>
+
+              {/* Mobile Number */}
+              <div>
+                <label className="block text-xs font-bold text-[#1B1B1F] mb-1">
+                  {language === 'bn' ? 'সচল মোবাইল নম্বর' : 'Mobile Number'} *
+                </label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                  <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="017XXXXXXXX"
+                    className="w-full h-11 pl-10 pr-3 rounded-2xl bg-[#F7F7F9] border border-[#E4E6EB] text-xs text-[#1B1B1F] outline-none focus:border-[#C41E3A] focus:bg-white transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Blood Group */}
+              <div>
+                <label className="block text-xs font-bold text-[#1B1B1F] mb-1.5">
+                  {language === 'bn' ? 'রক্তের গ্রুপ' : 'Blood Group'} *
+                </label>
+                <div className="grid grid-cols-4 gap-2">
                   {bloodGroups.map((bg) => (
                     <button
                       key={bg}
                       type="button"
                       onClick={() => setBloodGroup(bg)}
-                      className={`h-9 rounded-xl font-black text-xs flex items-center justify-center transition-all cursor-pointer ${
+                      className={`h-10 rounded-xl font-black text-xs transition-all cursor-pointer flex items-center justify-center ${
                         bloodGroup === bg
-                          ? 'bg-red-600 text-white shadow-xs'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-[#C41E3A] text-white shadow-xs scale-102 ring-2 ring-[#C41E3A]/30'
+                          : 'bg-[#F7F7F9] text-[#1B1B1F] hover:bg-[#EBE9EE] border border-[#E4E6EB]'
                       }`}
                     >
                       {bg}
@@ -417,212 +1068,46 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
               </div>
 
-              {/* District Selector */}
-              <div className="space-y-1 text-left">
-                <label className="text-xs font-bold text-gray-700">আপনার জেলা *</label>
+              {/* District */}
+              <div>
+                <label className="block text-xs font-bold text-[#1B1B1F] mb-1">
+                  {language === 'bn' ? 'জেলা / এলাকা' : 'District'} *
+                </label>
                 <select
                   value={selectedDistrict}
                   onChange={(e) => setSelectedDistrict(e.target.value)}
-                  className="w-full h-11 px-3 bg-gray-50 rounded-xl border border-gray-200 text-xs font-bold text-gray-800 outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                  className="w-full h-11 px-3 rounded-2xl bg-[#F7F7F9] border border-[#E4E6EB] text-xs text-[#1B1B1F] outline-none focus:border-[#C41E3A] focus:bg-white transition-colors cursor-pointer"
                 >
-                  {districtList.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
+                  {districtList.map((dist) => (
+                    <option key={dist} value={dist}>
+                      {dist}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Role Selection */}
-              <div className="grid grid-cols-2 gap-2 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => setUserRole('donor')}
-                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                    userRole === 'donor'
-                      ? 'border-red-600 bg-red-50/70 text-red-900 ring-1 ring-red-600'
-                      : 'border-gray-200 bg-white text-gray-700'
-                  }`}
-                >
-                  <span className="font-bold text-xs block">🩸 রক্তদাতা</span>
-                  <span className="text-[10px] text-gray-500">জরুরিতে রক্ত দিতে প্রস্তুত</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUserRole('recipient')}
-                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                    userRole === 'recipient'
-                      ? 'border-red-600 bg-red-50/70 text-red-900 ring-1 ring-red-600'
-                      : 'border-gray-200 bg-white text-gray-700'
-                  }`}
-                >
-                  <span className="font-bold text-xs block">🩺 গ্রহীতা</span>
-                  <span className="text-[10px] text-gray-500">রক্তের প্রয়োজনে সাহায্যপ্রার্থী</span>
-                </button>
-              </div>
-
-              {/* Registration CTA */}
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full h-12 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-50 mt-1"
+                disabled={isLoading}
+                className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#9E0027] to-[#C41E3A] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs active:scale-98 transition-all cursor-pointer disabled:opacity-50"
               >
-                {isSubmitting ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>ওটিপি কোড তৈরি হচ্ছে...</span>
-                  </>
+                {isLoading ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
                 ) : (
-                  <>
-                    <span>পরবর্তী ধাপ: ওটিপি যাচাই</span>
-                    <Send className="w-4 h-4" />
-                  </>
+                  <CheckCircle2 className="w-4 h-4" />
                 )}
+                <span>{language === 'bn' ? 'তথ্য সংরক্ষণ ও সক্রিয় করুন' : 'Save & Activate Profile'}</span>
               </button>
             </form>
           )}
 
-          {/* ================= STEP 2: OTP VERIFICATION ================= */}
-          {step === 'otp' && (
-            <div className="space-y-4 text-center">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
-                <Smartphone className="w-7 h-7" />
-              </div>
+          {/* Ethical Disclaimer Footer */}
+          <div className="pt-2 text-center text-[10.5px] text-[#5B5F6B] border-t border-[#E4E6EB]/60">
+            {language === 'bn'
+              ? '🔒 ১০০% সুরক্ষিত ও মানবিক উদ্যোগ। রক্ত কেনাবেচা আইনত দণ্ডনীয়।'
+              : '🔒 100% Secure & Voluntary. Trading blood is strictly illegal.'}
+          </div>
 
-              <div>
-                <h3 className="font-extrabold text-base text-gray-900">৬ সংখ্যার ওটিপি কোড দিন</h3>
-                <p className="text-xs text-gray-600 mt-0.5">
-                  নম্বর: <strong className="text-gray-900">{phoneInput}</strong>
-                </p>
-                <button
-                  onClick={() => setStep('input')}
-                  className="text-xs text-red-600 font-bold inline-flex items-center gap-1 hover:underline mt-1 cursor-pointer"
-                >
-                  <Edit2 className="w-3 h-3" />
-                  <span>নম্বর পরিবর্তন</span>
-                </button>
-              </div>
-
-              {/* Educational Explanation Banner regarding Supabase SMS Gateway */}
-              <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-2xl text-left space-y-1.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-                  <Info className="w-4 h-4 text-amber-700 shrink-0" />
-                  <span>ওটিপি এসএমএস তথ্য ও নোটিশ:</span>
-                </div>
-                <p className="text-[11px] text-amber-800 leading-relaxed">
-                  সুপারবেস ক্লাউডে সরাসরি ফোনে আসল এসএমএস পাঠানোর জন্য একটি পেইড এসএমএস গেটওয়ে (যেমন <strong>Twilio</strong>) প্রয়োজন হয় যা প্রতি এসএমএসে ফি কাটে। আপনার টেস্ট ও ইনস্ট্যান্ট ভেরিফিকেশনের সুবিধার্থে নিচে সরাসরি সিকিউরিটি ওটিপি কোডটি প্রদান করা হয়েছে:
-                </p>
-                
-                {/* Instant Generated Security OTP Box */}
-                {generatedOtp && (
-                  <div className="mt-2 p-2.5 bg-white border border-amber-300 rounded-xl flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] text-gray-500 font-semibold block uppercase tracking-wider">
-                        আপনার সিকিউর ওটিপি কোড:
-                      </span>
-                      <span className="font-mono text-base font-extrabold text-red-600 tracking-widest">
-                        {generatedOtp}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handlePasteOtp}
-                      className="px-3 py-1.5 rounded-lg bg-red-600 text-white font-bold text-xs flex items-center gap-1 hover:bg-red-700 transition-colors cursor-pointer"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>বসিয়ে দিন</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* OTP Input Field */}
-              <div className="space-y-1.5 text-left">
-                <label className="text-xs font-bold text-gray-700 block">ওটিপি কোড লিখুন</label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  placeholder="৬ সংখ্যার কোড"
-                  value={otpInput}
-                  onChange={(e) => setOtpInput(e.target.value)}
-                  className="w-full h-12 text-center text-xl font-mono font-extrabold tracking-widest bg-gray-50 rounded-2xl border border-gray-300 focus:border-red-500 focus:ring-2 focus:ring-red-100 outline-none"
-                />
-              </div>
-
-              {/* Timer Countdown */}
-              <div className="text-xs text-gray-500">
-                {timerSeconds > 0 ? (
-                  <p>
-                    কোড মেয়াদ: <strong className="text-gray-900">{timerSeconds} সেকেন্ড</strong>
-                  </p>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setTimerSeconds(60);
-                      requestPhoneOtp(phoneInput).then((r) => {
-                        if (r.otpCode) setGeneratedOtp(r.otpCode);
-                      });
-                    }}
-                    className="text-xs font-bold text-red-600 hover:underline cursor-pointer"
-                  >
-                    পুনরায় নতুন ওটিপি পাঠান
-                  </button>
-                )}
-              </div>
-
-              {/* Verification Button */}
-              <button
-                type="button"
-                onClick={handleVerifyAndComplete}
-                disabled={isVerifying}
-                className="w-full h-12 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {isVerifying ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>যাচাই ও অ্যাকাউন্ট তৈরি হচ্ছে...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>যাচাই সম্পন্ন করে প্রবেশ করুন</span>
-                    <CheckCircle2 className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-
-          {/* Guest Mode option */}
-          {step === 'input' && (
-            <div className="pt-1">
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full p-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 flex items-center justify-between text-left transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500">
-                    <Compass className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-gray-800 block leading-tight">
-                      গেস্ট হিসেবে ব্রাউজ করুন
-                    </span>
-                    <span className="text-[10px] text-gray-500">
-                      লগইন ছাড়াই রক্তের সন্ধান ও ডিরেক্টরি দেখুন
-                    </span>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Security Footer */}
-        <div className="p-3 bg-gray-50 border-t border-gray-100 flex items-center justify-center gap-2 text-xs text-gray-500">
-          <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span className="text-[11px]">২৫৬-বিট SSL এনক্রিপশন ও সুপারবেস ডেটাবেস দ্বারা সুরক্ষিত</span>
         </div>
       </div>
     </div>

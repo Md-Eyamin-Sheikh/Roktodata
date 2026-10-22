@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
 
     if (supabase) {
       const cleanDistrict = (body.location || body.district || 'বগুড়া').replace(/সদর/g, '').trim();
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('emergency_requests')
         .insert({
           blood_group: body.bloodGroup,
@@ -126,10 +126,10 @@ export async function POST(req: NextRequest) {
         savedId = (data as any).id;
 
         // Also automatically create a broadcast notification for this emergency request!
-        const { data: profs } = await supabase.from('profiles').select('id').limit(1);
-        const userId = profs?.[0]?.id;
+        const { data: profs } = await (supabase as any).from('profiles').select('id').limit(1);
+        const userId = (profs as any)?.[0]?.id;
         if (userId) {
-          await supabase.from('notifications').insert({
+          await (supabase as any).from('notifications').insert({
             user_id: userId,
             category: 'urgent',
             title: `🚨 জরুরি রক্তের ডাক: ${body.bloodGroup} প্রয়োজন`,

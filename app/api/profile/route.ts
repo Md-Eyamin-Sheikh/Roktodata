@@ -12,8 +12,8 @@ export async function GET() {
         .limit(1);
 
       if (!pErr && profiles && profiles.length > 0) {
-        const p = profiles[0];
-        const dp = (p as any).donor_profiles?.[0] || {};
+        const p: any = profiles[0];
+        const dp = p.donor_profiles?.[0] || {};
 
         // Fetch donation history
         let donationHistory: any[] = [];
@@ -98,12 +98,12 @@ export async function PATCH(req: NextRequest) {
     const supabase = getSupabaseServerClient();
 
     if (supabase) {
-      const { data: dps } = await supabase.from('donor_profiles').select('id, user_id').limit(1);
+      const { data: dps } = await (supabase as any).from('donor_profiles').select('id, user_id').limit(1);
       if (dps && dps[0]) {
         await (supabase as any)
           .from('donor_profiles')
           .update({ is_available: isAvailable })
-          .eq('id', dps[0].id);
+          .eq('id', (dps[0] as any).id);
       }
     }
 

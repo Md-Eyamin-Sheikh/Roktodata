@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 interface Toast {
   id: string;
@@ -46,12 +46,15 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 ? 'bg-emerald-900/90 text-white border-emerald-700/60'
                 : toast.type === 'error'
                 ? 'bg-[#C41E3A]/95 text-white border-red-700/60'
+                : toast.type === 'warning'
+                ? 'bg-amber-900/90 text-white border-amber-700/60'
                 : 'bg-[#1B1B1F]/90 text-white border-white/20'
             }`}
           >
             <div className="flex items-center gap-2.5 min-w-0">
               {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />}
               {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-red-200 shrink-0" />}
+              {toast.type === 'warning' && <AlertCircle className="w-5 h-5 text-amber-300 shrink-0" />}
               {toast.type === 'info' && <Info className="w-5 h-5 text-sky-400 shrink-0" />}
               <span className="text-xs font-semibold leading-relaxed line-clamp-2">{toast.message}</span>
             </div>

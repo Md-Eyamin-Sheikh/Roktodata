@@ -1,7 +1,85 @@
-node_modules/
-.next/
-coverage/
-.DS_Store
-*.log
-.env*
+# =========================================================================
+# 🩸 রক্তদাতা (Roktodata) — .gitignore
+# গিটহাবে পাঠানোর অনুপযোগী ফাইল ও ডিরেক্টরির তালিকা
+# =========================================================================
+
+# 📦 Dependencies (প্যাকেজ ও ডিপেন্ডেন্সি - অনেক বড় সাইজ, npm install দিয়ে তৈরি হয়)
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# 🏗️ Next.js Production & Build Outputs (বিল্ডের ফলে তৈরি ক্যাশ ও ফাইল)
+/.next/
+/out/
+/build
+/dist
+
+# 🔑 Environment Variables & API Secrets (গোপন এপিআই কি, পাসওয়ার্ড ও সেনসিটিভ ডেটা)
+.env
+.env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# শুধুমাত্র .env.example গিটহাবে থাকবে যাতে অন্যরা ফরম্যাট বুঝতে পারে
 !.env.example
+
+# 🧪 Testing & Code Coverage (টেস্টিং ও কভারেজ রিপোর্ট)
+/coverage
+*.lcov
+/.nyc_output
+
+# 📋 Debug Logs (লগ ফাইল ও ত্রুটির রেকর্ড)
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# 💻 IDE & Text Editors (ব্যক্তিগত কোড এডিটর সেটিংস)
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*~
+
+# 🖥️ Operating System Files (অপারেটিং সিস্টেম ক্যাশ ও থাম্বনেইল)
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ⚡ Vercel & Firebase Deployments
+.vercel
+.turbo
+.firebase/
+
+# 🗄️ Database & Local State Cache
+*.sqlite
+*.sqlite3
+*.db
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+
+# 📁 Temporary Files (অস্থায়ী ফাইল ও স্ক্র্যাচ)
+tmp/
+temp/
+*.zip
+*.tar.gz
