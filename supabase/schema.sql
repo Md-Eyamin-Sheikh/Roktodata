@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS public.donor_profiles (
   is_fast_responder BOOLEAN DEFAULT false,
   national_id_verified BOOLEAN DEFAULT false,
   privacy_hide_phone BOOLEAN DEFAULT true,
+  reward_points INTEGER DEFAULT 100,
+  badges JSONB DEFAULT '["নতুন সদস্য"]'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -156,12 +158,12 @@ CREATE INDEX IF NOT EXISTS idx_hospitals_gps ON public.hospitals_and_banks(latit
 -- =========================================================================
 CREATE TABLE IF NOT EXISTS public.blood_inventory (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  facility_id UUID REFERENCES public.hospitals_and_banks(id) ON DELETE CASCADE NOT NULL,
+  hospital_id UUID REFERENCES public.hospitals_and_banks(id) ON DELETE CASCADE NOT NULL,
   blood_group VARCHAR(5) NOT NULL CHECK (blood_group IN ('A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-')),
   units_available INTEGER DEFAULT 0 CHECK (units_available >= 0),
   status VARCHAR(20) DEFAULT 'available' CHECK (status IN ('available', 'low', 'critical', 'empty')),
   last_updated TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(facility_id, blood_group)
+  UNIQUE(hospital_id, blood_group)
 );
 
 -- =========================================================================
@@ -217,7 +219,7 @@ CREATE TABLE IF NOT EXISTS public.donation_history (
 
 CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
   category VARCHAR(20) DEFAULT 'urgent' CHECK (category IN ('urgent', 'my-req', 'camp', 'badge')),
   title VARCHAR(200) NOT NULL,
   description TEXT NOT NULL,

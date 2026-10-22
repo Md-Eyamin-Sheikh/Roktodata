@@ -13,7 +13,8 @@ export async function GET() {
     }, { status: 500 });
   }
 
-  const supabase = createClient(url, anonKey);
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || '';
+  const supabase = createClient(url, serviceKey || anonKey);
 
   try {
     const [

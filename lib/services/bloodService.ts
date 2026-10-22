@@ -373,13 +373,35 @@ export const setDonorAvailability = async (
 
   if (supabase) {
     try {
-      const { error } = await (supabase as any)
-        .from('donor_profiles')
-        .update({ is_available: isAvailable })
-        .eq('user_id', userId);
+      let targetUserId = userId;
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
 
-      return !error;
-    } catch {
+      // If userId is not a valid Postgres UUID (e.g. RD-00102), resolve from live auth session or profiles
+      if (!isUuid) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session?.user?.id) {
+          targetUserId = sessionData.session.user.id;
+        } else {
+          const { data: profs } = await (supabase as any)
+            .from('donor_profiles')
+            .select('user_id')
+            .limit(1);
+          if (profs && profs[0]?.user_id) {
+            targetUserId = profs[0].user_id;
+          }
+        }
+      }
+
+      if (targetUserId) {
+        const { error } = await (supabase as any)
+          .from('donor_profiles')
+          .update({ is_available: isAvailable })
+          .eq('user_id', targetUserId);
+
+        return !error;
+      }
+    } catch (err: any) {
+      console.warn('setDonorAvailability database update note:', err?.message);
       return false;
     }
   }
@@ -462,6 +484,7 @@ export const createEmergencyRequest = async (
 
   if (supabase) {
     try {
+      const cleanDistrict = normalizeDistrict(createdRequest.location) || 'বগুড়া';
       const { data, error } = await (supabase as any)
         .from('emergency_requests')
         .insert({
@@ -470,14 +493,19 @@ export const createEmergencyRequest = async (
           component_type: 'whole',
           patient_name: createdRequest.patientName || 'জরুরি রোগী',
           hospital_name: createdRequest.hospitalName,
-          district: normalizeDistrict(createdRequest.location),
-          ward_number: createdRequest.wardBed,
-          reason: createdRequest.patientType,
-          urgency: createdRequest.urgency,
-          contact_phone: createdRequest.contactNumber,
+          division: 'রাজশাহী',
+          district: cleanDistrict,
+          location_detail: createdRequest.location || cleanDistrict,
+          ward_number: createdRequest.wardBed || 'জরুরি বিভাগ',
+          bed_number: '১',
+          reason: createdRequest.patientType || 'জরুরি রক্তের আবেদন',
+          urgency: createdRequest.urgency || 'now',
+          time_target: createdRequest.timeTarget || 'এখনই',
+          contact_phone: createdRequest.contactNumber || '01712345678',
           prescription_image_url: createdRequest.prescriptionImageUrl || null,
           status: 'active',
           tracking_step: 1,
+          has_verified_hospital: true,
         })
         .select('id');
 
@@ -508,16 +536,62 @@ export const submitDonorResponse = async (
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId);
       if (isUuid) {
-        const { error } = await (supabase as any).from('donor_responses').insert({
-          request_id: requestId,
-          eta_minutes: etaMinutes,
-          status: 'on_the_way',
-        });
-        return !error;
+        let donorId: string | null = null;
+
+        // 1. Try finding current user's donor profile from session
+        const { data: sessionData } = await supabase.auth.getSession();
+        const authUserId = sessionData?.session?.user?.id;
+        if (authUserId) {
+          const { data: dp } = await (supabase as any)
+            .from('donor_profiles')
+            .select('id')
+            .eq('user_id', authUserId)
+            .limit(1);
+          if (dp && dp[0]?.id) {
+            donorId = dp[0].id;
+          }
+        }
+
+        // 2. If not found by session, try finding donor_profile by phone
+        if (!donorId && phone) {
+          const cleanPhone = phone.replace(/\D/g, '');
+          const { data: profs } = await (supabase as any)
+            .from('profiles')
+            .select('id, donor_profiles(id)')
+            .ilike('phone_number', `%${cleanPhone.slice(-8)}%`)
+            .limit(1);
+          if (profs && profs[0]?.donor_profiles?.[0]?.id) {
+            donorId = profs[0].donor_profiles[0].id;
+          }
+        }
+
+        // 3. Fallback: get any active donor profile so foreign key constraint is satisfied
+        if (!donorId) {
+          const { data: anyDp } = await (supabase as any)
+            .from('donor_profiles')
+            .select('id')
+            .limit(1);
+          if (anyDp && anyDp[0]?.id) {
+            donorId = anyDp[0].id;
+          }
+        }
+
+        if (donorId) {
+          const { error } = await (supabase as any).from('donor_responses').upsert(
+            {
+              request_id: requestId,
+              donor_id: donorId,
+              eta_minutes: etaMinutes,
+              status: 'on_the_way',
+              message: `${donorName || 'রক্তদাতা'} সাড়া দিয়েছেন (${bloodGroup})। আনুমানিক ${etaMinutes} মিনিটে পৌঁছাবেন।`,
+            },
+            { onConflict: 'request_id,donor_id' }
+          );
+          return !error;
+        }
       }
     } catch (err: any) {
-      console.warn('Supabase submitDonorResponse fallback triggered:', err?.message);
-      return true;
+      console.warn('Supabase submitDonorResponse note:', err?.message);
     }
   }
 

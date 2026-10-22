@@ -14,6 +14,13 @@
 -- =========================================================================
 -- অপশন ১: সবচেয়ে সহজ ও নিশ্চিত পদ্ধতি (Disable RLS for open write/read)
 -- =========================================================================
+-- কলাম মিসম্যাচ সংশোধন (Auto-repair columns)
+ALTER TABLE IF EXISTS public.donor_profiles ADD COLUMN IF NOT EXISTS reward_points INTEGER DEFAULT 100;
+ALTER TABLE IF EXISTS public.donor_profiles ADD COLUMN IF NOT EXISTS badges JSONB DEFAULT '["নতুন সদস্য"]'::jsonb;
+ALTER TABLE IF EXISTS public.blood_inventory ADD COLUMN IF NOT EXISTS hospital_id UUID REFERENCES public.hospitals_and_banks(id) ON DELETE CASCADE;
+ALTER TABLE IF EXISTS public.notifications ALTER COLUMN user_id DROP NOT NULL;
+
+-- আরএলএস নিষ্ক্রিয়করণ ও ফুল পারমিশন গ্রান্ট
 ALTER TABLE IF EXISTS public.emergency_requests DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.profiles DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.donor_profiles DISABLE ROW LEVEL SECURITY;
@@ -24,6 +31,10 @@ ALTER TABLE IF EXISTS public.ambulances DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.donation_camps DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.donation_history DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.notifications DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.districts DISABLE ROW LEVEL SECURITY;
+
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 
 -- =========================================================================
 -- অপশন ২: অথবা RLS চালু রেখে সকল পারমিশন উন্মুক্ত রাখা (Permissive Policies)

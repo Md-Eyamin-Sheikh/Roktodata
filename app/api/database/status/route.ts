@@ -15,7 +15,8 @@ export async function GET() {
     });
   }
 
-  const client = createClient(url, anonKey);
+  const clientKey = serviceKey || anonKey;
+  const client = createClient(url, clientKey);
 
   // 1. Check Tables and Row Counts
   const tables = [
