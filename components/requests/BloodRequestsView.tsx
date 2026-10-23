@@ -22,22 +22,27 @@ import {
   ChevronRight,
   Navigation,
   Activity,
+  ShieldAlert,
+  X,
 } from 'lucide-react';
 import { EmergencyRequest, RespondingDonor, BloodGroup } from '@/lib/types';
 import { toBengaliDigits } from '@/lib/bengali-utils';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { getTransportLabel } from '@/lib/services/bloodService';
 
 interface BloodRequestsViewProps {
   myRequest: EmergencyRequest | null;
   nearbyRequests: EmergencyRequest[];
   respondingDonors: RespondingDonor[];
   onConfirmDonor: (donorId: string) => void;
+  onDeclineDonor?: (donorId: string) => void;
+  onOpenDonorResponse: (req: EmergencyRequest) => void;
   onCloseRequest: () => void;
   onShareRequest: () => void;
   onFindMoreDonors: () => void;
   onTabSelectRequestForm: () => void;
   onOpenChat: (donor: RespondingDonor) => void;
-  onOpenReport: (donorName: string) => void;
+  onOpenReport: (targetName: string, targetUserId?: string, requestId?: string) => void;
   onOpenVerificationExplainer?: () => void;
 }
 
@@ -46,6 +51,8 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
   nearbyRequests,
   respondingDonors,
   onConfirmDonor,
+  onDeclineDonor,
+  onOpenDonorResponse,
   onCloseRequest,
   onShareRequest,
   onFindMoreDonors,
@@ -174,6 +181,32 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                   {/* Top Status Gradient Bar */}
                   <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#C41E3A] via-[#E53935] to-[#FF8A80]" />
 
+                  {/* Request ID & Status Badge Banner */}
+                  <div className="flex items-center justify-between bg-[#FAF9FB] px-3 py-1.5 rounded-xl border border-[#E4E6EB]/60 text-xs mt-1">
+                    <span className="font-mono text-[#5B5F6B] text-[11px]">
+                      আইডি: <strong className="text-[#1B1B1F]">{myRequest.id}</strong>
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider ${
+                      myRequest.status === 'open' || myRequest.status === 'active'
+                        ? 'bg-[#DCFCE7] text-[#166534]'
+                        : myRequest.status === 'partially_fulfilled'
+                        ? 'bg-[#FEF3C7] text-[#92400E]'
+                        : myRequest.status === 'fulfilled'
+                        ? 'bg-[#DBEAFE] text-[#1E40AF]'
+                        : 'bg-[#F3F4F6] text-[#4B5563]'
+                    }`}>
+                      {myRequest.status === 'open'
+                        ? '● উন্মুক্ত (Open)'
+                        : myRequest.status === 'partially_fulfilled'
+                        ? `● আংশিক পূরণ (${toBengaliDigits(myRequest.bagsFulfilled || 1)}/${toBengaliDigits(myRequest.bagsNeeded)} ব্যাগ)`
+                        : myRequest.status === 'fulfilled'
+                        ? '✓ সম্পন্ন (Fulfilled)'
+                        : myRequest.status === 'cancelled'
+                        ? 'বাতিল (Cancelled)'
+                        : 'সক্রিয় (Active)'}
+                    </span>
+                  </div>
+
                   {/* Header: Blood Group, Hospital, Urgency */}
                   <div className="flex items-start justify-between gap-3 pt-1">
                     <div className="flex items-start gap-3">
@@ -222,6 +255,24 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                       </span>
                     </div>
                   </div>
+
+                  {/* Prescription Attachment Preview Badge if available */}
+                  {(myRequest.prescriptionImageUrl || (myRequest as any).prescriptionSignedUrl) && (
+                    <div className="p-2.5 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2 text-[#166534] font-bold">
+                        <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
+                        <span>ডাক্তারের প্রেসক্রিপশন স্লিপ সংযুক্ত আছে</span>
+                      </div>
+                      <a
+                        href={myRequest.prescriptionImageUrl || (myRequest as any).prescriptionSignedUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] font-bold text-[#0D58C9] hover:underline"
+                      >
+                        ছবি দেখুন
+                      </a>
+                    </div>
+                  )}
 
                   {/* Live Search Radar Banner */}
                   <div className="flex items-center justify-between bg-gradient-to-r from-[#F0FDF4] to-[#DCFCE7] border border-[#BBF7D0] rounded-2xl p-3">
@@ -360,16 +411,27 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                   </span>
                 </div>
 
+                {/* Medical Advisory Banner for Blood Matching & Hospital Cross-matching */}
+                <div className="bg-[#FFF8E1] border border-[#FFE082] rounded-2xl p-3 flex items-start gap-2.5 text-xs text-[#7A4F01]">
+                  <ShieldAlert className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
+                  <p className="leading-relaxed">
+                    <span className="font-bold">চিকিৎসাগত সতর্কতা ও নির্দেশনা:</span> রক্তের সামঞ্জস্যতা ও সাড়া কেবল প্রাথমিক নির্দেশনামূলক। হাসপাতালে রক্ত সঞ্চালনের পূর্বে সংশ্লিষ্ট ল্যাবরেটরি ও চিকিৎসকের উপস্থিতিতে রক্তের ক্রস-ম্যাচিং (Major & Minor Cross-match) এবং স্বাস্থ্য স্ক্রিনিং পরীক্ষা বাধ্যতামূলক।
+                  </p>
+                </div>
+
                 {respondingDonors.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3.5">
                     {respondingDonors.map((donor) => {
                       const isConfirmed = confirmedDonorId === donor.id || donor.status === 'confirmed';
+                      const isDeclined = donor.status === 'declined' || donor.status === 'cancelled';
                       return (
                         <div
                           key={donor.id}
                           className={`bg-white rounded-3xl p-4 sm:p-5 shadow-xs border transition-all flex flex-col justify-between ${
                             isConfirmed
                               ? 'border-[#16A34A] ring-2 ring-[#DCFCE7]'
+                              : isDeclined
+                              ? 'border-[#E4E6EB] opacity-60 bg-[#FAFAFA]'
                               : 'border-[#E4E6EB]/80 hover:border-[#C41E3A]/40'
                           }`}
                         >
@@ -389,7 +451,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                                 </div>
 
                                 <div>
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
                                     <h4 className="font-bold text-[15px] sm:text-[16px] text-[#1B1B1F]">
                                       {donor.name}
                                     </h4>
@@ -398,6 +460,13 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                                         যাচাইকৃত
                                       </span>
                                     )}
+                                    <button
+                                      onClick={() => onOpenReport(donor.name, donor.id, myRequest?.id)}
+                                      className="text-[#BA1A1A] hover:bg-[#FFDAD6]/40 p-1 rounded-lg text-[10px] font-semibold flex items-center gap-0.5 cursor-pointer ml-1"
+                                      title="রিপোর্ট বা অভিযোগ জানান"
+                                    >
+                                      <AlertCircle className="w-3.5 h-3.5" />
+                                    </button>
                                   </div>
                                   <p className="text-xs text-[#5B5F6B] mt-0.5 flex items-center gap-1">
                                     <Navigation className="w-3 h-3 text-[#16A34A]" />
@@ -411,21 +480,45 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                                   </p>
                                 </div>
                               </div>
+
+                              {/* Status Badge */}
+                              <span
+                                className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${
+                                  isConfirmed
+                                    ? 'bg-[#DCFCE7] text-[#166534]'
+                                    : donor.status === 'on_the_way'
+                                    ? 'bg-[#FEF3C7] text-[#92400E]'
+                                    : isDeclined
+                                    ? 'bg-[#FEE2E2] text-[#991B1B]'
+                                    : 'bg-[#EFF6FF] text-[#1D4ED8]'
+                                }`}
+                              >
+                                {isConfirmed
+                                  ? '✓ নিশ্চিত'
+                                  : donor.status === 'on_the_way'
+                                  ? 'হাসপাতালের পথে'
+                                  : isDeclined
+                                  ? 'বাতিল'
+                                  : 'অনুরোধ গৃহীত'}
+                              </span>
                             </div>
 
                             {/* Tags & Highlights */}
-                            <div className="flex items-center gap-2 mt-3 flex-wrap">
-                              <span className="text-[11px] bg-[#F7F7F9] text-[#5B5F6B] px-2.5 py-1 rounded-full font-semibold border border-[#E4E6EB]/50">
-                                {toBengaliDigits(donor.totalDonations ?? 4)} বার রক্তদান করেছেন
+                            <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                              {/* Transport Mode Tag */}
+                              <span className="text-[11px] bg-[#F7F7F9] text-[#1B1B1F] px-2.5 py-1 rounded-full font-semibold border border-[#E4E6EB]/60 flex items-center gap-1">
+                                <span>{donor.transportLabel || getTransportLabel(donor.transportMode)}</span>
                               </span>
+
+                              <span className="text-[11px] bg-[#F7F7F9] text-[#5B5F6B] px-2 py-1 rounded-full font-semibold border border-[#E4E6EB]/50">
+                                {toBengaliDigits(donor.totalDonations ?? 4)} বার রক্তদান
+                              </span>
+
                               {donor.lastDonationMonths && (
-                                <span className="text-[11px] bg-[#F7F7F9] text-[#5B5F6B] px-2.5 py-1 rounded-full font-semibold border border-[#E4E6EB]/50">
+                                <span className="text-[11px] bg-[#F7F7F9] text-[#5B5F6B] px-2 py-1 rounded-full font-semibold border border-[#E4E6EB]/50">
                                   শেষ দান: {toBengaliDigits(donor.lastDonationMonths)} মাস আগে
                                 </span>
                               )}
-                              <span className="text-[11px] bg-[#DCFCE7] text-[#166534] px-2 py-0.5 rounded-full font-bold">
-                                ⚡ প্রস্তুত
-                              </span>
                             </div>
                           </div>
 
@@ -449,15 +542,28 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
 
                             <button
                               onClick={() => handleConfirm(donor.id, donor.name)}
-                              className={`col-span-6 h-10 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all active:scale-95 shadow-xs cursor-pointer ${
+                              disabled={isConfirmed || isDeclined}
+                              className={`col-span-5 h-10 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all active:scale-95 shadow-xs cursor-pointer ${
                                 isConfirmed
-                                  ? 'bg-[#16A34A] text-white shadow-xs'
+                                  ? 'bg-[#16A34A] text-white shadow-xs opacity-90'
+                                  : isDeclined
+                                  ? 'bg-[#E4E6EB] text-[#5B5F6B] cursor-not-allowed'
                                   : 'bg-gradient-to-r from-[#9E0027] to-[#C41E3A] hover:from-[#80001F] hover:to-[#B01A33] text-white'
                               }`}
                             >
                               <UserCheck className="w-4 h-4" />
-                              <span>{isConfirmed ? 'ডোনার নিশ্চিত' : 'ডোনার নিশ্চিত করুন'}</span>
+                              <span className="truncate">{isConfirmed ? 'রক্তদান নিশ্চিত' : 'ডোনার নিশ্চিত'}</span>
                             </button>
+
+                            {onDeclineDonor && !isConfirmed && !isDeclined && (
+                              <button
+                                onClick={() => onDeclineDonor(donor.id)}
+                                title="প্রত্যাখ্যান করুন"
+                                className="col-span-1 h-10 rounded-xl bg-[#F7F7F9] hover:bg-[#FEE2E2] text-[#5B5F6B] hover:text-[#BA1A1A] border border-[#E4E6EB]/60 flex items-center justify-center transition-all cursor-pointer"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
@@ -638,6 +744,14 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
             </span>
           </div>
 
+          {/* Clinical Cross-matching Advisory */}
+          <div className="bg-[#FFF8E1] border border-[#FFE082] rounded-2xl p-3 flex items-start gap-2.5 text-xs text-[#7A4F01]">
+            <ShieldAlert className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              <span className="font-bold">চিকিৎসাগত নির্দেশিকা:</span> রক্তদানের পূর্বে সংশ্লিষ্ট হাসপাতালে চিকিৎসক ও ল্যাবরেটরি কর্তৃক রক্তের ক্রস-ম্যাচিং (Major & Minor Cross-match) সম্পন্ন করা বাধ্যতামূলক। পূর্ববর্তী রক্তদানের পর পুরুষের ক্ষেত্রে ৯০ দিন ও নারীদের ক্ষেত্রে ১২০ দিন অতিবাহিত হতে হবে।
+            </p>
+          </div>
+
           {/* Grid of Nearby Requests (1-col mobile, 2-col tablet, 3-col desktop) */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredNearby.map((req) => (
@@ -690,18 +804,35 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                 {/* Footer Action */}
                 <div className="flex items-center justify-between pt-3 mt-3 border-t border-[#E4E6EB]/60">
                   <span className="text-xs text-[#5B5F6B]">{req.createdAt}</span>
-                  <button
-                    onClick={() =>
-                      alert(
-                        language === 'bn'
-                          ? `${req.hospitalName}-এর ${req.bloodGroup} রক্তের প্রয়োজনে সাড়া দেওয়ার আবেদন সম্পন্ন হয়েছে!`
-                          : `Response submitted for ${req.bloodGroup} at ${req.hospitalName}!`
-                      )
-                    }
-                    className="h-9 px-4 bg-gradient-to-r from-[#9E0027] to-[#C41E3A] hover:from-[#80001F] hover:to-[#B01A33] text-white rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
-                  >
-                    {language === 'bn' ? 'সাড়া দিন' : 'Respond'}
-                  </button>
+                  {req.status === 'fulfilled' ? (
+                    <span className="px-3 py-1.5 bg-[#DCFCE7] text-[#166534] rounded-xl text-xs font-bold">
+                      {language === 'bn' ? '✓ রক্ত পাওয়া সম্পন্ন' : 'Fulfilled'}
+                    </span>
+                  ) : req.status === 'cancelled' ? (
+                    <span className="px-3 py-1.5 bg-[#F0EDF2] text-[#5B5F6B] rounded-xl text-xs font-bold">
+                      {language === 'bn' ? 'অনুরোধটি বাতিল' : 'Cancelled'}
+                    </span>
+                  ) : req.hasResponded ? (
+                    <button
+                      onClick={() => onOpenDonorResponse(req)}
+                      className="h-9 px-3.5 bg-[#EBF3FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] text-[#0D58C9] rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>
+                        {language === 'bn'
+                          ? `সাড়া দিয়েছেন (${toBengaliDigits(req.userResponseEta || 30)}মি)`
+                          : `Responded (${req.userResponseEta || 30}m)`}
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => onOpenDonorResponse(req)}
+                      className="h-9 px-4 bg-gradient-to-r from-[#9E0027] to-[#C41E3A] hover:from-[#80001F] hover:to-[#B01A33] text-white rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Heart className="w-3.5 h-3.5 fill-current" />
+                      <span>{language === 'bn' ? 'সাড়া দিন' : 'Respond'}</span>
+                    </button>
+                  )}
                 </div>
               </article>
             ))}

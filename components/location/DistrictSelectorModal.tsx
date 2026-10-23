@@ -54,7 +54,7 @@ export const DistrictSelectorModal: React.FC<DistrictSelectorModalProps> = ({
     let isMounted = true;
 
     fetchDistrictLiveMetrics()
-      .then((data) => {
+      .then((data: Record<string, DistrictMetric>) => {
         if (isMounted) {
           setMetrics(data);
           setIsLoadingMetrics(false);

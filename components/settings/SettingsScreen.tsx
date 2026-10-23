@@ -26,12 +26,14 @@ import {
   Phone,
   ShieldAlert,
   CheckCircle2,
-  Database
+  Database,
+  Type
 } from 'lucide-react';
 import { UserProfile } from '@/lib/types';
 import { toBengaliDigits } from '@/lib/bengali-utils';
 import { useToast } from '@/components/ui/ToastNotification';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { updateAuthenticatedUser } from '@/lib/services/authService';
 
 interface SettingsScreenProps {
   userProfile: UserProfile;
@@ -59,6 +61,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   );
   const [reducedMotion, setReducedMotion] = useState<boolean>(userProfile.reducedMotion || false);
   const [quietHours, setQuietHours] = useState<boolean>(userProfile.quietHoursEnabled ?? true);
+  const [textSize, setTextSize] = useState<'100%' | '125%' | '150%'>(userProfile.textSize || '100%');
 
   // Pause duration state
   const [pauseDays, setPauseDays] = useState<number | null>(null);
@@ -144,6 +147,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       // Section 4: Display & Language
       secPref: 'ভাষা ও ডিসপ্লে',
       langTitle: 'ভাষা পরিবর্তন (Language)',
+      fontSizeTitle: 'ফন্টের আকার ও স্কেলিং (Text Size)',
+      fontSizeDesc: 'টেক্সট ও বাটনগুলো সহজে পড়ার জন্য আপনার উপযোগী আকার বেছে নিন',
+      fontSize100: 'ছোট (১০০%)',
+      fontSize125: 'স্বাভাবিক (১২৫%)',
+      fontSize150: 'বড় (১৫০%)',
       motionTitle: 'হালকা অ্যানিমেশন (Reduced Motion)',
       motionDesc: 'সব ডিভাইসে মসৃণ গতি ও ব্যাটারি সাশ্রয়ী অভিজ্ঞতা',
 
@@ -223,6 +231,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       // Section 4: Display & Language
       secPref: 'Language & Display',
       langTitle: 'Language (ভাষা)',
+      fontSizeTitle: 'Text Size Scaling',
+      fontSizeDesc: 'Adjust comfortable typography scale across all screens',
+      fontSize100: 'Normal (100%)',
+      fontSize125: 'Medium (125%)',
+      fontSize150: 'Large (150%)',
       motionTitle: 'Reduced Motion',
       motionDesc: 'Smoother performance and lower battery consumption on all devices',
 
@@ -246,7 +259,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const handleToggleLanguage = (newLang: 'bn' | 'en') => {
     setGlobalLanguage(newLang);
     onUpdateProfile({ language: newLang });
+    updateAuthenticatedUser({ language: newLang });
     showToast(newLang === 'en' ? 'Language switched to English' : 'ভাষা পরিবর্তিত হয়েছে: বাংলা', 'success');
+  };
+
+  // 1b. Font Size Scaling
+  const handleSelectTextSize = (size: '100%' | '125%' | '150%') => {
+    setTextSize(size);
+    onUpdateProfile({ textSize: size });
+    updateAuthenticatedUser({ textSize: size });
+    showToast(
+      language === 'bn'
+        ? `ফন্টের আকার ${size === '100%' ? 'ছোট (১০০%)' : size === '125%' ? 'স্বাভাবিক (১২৫%)' : 'বড় (১৫০%)'} নির্ধারণ করা হয়েছে।`
+        : `Font size updated to ${size}.`,
+      'success'
+    );
   };
 
   // 2. Master Availability Toggle
@@ -810,6 +837,88 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               <h2 className="font-extrabold text-[15px] sm:text-[16px] text-[#1B1B1F] leading-tight">
                 {cur.secPref}
               </h2>
+            </div>
+          </div>
+
+          {/* Bilingual Language Selection */}
+          <div className="p-3.5 rounded-2xl bg-[#FAF9FB] border border-[#E4E6EB]/70 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Languages className="w-4 h-4 text-[#7B1FA2]" />
+                <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F]">
+                  {cur.langTitle}
+                </span>
+              </div>
+              <span className="text-xs font-bold text-[#7B1FA2] bg-[#F3E5F5] px-2.5 py-0.5 rounded-full">
+                {language === 'bn' ? 'বাংলা' : 'English'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleToggleLanguage('bn')}
+                className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center justify-center gap-1.5 ${
+                  language === 'bn'
+                    ? 'bg-[#C41E3A] text-white border-[#C41E3A] shadow-xs'
+                    : 'bg-white border-[#E4E6EB] text-[#1B1B1F] hover:bg-[#F7F7F9]'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span>বাংলা (BN)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleLanguage('en')}
+                className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center justify-center gap-1.5 ${
+                  language === 'en'
+                    ? 'bg-[#C41E3A] text-white border-[#C41E3A] shadow-xs'
+                    : 'bg-white border-[#E4E6EB] text-[#1B1B1F] hover:bg-[#F7F7F9]'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-blue-400" />
+                <span>English (EN)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Font Size Scaling */}
+          <div className="p-3.5 rounded-2xl bg-[#FAF9FB] border border-[#E4E6EB]/70 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Type className="w-4 h-4 text-[#0D58C9]" />
+                <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F]">
+                  {cur.fontSizeTitle}
+                </span>
+              </div>
+              <span className="text-xs font-black text-[#0D58C9] bg-[#E8F0FE] px-2.5 py-0.5 rounded-full">
+                {textSize}
+              </span>
+            </div>
+
+            <p className="text-[11px] text-[#5B5F6B]">
+              {cur.fontSizeDesc}
+            </p>
+
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { size: '100%' as const, label: cur.fontSize100 },
+                { size: '125%' as const, label: cur.fontSize125 },
+                { size: '150%' as const, label: cur.fontSize150 },
+              ].map((item) => (
+                <button
+                  key={item.size}
+                  type="button"
+                  onClick={() => handleSelectTextSize(item.size)}
+                  className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer border text-center ${
+                    textSize === item.size
+                      ? 'bg-[#0D58C9] text-white border-[#0D58C9] shadow-xs'
+                      : 'bg-white border-[#E4E6EB] text-[#1B1B1F] hover:bg-[#F7F7F9]'
+                  }`}
+                >
+                  <span>{item.label}</span>
+                </button>
+              ))}
             </div>
           </div>
 

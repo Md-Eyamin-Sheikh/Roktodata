@@ -20,9 +20,17 @@ import {
   Check,
   ChevronRight,
   ShieldCheck,
+  ShieldAlert,
+  Lock,
+  Key,
   UserCheck,
   History,
   HeartHandshake,
+  MessageSquare,
+  AlertTriangle,
+  Bookmark,
+  CheckSquare,
+  Radio,
   X
 } from 'lucide-react';
 
@@ -53,17 +61,42 @@ export const LiveDatabaseViewer: React.FC<LiveDatabaseViewerProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedSql, setCopiedSql] = useState(false);
   const [showSqlModal, setShowSqlModal] = useState(false);
+  const [adminKey, setAdminKey] = useState<string>('');
+  const [inputKey, setInputKey] = useState('');
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  const fetchTables = async () => {
+  const fetchTables = async (keyToUse?: string) => {
+    const key = keyToUse !== undefined ? keyToUse : adminKey;
+    if (!key) {
+      setIsUnlocked(false);
+      return;
+    }
     setLoading(true);
+    setAuthError(null);
     try {
-      const res = await fetch('/api/database/tables');
+      const res = await fetch('/api/database/tables', {
+        headers: {
+          'x-admin-key': key,
+        },
+      });
       const json = await res.json();
-      if (json.success && json.tables) {
+      if (res.status === 403 || !json.success) {
+        setIsUnlocked(false);
+        setAuthError(json.error || 'ভুল অ্যাডমিন কী। অ্যাক্সেস প্রত্যাখ্যান করা হয়েছে।');
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('roktodata_admin_key');
+        }
+      } else if (json.success && json.tables) {
         setTablesData(json.tables);
+        setIsUnlocked(true);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('roktodata_admin_key', key);
+        }
       }
     } catch (e) {
       console.error('Failed to fetch tables:', e);
+      setAuthError('সার্ভারের সাথে সংযোগ ব্যর্থ হয়েছে।');
     } finally {
       setLoading(false);
     }
@@ -71,7 +104,13 @@ export const LiveDatabaseViewer: React.FC<LiveDatabaseViewerProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      fetchTables();
+      const storedKey = typeof window !== 'undefined' ? sessionStorage.getItem('roktodata_admin_key') || '' : '';
+      if (storedKey) {
+        setAdminKey(storedKey);
+        fetchTables(storedKey);
+      } else {
+        setIsUnlocked(false);
+      }
     }
   }, [isOpen]);
 
@@ -98,32 +137,23 @@ export const LiveDatabaseViewer: React.FC<LiveDatabaseViewerProps> = ({
     { id: 'donor_responses', label: 'ডোনার সাড়া', icon: HeartHandshake, color: 'text-[#EC4899]' },
     { id: 'donation_history', label: 'রক্তদান ইতিহাস', icon: History, color: 'text-[#6366F1]' },
     { id: 'notifications', label: 'নোটিফিকেশন', icon: Bell, color: 'text-[#F59E0B]' },
+    { id: 'chat_messages', label: 'চ্যাট মেসেজ', icon: MessageSquare, color: 'text-[#0284C7]' },
+    { id: 'reports', label: 'অভিযোগ রিপোর্ট', icon: AlertTriangle, color: 'text-[#DC2626]' },
+    { id: 'donor_bookmarks', label: 'বুকমার্কস', icon: Bookmark, color: 'text-[#9333EA]' },
+    { id: 'campaign_rsvps', label: 'ক্যাম্প RSVP', icon: CheckSquare, color: 'text-[#059669]' },
+    { id: 'push_subscriptions', label: 'পুশ সাবস্ক্রিপশন', icon: Radio, color: 'text-[#4F46E5]' },
     { id: 'districts', label: 'জেলা তালিকা', icon: MapPin, color: 'text-[#2563EB]' },
   ];
 
   const handleCopySql = () => {
     const sql = `-- =========================================================================
--- রক্তদাতা (Roktodata) — সব টেবিল সিডিং স্ক্রিপ্ট (Supabase SQL Editor)
+-- রক্তদাতা (Roktodata) — নিরাপদ RLS ও অ্যাক্সেস পলিসি নির্দেশিকা
 -- =========================================================================
-ALTER TABLE IF EXISTS public.districts DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;
-ALTER TABLE IF EXISTS public.profiles DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.donor_profiles DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.donor_responses DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.donation_history DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.notifications DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.emergency_requests DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.hospitals_and_banks DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.blood_inventory DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.ambulances DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.donation_camps DISABLE ROW LEVEL SECURITY;
-
-INSERT INTO public.profiles (id, phone_number, full_name, blood_group, division, district, is_verified)
-VALUES
-  ('11111111-1111-1111-1111-111111111101', '01712000201', 'তানভীর হাসান', 'A+', 'রাজশাহী', 'বগুড়া', true),
-  ('11111111-1111-1111-1111-111111111102', '01712000202', 'সাকিব আল হাসান', 'O+', 'ঢাকা', 'ঢাকা', true),
-  ('11111111-1111-1111-1111-111111111103', '01712000203', 'মো: আরিফুল ইসলাম', 'B+', 'রাজশাহী', 'বগুড়া', true)
-ON CONFLICT (id) DO NOTHING;`;
+-- সম্পূর্ণ প্রডাকশন গ্রেড RLS পলিসি স্ক্রিপ্টটি রয়েছে:
+-- supabase/rls_secure_policies.sql
+--
+-- অনুগ্রহ করে Supabase Dashboard -> SQL Editor এ গিয়ে
+-- supabase/rls_secure_policies.sql কোডটি রান করুন।`;
 
     navigator.clipboard.writeText(sql);
     setCopiedSql(true);
@@ -156,9 +186,24 @@ ON CONFLICT (id) DO NOTHING;`;
           </div>
 
           <div className="flex items-center gap-2">
+            {isUnlocked && (
+              <button
+                onClick={() => {
+                  if (typeof window !== 'undefined') sessionStorage.removeItem('roktodata_admin_key');
+                  setIsUnlocked(false);
+                  setTablesData(null);
+                }}
+                title="লক করুন"
+                className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+              >
+                <Lock className="w-4 h-4 text-amber-300" />
+                <span className="hidden sm:inline">লক</span>
+              </button>
+            )}
+
             <button
-              onClick={fetchTables}
-              disabled={loading}
+              onClick={() => fetchTables()}
+              disabled={loading || !isUnlocked}
               title="রিফ্রেশ করুন"
               className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold disabled:opacity-50"
             >
@@ -183,8 +228,61 @@ ON CONFLICT (id) DO NOTHING;`;
           </div>
         </div>
 
-        {/* Tab Horizontal Scroller */}
-        <div className="px-4 py-3 bg-[#FAF9FB] border-b border-[#E4E6EB] shrink-0 overflow-x-auto flex gap-2 scrollbar-none">
+        {!isUnlocked ? (
+          <div className="flex-1 p-6 flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-4">
+            <div className="w-16 h-16 rounded-3xl bg-[#FDECEF] text-[#C41E3A] flex items-center justify-center shadow-xs">
+              <ShieldAlert className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-base sm:text-lg text-[#1B1B1F]">
+                অ্যাডমিন ও ডেভেলপার প্রমাণীকরণ
+              </h3>
+              <p className="text-xs text-[#5B5F6B] mt-1.5 leading-relaxed">
+                রোগীর সংবেদনশীল তথ্য, রক্তের অনুরোধ ও ফোন নম্বরের গোপনীয়তা সুরক্ষায় এই ডেটাবেস ভিউয়ারটি শুধুমাত্র সিস্টেম অ্যাডমিনদের জন্য সংরক্ষিত।
+              </p>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setAdminKey(inputKey);
+                fetchTables(inputKey);
+              }}
+              className="w-full space-y-3 pt-2"
+            >
+              <div className="relative">
+                <Lock className="w-4 h-4 text-[#5B5F6B] absolute left-3.5 top-3.5" />
+                <input
+                  type="password"
+                  value={inputKey}
+                  onChange={(e) => setInputKey(e.target.value)}
+                  placeholder="অ্যাডমিন কী (Admin Key) লিখুন..."
+                  className="w-full h-11 pl-10 pr-3 rounded-2xl bg-[#F7F7F9] border border-[#E4E6EB] text-xs font-mono outline-none focus:border-[#C41E3A] focus:ring-1 focus:ring-[#C41E3A]"
+                  autoFocus
+                />
+              </div>
+
+              {authError && (
+                <div className="p-2.5 rounded-xl bg-[#FFDAD6]/50 border border-[#FFDAD6] text-[#BA1A1A] text-xs font-medium flex items-center gap-1.5 text-left">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{authError}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading || !inputKey.trim()}
+                className="w-full h-11 rounded-2xl bg-[#1B1B1F] hover:bg-[#2D2D35] text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                <span>কনসোল আনলক করুন</span>
+              </button>
+            </form>
+          </div>
+        ) : (
+          <>
+            {/* Tab Horizontal Scroller */}
+            <div className="px-4 py-3 bg-[#FAF9FB] border-b border-[#E4E6EB] shrink-0 overflow-x-auto flex gap-2 scrollbar-none">
           {tableTabs.map((tab) => {
             const Icon = tab.icon;
             const count = tablesData?.[tab.id]?.count ?? 0;
@@ -469,6 +567,8 @@ ON CONFLICT (id) DO NOTHING;`;
             বন্ধ করুন
           </button>
         </div>
+          </>
+        )}
 
       </div>
 
@@ -492,20 +592,20 @@ ON CONFLICT (id) DO NOTHING;`;
             </div>
 
             <p className="text-xs text-[#5B5F6B] leading-relaxed">
-              আপনার Supabase ড্যাশবোর্ডের <strong>SQL Editor</strong> এ গিয়ে নিচের স্ক্রিপ্টটি পেস্ট করে <strong>Run</strong> বাটনে ক্লিক করলে সকল টেবিলে (Profiles, History, Notifications সহ) ১৫+ ডেটা স্বয়ংক্রিয়ভাবে ইনসার্ট হয়ে যাবে।
+              আপনার Supabase ড্যাশবোর্ডের <strong>SQL Editor</strong>-এ গিয়ে <strong>supabase/rls_secure_policies.sql</strong> স্ক্রিপ্টটি রান করলে সকল টেবিলে নিরাপদ Row Level Security সক্রিয় হবে।
             </p>
 
             <div className="p-3 rounded-xl bg-[#1E1E24] text-gray-200 font-mono text-xs overflow-y-auto flex-1 select-all">
-              <pre>{`-- ১. RLS ও Foreign Key ফিক্স
-ALTER TABLE IF EXISTS public.districts DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;
-ALTER TABLE IF EXISTS public.profiles DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.donor_profiles DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.donor_responses DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.donation_history DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.notifications DISABLE ROW LEVEL SECURITY;
+              <pre>{`-- রক্তদাতা (Roktodata) — নিরাপদ RLS পলিসি
+-- প্রতিটি টেবিলে RLS চালু ও অনুমতি যাচাই:
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.donor_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.emergency_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.donor_responses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.blood_inventory ENABLE ROW LEVEL SECURITY;
 
--- বিস্তারিত কোড supabase/seed_15_rows_all_tables.sql ফাইলে প্রস্তুত আছে।`}</pre>
+-- সম্পূর্ণ কোড supabase/rls_secure_policies.sql ফাইলে প্রস্তুত রয়েছে।`}</pre>
             </div>
 
             <div className="grid grid-cols-2 gap-2 pt-2">

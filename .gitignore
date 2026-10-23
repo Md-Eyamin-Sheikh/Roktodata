@@ -31,6 +31,10 @@
 # শুধুমাত্র .env.example গিটহাবে থাকবে যাতে অন্যরা ফরম্যাট বুঝতে পারে
 !.env.example
 
+# 🔒 Database Backups & Local Dumps
+/backups/
+backups/*
+
 # 🧪 Testing & Code Coverage (টেস্টিং ও কভারেজ রিপোর্ট)
 /coverage
 *.lcov

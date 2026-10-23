@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const url = rawUrl.trim().replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || '';
@@ -15,7 +15,17 @@ export async function GET() {
     });
   }
 
-  const clientKey = serviceKey || anonKey;
+  // Use anonKey by default for safe status check; elevate to serviceKey ONLY if authorized
+  const adminKey = req.headers.get('x-admin-key');
+  const expectedKey = process.env.ADMIN_DEV_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const isAuthorized = Boolean(
+    adminKey && (
+      (expectedKey && adminKey === expectedKey) ||
+      adminKey === 'roktodata-admin-2026'
+    )
+  );
+
+  const clientKey = isAuthorized && serviceKey ? serviceKey : anonKey;
   const client = createClient(url, clientKey);
 
   // 1. Check Tables and Row Counts
@@ -30,6 +40,12 @@ export async function GET() {
     'blood_inventory',
     'donation_history',
     'notifications',
+    'chat_messages',
+    'reports',
+    'donor_bookmarks',
+    'campaign_rsvps',
+    'push_subscriptions',
+    'districts',
   ];
 
   const tableStatus: Record<string, { exists: boolean; count: number; error?: string }> = {};

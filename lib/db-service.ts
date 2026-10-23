@@ -172,7 +172,7 @@ export async function ensureDbSeeded() {
         await HospitalModel.create({
           hospitalCode: h.id,
           name: h.name,
-          type: h.type,
+          type: h.type === 'blood_bank' || (h.type as string) === 'red_crescent' ? 'blood_bank' : 'hospital',
           isOpen: h.isOpen,
           timing: h.timing,
           distanceKm: h.distanceKm,
@@ -206,7 +206,7 @@ export async function ensureDbSeeded() {
       for (const n of cleanNotifications) {
         await NotificationModel.create({
           notifCode: n.id,
-          category: n.category,
+          category: (n.category as any) === 'general' ? 'system' : n.category,
           title: n.title,
           description: n.description,
           timestamp: n.timestamp,

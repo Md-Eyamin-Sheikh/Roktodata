@@ -3,7 +3,7 @@ import { BLOOD_GROUPS, BloodGroup } from './_shared';
 
 export interface INotification extends Document {
   notifCode: string;
-  category: 'urgent' | 'my-req' | 'health' | 'camps' | 'system';
+  category: 'urgent' | 'my-req' | 'health' | 'camps' | 'system' | 'general';
   title: string;
   description: string;
   timestamp: string;
@@ -20,7 +20,7 @@ const NotificationSchema = new Schema<INotification>(
     notifCode: { type: String, required: true, unique: true, index: true },
     category: {
       type: String,
-      enum: ['urgent', 'my-req', 'health', 'camps', 'system'],
+      enum: ['urgent', 'my-req', 'health', 'camps', 'system', 'general'],
       default: 'system',
     },
     title: { type: String, required: true },

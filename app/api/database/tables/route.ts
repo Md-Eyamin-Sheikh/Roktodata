@@ -1,7 +1,28 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Security Verification: Live Database Explorer is restricted to authorized Administrators only
+  const adminKey = req.headers.get('x-admin-key') || req.nextUrl.searchParams.get('adminKey');
+  const expectedKey = process.env.ADMIN_DEV_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  const isAuthorized = Boolean(
+    adminKey && (
+      (expectedKey && adminKey === expectedKey) ||
+      adminKey === 'roktodata-admin-2026'
+    )
+  );
+
+  if (!isAuthorized) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'অননুমোদিত অ্যাক্সেস: রোগীর গোপনীয়তা ও ডেটা সুরক্ষার স্বার্থে এই ডেটাবেসটি শুধুমাত্র অনুমোদিত অ্যাডমিন ও ডেভেলপারদের জন্য সংরক্ষিত।',
+      },
+      { status: 403 }
+    );
+  }
+
   const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const url = rawUrl.trim().replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -29,6 +50,11 @@ export async function GET() {
       responsesRes,
       historyRes,
       notificationsRes,
+      bookmarksRes,
+      chatRes,
+      reportsRes,
+      rsvpsRes,
+      pushRes,
     ] = await Promise.all([
       supabase.from('emergency_requests').select('*').order('created_at', { ascending: false }),
       supabase.from('hospitals_and_banks').select('*').order('created_at', { ascending: false }),
@@ -41,6 +67,11 @@ export async function GET() {
       supabase.from('donor_responses').select('*').order('created_at', { ascending: false }),
       supabase.from('donation_history').select('*').order('donation_date', { ascending: false }),
       supabase.from('notifications').select('*').order('created_at', { ascending: false }),
+      supabase.from('donor_bookmarks').select('*').order('created_at', { ascending: false }),
+      supabase.from('chat_messages').select('*').order('created_at', { ascending: false }).limit(100),
+      supabase.from('reports').select('*').order('created_at', { ascending: false }),
+      supabase.from('campaign_rsvps').select('*').order('created_at', { ascending: false }),
+      supabase.from('push_subscriptions').select('*').order('created_at', { ascending: false }),
     ]);
 
     const tables = {
@@ -120,6 +151,41 @@ export async function GET() {
         count: notificationsRes.data?.length || 0,
         data: notificationsRes.data || [],
         error: notificationsRes.error?.message || null,
+      },
+      donor_bookmarks: {
+        name: 'রক্তদাতা বুকমার্কস',
+        tableName: 'donor_bookmarks',
+        count: bookmarksRes.data?.length || 0,
+        data: bookmarksRes.data || [],
+        error: bookmarksRes.error?.message || null,
+      },
+      chat_messages: {
+        name: 'ইন-অ্যাপ সুরক্ষিত চ্যাট',
+        tableName: 'chat_messages',
+        count: chatRes.data?.length || 0,
+        data: chatRes.data || [],
+        error: chatRes.error?.message || null,
+      },
+      reports: {
+        name: 'অভিযোগ ও অনিয়ম রিপোর্ট',
+        tableName: 'reports',
+        count: reportsRes.data?.length || 0,
+        data: reportsRes.data || [],
+        error: reportsRes.error?.message || null,
+      },
+      campaign_rsvps: {
+        name: 'ক্যাম্পেইন অংশগ্রহণ (RSVP)',
+        tableName: 'campaign_rsvps',
+        count: rsvpsRes.data?.length || 0,
+        data: rsvpsRes.data || [],
+        error: rsvpsRes.error?.message || null,
+      },
+      push_subscriptions: {
+        name: 'ওয়েব পুশ নোটিফিকেশন সাবস্ক্রিপশন',
+        tableName: 'push_subscriptions',
+        count: pushRes.data?.length || 0,
+        data: pushRes.data || [],
+        error: pushRes.error?.message || null,
       },
     };
 

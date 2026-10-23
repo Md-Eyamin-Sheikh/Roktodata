@@ -37,13 +37,15 @@ import {
   Shield,
   Activity,
   Flame,
-  Phone
+  Phone,
+  Edit3
 } from 'lucide-react';
-import { UserProfile, DonationRecord } from '@/lib/types';
+import { UserProfile, DonationRecord, BloodGroup } from '@/lib/types';
 import { BloodAnalyticsCharts } from '@/components/analytics/BloodAnalyticsCharts';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useToast } from '@/components/ui/ToastNotification';
-import { updateAuthenticatedUser } from '@/lib/services/authService';
+import { updateAuthenticatedUser, isValidBdPhoneNumber, normalizePhoneNumber } from '@/lib/services/authService';
+import { divisionsList, allDistricts } from '@/lib/geo/bangladeshGeoData';
 
 interface UserProfileViewProps {
   userProfile: UserProfile;
@@ -53,6 +55,8 @@ interface UserProfileViewProps {
   onOpenAuditLog: () => void;
   onOpenAuth?: () => void;
   onLogout?: () => void;
+  onOpenDonorSetup?: () => void;
+  onUpdateProfile?: (updates: Partial<UserProfile>) => void;
 }
 
 export const UserProfileView: React.FC<UserProfileViewProps> = ({
@@ -63,6 +67,8 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   onOpenAuditLog,
   onOpenAuth,
   onLogout,
+  onOpenDonorSetup,
+  onUpdateProfile,
 }) => {
   const { language, t, formatDigits } = useLanguage();
   const { showToast } = useToast();
@@ -139,6 +145,23 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [copiedText, setCopiedText] = useState(false);
   const [copiedDonorId, setCopiedDonorId] = useState(false);
 
+  // Profile Edit modal & form states
+  const [activeProfile, setActiveProfile] = useState<UserProfile>(userProfile);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [editName, setEditName] = useState(userProfile.name || '');
+  const [editBloodGroup, setEditBloodGroup] = useState<BloodGroup>((userProfile.bloodGroup as BloodGroup) || 'B+');
+  const [editPhone, setEditPhone] = useState(userProfile.phone || '');
+  const [editDivision, setEditDivision] = useState(userProfile.division || 'রাজশাহী');
+  const [editDistrict, setEditDistrict] = useState(userProfile.district || 'বগুড়া');
+  const [editUpazila, setEditUpazila] = useState(userProfile.upazila || 'বগুড়া সদর');
+  const [editLocation, setEditLocation] = useState(userProfile.location || '');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Keep activeProfile in sync if prop changes
+  React.useEffect(() => {
+    setActiveProfile(userProfile);
+  }, [userProfile]);
+
   // Add Donation form state
   const [newHospital, setNewHospital] = useState('');
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
@@ -153,6 +176,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const cardCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const displayName =
+    activeProfile.name ||
     userProfile.name ||
     (isLoggedIn
       ? language === 'bn'
@@ -161,9 +185,11 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       : language === 'bn'
       ? 'অতিথি ব্যবহারকারী'
       : 'Guest User');
-  const displayInitial = userProfile.name ? userProfile.name.charAt(0) : language === 'bn' ? 'র' : 'D';
-  const bloodGroup = userProfile.bloodGroup || 'B+';
-  const donorId = userProfile.donorId || 'RD-38486';
+  const displayInitial = displayName ? displayName.charAt(0) : language === 'bn' ? 'র' : 'D';
+  const bloodGroup = (activeProfile.bloodGroup || userProfile.bloodGroup || 'B+') as BloodGroup;
+  const donorId = activeProfile.donorId || userProfile.donorId || 'RD-38486';
+  const locationText = activeProfile.location || userProfile.location || (activeProfile.district ? `${activeProfile.district}${activeProfile.upazila ? ', ' + activeProfile.upazila : ''}` : (language === 'bn' ? 'বগুড়া সদর' : 'Bogura Sadar'));
+  const phoneText = activeProfile.phone || userProfile.phone || '';
 
   // Compatibility matrix helper
   const getCompatibility = (bg: string) => {
@@ -327,7 +353,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       ctx.font = 'bold 32px monospace';
       ctx.fillText(`#${donorId}`, 75, 530);
       ctx.font = 'bold 28px sans-serif';
-      ctx.fillText(userProfile.location || (language === 'bn' ? 'বগুড়া সদর' : 'Bogura Sadar'), 380, 530);
+      ctx.fillText(locationText, 380, 530);
       ctx.fillText(`${formatDigits(totalDonations)} ${language === 'bn' ? 'বার' : 'times'}`, 680, 530);
 
       // Security Footer Line
@@ -349,7 +375,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       ctx.font = '16px monospace';
       ctx.fillText(`ISSUED: 2026 • VALID THRU: 2031 • ROKTODATA SECURE CARD #${donorId}`, 75, 675);
 
-      // QR Code Block on Bottom Right
+      // QR Code Block on Bottom Right with Verifiable Reference
       ctx.fillStyle = '#FFFFFF';
       ctx.beginPath();
       ctx.roundRect(985, 540, 145, 145, 20);
@@ -362,6 +388,11 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
       ctx.fillRect(1005, 633, 32, 32);
       ctx.fillRect(1050, 605, 20, 20);
       ctx.fillRect(1078, 633, 16, 16);
+
+      // Verifiable link imprint on card
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText(`VERIFY: roktodata.app/donor/${donorId}`, 75, 705);
 
       return canvas;
     } catch (err) {
@@ -740,6 +771,75 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
     );
   };
 
+  // ================= 4b. FUNCTIONAL PROFILE EDITOR =================
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName.trim()) {
+      showToast(language === 'bn' ? 'অনুগ্রহ করে আপনার নাম প্রদান করুন।' : 'Please enter your name.', 'error');
+      return;
+    }
+
+    if (editPhone.trim() && !isValidBdPhoneNumber(editPhone)) {
+      showToast(
+        language === 'bn'
+          ? 'সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: ০১৭XXXXXXXX)।'
+          : 'Please enter a valid 11-digit Bangladeshi mobile number.',
+        'error'
+      );
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const cleanPhone = editPhone.trim() ? normalizePhoneNumber(editPhone.trim()) : '';
+      const displayLocation = editLocation.trim() || `${editDistrict}${editUpazila ? ', ' + editUpazila : ''}`;
+
+      const updates: Partial<UserProfile> = {
+        name: editName.trim(),
+        bloodGroup: editBloodGroup,
+        phone: cleanPhone || undefined,
+        division: editDivision,
+        district: editDistrict,
+        upazila: editUpazila,
+        location: displayLocation,
+      };
+
+      const updated = await updateAuthenticatedUser(updates);
+      if (updated) {
+        setActiveProfile(updated);
+      } else {
+        setActiveProfile((prev) => ({ ...prev, ...updates }));
+      }
+
+      if (onUpdateProfile) {
+        onUpdateProfile(updates);
+      }
+
+      setShowEditProfileModal(false);
+      showToast(
+        language === 'bn'
+          ? 'প্রোফাইল তথ্য সফলভাবে হালনাগাদ করা হয়েছে!'
+          : 'Profile updated successfully!',
+        'success'
+      );
+    } catch (err: any) {
+      showToast(err?.message || (language === 'bn' ? 'প্রোফাইল আপডেট ব্যর্থ হয়েছে' : 'Failed to update profile'), 'error');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  // Dynamic district and upazila options for profile editing
+  const availableDistricts = allDistricts.filter(
+    (d) => !editDivision || d.divisionBn === editDivision || d.divisionEn.toLowerCase() === editDivision.toLowerCase()
+  );
+
+  const currentDistrictObj = allDistricts.find(
+    (d) => d.nameBn === editDistrict || d.nameEn.toLowerCase() === editDistrict.toLowerCase()
+  );
+
+  const availableUpazilas = currentDistrictObj ? currentDistrictObj.upazilas : [];
+
   // ================= 5. FUNCTIONAL DONATION HISTORY LOGGER =================
   const handleAddDonationSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -809,6 +909,35 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
   return (
     <div className="flex flex-col w-full pb-24">
+      {/* Incomplete Profile Banner */}
+      {isLoggedIn && !userProfile.isProfileComplete && (
+        <div className="mx-3 sm:mx-4 mt-2 mb-2 p-3.5 sm:p-4 rounded-2xl bg-[#FFF8E1] border border-[#FFE082] flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#FFA000] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <AlertTriangle className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h4 className="font-bold text-xs sm:text-sm text-[#E65100]">
+                {language === 'bn' ? '⚠️ আপনার ডোনার প্রোফাইল অসম্পূর্ণ' : '⚠️ Donor Profile Incomplete'}
+              </h4>
+              <p className="text-[11px] sm:text-xs text-[#795548] mt-0.5">
+                {language === 'bn'
+                  ? 'জরুরি রক্তদান ও অনুরোধের সুবিধার্থে মোবাইল নম্বর, রক্তের গ্রুপ, বিভাগ ও জেলা পূরণ করুন।'
+                  : 'Please provide mobile number, blood group, division & district to activate donor privileges.'}
+              </p>
+            </div>
+          </div>
+          {onOpenDonorSetup && (
+            <button
+              onClick={onOpenDonorSetup}
+              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#E65100] hover:bg-[#BF360C] text-white text-xs font-bold shrink-0 shadow-xs cursor-pointer transition-colors"
+            >
+              {language === 'bn' ? 'প্রোফাইল সম্পন্ন করুন' : 'Complete Profile'}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Guest Mode Notice Banner */}
       {!isLoggedIn && (
         <div className="mx-3 sm:mx-4 mt-2 mb-2 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
@@ -919,7 +1048,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                   </div>
                   <p className="text-xs text-[#5B5F6B] flex items-center gap-1 mt-0.5">
                     <MapPin className="w-3.5 h-3.5 text-[#C41E3A] shrink-0" />
-                    <span>{userProfile.location || (language === 'bn' ? 'বগুড়া সদর' : 'Bogura Sadar')}</span>
+                    <span>{locationText}</span>
                   </p>
                 </div>
               </div>
@@ -938,7 +1067,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
               <Lock className="w-4 h-4 text-[#5B5F6B] shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <span className="text-xs font-bold text-[#1B1B1F] block">
-                  {userProfile.phone ||
+                  {phoneText ||
                     (isLoggedIn
                       ? language === 'bn'
                         ? '০১৭৭৫-০১২০১৪ (সংরক্ষিত)'
@@ -953,6 +1082,34 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                     : 'Strict Privacy: Phone numbers are only visible to verified medical emergency contacts.'}
                 </p>
               </div>
+            </div>
+
+            {/* Edit Profile & Security Bar */}
+            <div className="flex items-center gap-2 pt-1 border-t border-[#E4E6EB]/60">
+              <button
+                onClick={() => {
+                  setEditName(activeProfile.name || userProfile.name || '');
+                  setEditBloodGroup((activeProfile.bloodGroup || userProfile.bloodGroup || 'B+') as BloodGroup);
+                  setEditPhone(activeProfile.phone || userProfile.phone || '');
+                  setEditDivision(activeProfile.division || userProfile.division || 'রাজশাহী');
+                  setEditDistrict(activeProfile.district || userProfile.district || 'বগুড়া');
+                  setEditUpazila(activeProfile.upazila || userProfile.upazila || 'বগুড়া সদর');
+                  setEditLocation(activeProfile.location || userProfile.location || '');
+                  setShowEditProfileModal(true);
+                }}
+                className="flex-1 py-2 px-3 rounded-xl bg-[#FAF9FB] hover:bg-[#F0EDF2] text-[#1B1B1F] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#E4E6EB]"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-[#C41E3A]" />
+                <span>{language === 'bn' ? 'প্রোফাইল সম্পাদনা' : 'Edit Profile'}</span>
+              </button>
+
+              <button
+                onClick={() => setShowAuditModal(true)}
+                className="py-2 px-3 rounded-xl bg-[#FAF9FB] hover:bg-[#F0EDF2] text-[#0D58C9] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#E4E6EB]"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>{language === 'bn' ? 'কে দেখেছে?' : 'Audit Log'}</span>
+              </button>
             </div>
           </div>
 
@@ -1518,7 +1675,18 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 {donationHistory.map((item) => (
                   <div
                     key={item.id}
-                    onClick={() => setSelectedCertificate(item)}
+                    onClick={() => {
+                      if (item.status === 'completed') {
+                        setSelectedCertificate(item);
+                      } else {
+                        showToast(
+                          language === 'bn'
+                            ? 'শুধুমাত্র সফলভাবে সম্পন্ন ও যাচাইকৃত রক্তদানের সনদ প্রদর্শিত হয়।'
+                            : 'Digital certificates are issued only for completed donations.',
+                          'info'
+                        );
+                      }
+                    }}
                     className="p-3 bg-[#F7F7F9] hover:bg-white rounded-2xl flex items-center justify-between border border-[#E4E6EB]/60 hover:border-[#C41E3A]/40 transition-all cursor-pointer shadow-2xs group"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -1580,7 +1748,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
       {/* ================= 7. LIVE BLOOD DONATION & HEALTH ANALYTICS (FULL WIDTH) ================= */}
       <div className="px-3 sm:px-4 mt-4 w-full">
-        <BloodAnalyticsCharts />
+        <BloodAnalyticsCharts completedRequestCount={totalDonations} />
       </div>
 
       {/* ================= MODAL 1: 100% FUNCTIONAL SHARE SHEET ================= */}
@@ -2088,7 +2256,215 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
         </div>
       )}
 
-      {/* ================= MODAL 6: AUDIT LOG (WHO VIEWED MY PROFILE) ================= */}
+      {/* ================= MODAL 6: EDIT PROFILE MODAL ================= */}
+      {showEditProfileModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
+          <div className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 animate-in slide-in-from-bottom-5 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E4E6EB]">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#FDECEF] text-[#C41E3A] flex items-center justify-center font-bold">
+                  <Edit3 className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-[16px] text-[#1B1B1F]">
+                    {language === 'bn' ? 'প্রোফাইল তথ্য সম্পাদনা' : 'Edit Profile Information'}
+                  </h3>
+                  <p className="text-[11px] text-[#5B5F6B]">
+                    {language === 'bn' ? 'আপনার ব্যক্তিগত ও রক্তদানের তথ্য হালনাগাদ করুন' : 'Update personal and blood donation info'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowEditProfileModal(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[#5B5F6B] hover:bg-[#F7F7F9] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              {/* Full Name */}
+              <div>
+                <label className="text-xs font-bold text-[#1B1B1F] block mb-1">
+                  {language === 'bn' ? 'পূর্ণ নাম' : 'Full Name'} *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder={language === 'bn' ? 'আপনার পূর্ণ নাম লিখুন' : 'Enter your full name'}
+                  className="w-full h-11 px-3.5 rounded-xl bg-[#F7F7F9] text-xs font-semibold text-[#1B1B1F] border border-[#E4E6EB] focus:outline-none focus:ring-2 focus:ring-[#C41E3A]"
+                />
+              </div>
+
+              {/* Blood Group Selector */}
+              <div>
+                <label className="text-xs font-bold text-[#1B1B1F] block mb-1.5">
+                  {language === 'bn' ? 'রক্তের গ্রুপ' : 'Blood Group'} *
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {(['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'] as BloodGroup[]).map((bg) => (
+                    <button
+                      key={bg}
+                      type="button"
+                      onClick={() => setEditBloodGroup(bg)}
+                      className={`h-10 rounded-xl font-black text-xs transition-all cursor-pointer border ${
+                        editBloodGroup === bg
+                          ? 'bg-[#C41E3A] text-white border-[#C41E3A] shadow-xs'
+                          : 'bg-[#F7F7F9] text-[#1B1B1F] border-[#E4E6EB] hover:bg-[#FDECEF]'
+                      }`}
+                    >
+                      {bg}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mobile Number */}
+              <div>
+                <label className="text-xs font-bold text-[#1B1B1F] block mb-1">
+                  {language === 'bn' ? 'মোবাইল নম্বর (জরুরি যোগাযোগের জন্য)' : 'Phone Number'}
+                </label>
+                <input
+                  type="tel"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  placeholder={language === 'bn' ? '০১৭১২-৩৪৫৬৭৮' : '01712-345678'}
+                  className="w-full h-11 px-3.5 rounded-xl bg-[#F7F7F9] text-xs font-semibold text-[#1B1B1F] border border-[#E4E6EB] focus:outline-none focus:ring-2 focus:ring-[#C41E3A]"
+                />
+                <p className="text-[10.5px] text-[#5B5F6B] mt-1">
+                  {language === 'bn'
+                    ? '🔒 নম্বরটি কঠোরভাবে সুরক্ষিত এবং অনুমোদিত রোগীর স্বজন ব্যতীত কারো কাছে উন্মুক্ত নয়।'
+                    : '🔒 Phone is strictly protected and revealed only to verified emergency contacts.'}
+                </p>
+              </div>
+
+              {/* Division & District */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-[#1B1B1F] block mb-1">
+                    {language === 'bn' ? 'বিভাগ' : 'Division'}
+                  </label>
+                  <select
+                    value={editDivision}
+                    onChange={(e) => {
+                      const div = e.target.value;
+                      setEditDivision(div);
+                      const matching = allDistricts.filter(
+                        (d) => d.divisionBn === div || d.divisionEn.toLowerCase() === div.toLowerCase()
+                      );
+                      if (matching.length > 0) {
+                        setEditDistrict(matching[0].nameBn);
+                        setEditUpazila(matching[0].upazilas[0] || '');
+                      }
+                    }}
+                    className="w-full h-11 px-3 rounded-xl bg-[#F7F7F9] text-xs font-semibold text-[#1B1B1F] border border-[#E4E6EB] focus:outline-none"
+                  >
+                    {divisionsList.map((d) => (
+                      <option key={d.id} value={d.nameBn}>
+                        {d.nameBn}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-[#1B1B1F] block mb-1">
+                    {language === 'bn' ? 'জেলা' : 'District'}
+                  </label>
+                  <select
+                    value={editDistrict}
+                    onChange={(e) => {
+                      const dist = e.target.value;
+                      setEditDistrict(dist);
+                      const dObj = allDistricts.find(
+                        (d) => d.nameBn === dist || d.nameEn.toLowerCase() === dist.toLowerCase()
+                      );
+                      if (dObj && dObj.upazilas.length > 0) {
+                        setEditUpazila(dObj.upazilas[0]);
+                      }
+                    }}
+                    className="w-full h-11 px-3 rounded-xl bg-[#F7F7F9] text-xs font-semibold text-[#1B1B1F] border border-[#E4E6EB] focus:outline-none"
+                  >
+                    {availableDistricts.map((d) => (
+                      <option key={d.id} value={d.nameBn}>
+                        {d.nameBn}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Upazila & Specific Area */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-[#1B1B1F] block mb-1">
+                    {language === 'bn' ? 'উপজেলা / থানা' : 'Upazila'}
+                  </label>
+                  <select
+                    value={editUpazila}
+                    onChange={(e) => setEditUpazila(e.target.value)}
+                    className="w-full h-11 px-3 rounded-xl bg-[#F7F7F9] text-xs font-semibold text-[#1B1B1F] border border-[#E4E6EB] focus:outline-none"
+                  >
+                    {availableUpazilas.length > 0 ? (
+                      availableUpazilas.map((u) => (
+                        <option key={u} value={u}>
+                          {u}
+                        </option>
+                      ))
+                    ) : (
+                      <option value={editDistrict + ' সদর'}>{editDistrict} সদর</option>
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-[#1B1B1F] block mb-1">
+                    {language === 'bn' ? 'এলাকা / মহল্লা' : 'Area / Neighborhood'}
+                  </label>
+                  <input
+                    type="text"
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    placeholder={language === 'bn' ? 'উদা: জলেশ্বরীতলা, কলোনি' : 'e.g., Joleshworitola'}
+                    className="w-full h-11 px-3 rounded-xl bg-[#F7F7F9] text-xs font-semibold text-[#1B1B1F] border border-[#E4E6EB] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="pt-2 flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowEditProfileModal(false)}
+                  className="flex-1 py-3 rounded-xl bg-[#F7F7F9] text-[#5B5F6B] font-bold text-xs hover:bg-[#E4E6EB] transition-colors cursor-pointer"
+                >
+                  {language === 'bn' ? 'বাতিল' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingProfile}
+                  className="flex-1 py-3 rounded-xl bg-[#C41E3A] hover:bg-[#A3182F] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>
+                    {isSavingProfile
+                      ? language === 'bn'
+                        ? 'সংরক্ষণ হচ্ছে...'
+                        : 'Saving...'
+                      : language === 'bn'
+                      ? 'পরিবর্তন সংরক্ষণ করুন'
+                      : 'Save Changes'}
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL 7: AUDIT LOG (WHO VIEWED MY PROFILE) ================= */}
       {showAuditModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
           <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl space-y-4 animate-in slide-in-from-bottom-5">

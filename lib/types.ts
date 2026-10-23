@@ -6,11 +6,22 @@ export type ComponentType = 'whole' | 'platelets' | 'plasma';
 
 export type StockLevel = 'adequate' | 'limited' | 'empty';
 
+export type RequestStatus =
+  | 'open'
+  | 'active'
+  | 'partially_fulfilled'
+  | 'in_progress'
+  | 'fulfilled'
+  | 'cancelled'
+  | 'expired';
+
 export interface EmergencyRequest {
   id: string;
   bloodGroup: BloodGroup;
   hospitalName: string;
   location: string;
+  division?: string;
+  district?: string;
   distanceKm: number;
   bagsNeeded: number;
   bagsFulfilled?: number;
@@ -25,18 +36,33 @@ export interface EmergencyRequest {
   reason?: string;
   wardNumber?: string;
   bedNumber?: string;
+  cabinNumber?: string;
   wardBed?: string;
   contactNumber?: string;
   prescriptionImageUrl?: string;
+  prescriptionSignedUrl?: string;
   hasVerifiedHospital: boolean;
   hasPrescriptionSlip?: boolean;
   isCaseVerified?: boolean;
-  status?: 'active' | 'in_progress' | 'fulfilled' | 'cancelled';
+  status?: RequestStatus;
   respondingDonorsCount?: number;
   trackingStep?: number; // 1 to 5
   hasResponded?: boolean;
   userResponseEta?: number;
+  userTransportMode?: TransportMode;
+  idempotencyKey?: string;
 }
+
+export type TransportMode = 'walking' | 'rickshaw' | 'motorcycle' | 'car' | 'public';
+
+export type DonorResponseStatus =
+  | 'accepted'
+  | 'on_the_way'
+  | 'confirmed'
+  | 'declined'
+  | 'cancelled'
+  | 'en_route'
+  | 'pending';
 
 export interface Donor {
   id: string;
@@ -45,6 +71,8 @@ export interface Donor {
   avatarUrl?: string;
   bloodGroup: BloodGroup;
   location: string;
+  district?: string;
+  upazila?: string;
   distanceKm: number;
   isAvailableToday: boolean;
   isVerified: boolean;
@@ -52,6 +80,11 @@ export interface Donor {
   lastDonationDate: string;
   responseTimeMinutes: string;
   phone: string;
+  phoneMasked?: string;
+  privacyHidePhone?: boolean;
+  isFastResponder?: boolean;
+  hospitalAffiliation?: string;
+  gender?: 'male' | 'female';
   isBookmarked?: boolean;
 }
 
@@ -70,7 +103,11 @@ export interface RespondingDonor {
   isVerified: boolean;
   isFastResponder?: boolean;
   phone: string;
-  status: 'en_route' | 'confirmed' | 'pending' | 'on_the_way' | 'accepted';
+  transportMode?: TransportMode;
+  transportLabel?: string;
+  respondedAt?: string;
+  message?: string;
+  status: DonorResponseStatus;
 }
 
 export interface DonationCamp {
@@ -82,20 +119,39 @@ export interface DonationCamp {
   venue: string;
   isRsvp: boolean;
   registeredCount: number;
+  targetUnits?: number;
+  targetBags?: number;
   description?: string;
 }
 
 export interface HospitalBloodBank {
   id: string;
   name: string;
-  type: 'hospital' | 'blood_bank';
+  type: 'hospital' | 'blood_bank' | 'medical_college' | 'district_hospital' | 'upazila_health_complex' | 'red_crescent' | 'private_clinic';
   isOpen: boolean;
   timing: string;
   distanceKm: number;
   location: string;
+  district?: string;
+  division?: string;
   phone: string;
   lastUpdated: string;
+  isVerified?: boolean;
   stocks: { [key in BloodGroup]: { count: number; status: StockLevel } };
+}
+
+export interface BloodInventoryLog {
+  id: string;
+  hospitalId: string;
+  hospitalName?: string;
+  bloodGroup: BloodGroup;
+  previousUnits: number;
+  newUnits: number;
+  delta: number;
+  operatorId?: string;
+  operatorName?: string;
+  reason?: string;
+  timestamp: string;
 }
 
 export interface AmbulanceService {
@@ -103,9 +159,12 @@ export interface AmbulanceService {
   providerName: string;
   phone: string;
   location: string;
+  district?: string;
+  division?: string;
   distanceKm: number;
   type: 'ICU' | 'Freezing' | 'Normal' | 'AC';
   isAvailable247: boolean;
+  isVerified?: boolean;
 }
 
 export interface HealthEducationArticle {
@@ -122,18 +181,82 @@ export interface ChatMessage {
   senderName: string;
   text: string;
   timestamp: string;
+  requestId?: string;
+  senderId?: string;
+  receiverId?: string;
+}
+
+export interface SafeChatMessage {
+  id: string;
+  requestId: string | null;
+  senderId: string;
+  receiverId?: string | null;
+  senderName?: string;
+  message: string;
+  isRead?: boolean;
+  isMe?: boolean;
+  createdAt: string;
+}
+
+export interface FraudReportPayload {
+  reporterId?: string;
+  reportedUserId?: string;
+  reportedName?: string;
+  targetUserId?: string;
+  targetName?: string;
+  requestId?: string;
+  reason: string;
+  description?: string;
+  details?: string;
+  proofFileName?: string;
+  proofFileUrl?: string;
+  proofImageUrl?: string;
+}
+
+export interface FraudReportItem {
+  id: string;
+  reporterId?: string | null;
+  reportedUserId?: string | null;
+  reportedName?: string;
+  targetUserId?: string | null;
+  targetName?: string;
+  requestId?: string | null;
+  reason: string;
+  description?: string;
+  details?: string;
+  status: 'pending' | 'reviewing' | 'investigating' | 'resolved' | 'dismissed';
+  proofFileName?: string;
+  proofFileUrl?: string;
+  proofImageUrl?: string;
+  adminNotes?: string;
+  createdAt: string;
+}
+
+export interface CreateCampPayload {
+  organizer: string;
+  venue: string;
+  division?: string;
+  district: string;
+  upazila?: string;
+  campDate: string;
+  timeSlot: string;
+  targetUnits?: number;
+  description?: string;
 }
 
 export interface AppNotification {
   id: string;
-  category: 'urgent' | 'my-req' | 'camps' | 'health' | 'system';
+  category: 'urgent' | 'my-req' | 'camps' | 'health' | 'system' | 'general';
   title: string;
   description: string;
   timestamp: string;
   bloodGroup?: BloodGroup;
   isUnread: boolean;
   actionType?: 'call' | 'respond' | 'calendar' | 'details';
+  actionUrl?: string;
   donorName?: string;
+  link?: string;
+  requestId?: string;
 }
 
 export interface UserBadge {
@@ -162,6 +285,10 @@ export interface UserProfile {
   donorId: string;
   phone: string;
   location: string;
+  division?: string;
+  district?: string;
+  upazila?: string;
+  userId?: string;
   isVerified: boolean;
   isAvailable: boolean;
   lastDonationDate: string;
@@ -180,7 +307,7 @@ export interface UserProfile {
   textSize: '100%' | '125%' | '150%';
   reducedMotion: boolean;
   isProfileComplete?: boolean;
-  role?: 'donor' | 'hospital_operator' | 'admin';
+  role?: 'donor' | 'hospital_operator' | 'admin' | 'recipient';
   badges?: UserBadge[];
   donationHistory?: DonationRecord[];
 }

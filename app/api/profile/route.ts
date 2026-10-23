@@ -2,80 +2,116 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { initialUserProfile } from '@/lib/data';
 
-export async function GET() {
+/**
+ * Extracts and verifies the authenticated Supabase user from the request Authorization header
+ */
+async function getAuthUser(req: NextRequest, supabase: any) {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  const token = authHeader.split(' ')[1]?.trim();
+  if (!token) return null;
+
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data?.user) return null;
+    return data.user;
+  } catch {
+    return null;
+  }
+}
+
+export async function GET(req: NextRequest) {
   try {
     const supabase = getSupabaseServerClient();
     if (supabase) {
-      const { data: profiles, error: pErr } = await supabase
-        .from('profiles')
-        .select('*, donor_profiles(*)')
-        .limit(1);
+      const authUser = await getAuthUser(req, supabase);
 
-      if (!pErr && profiles && profiles.length > 0) {
-        const p: any = profiles[0];
-        const dp = p.donor_profiles?.[0] || {};
+      // If user is authenticated, retrieve strictly their profile
+      if (authUser?.id) {
+        const { data: profile, error: pErr } = await supabase
+          .from('profiles')
+          .select('*, donor_profiles(*)')
+          .eq('id', authUser.id)
+          .maybeSingle();
 
-        // Fetch donation history
-        let donationHistory: any[] = [];
-        if (dp.id) {
-          const { data: hist } = await supabase
-            .from('donation_history')
-            .select('*')
-            .eq('donor_id', dp.id)
-            .order('donation_date', { ascending: false });
+        if (!pErr && profile) {
+          const p: any = profile;
+          const dp = p.donor_profiles?.[0] || {};
 
-          if (hist) {
-            donationHistory = hist.map((h: any) => ({
-              id: h.id,
-              date: h.donation_date,
-              location: h.hospital_name,
-              units: 1,
-              recipientType: 'জরুরি রোগী',
-              badgeEarned: h.badge_earned || 'নিয়মিত ডোনার',
-              verifiedByHospital: h.verified_by_hospital,
-            }));
+          // Fetch user's donation history
+          let donationHistory: any[] = [];
+          if (dp.id) {
+            const { data: hist } = await supabase
+              .from('donation_history')
+              .select('*')
+              .eq('donor_id', dp.id)
+              .order('donation_date', { ascending: false });
+
+            if (hist) {
+              donationHistory = hist.map((h: any) => ({
+                id: h.id,
+                date: h.donation_date,
+                location: h.hospital_name,
+                units: 1,
+                recipientType: 'জরুরি রোগী',
+                badgeEarned: h.badge_earned || 'নিয়মিত ডোনার',
+                verifiedByHospital: h.verified_by_hospital,
+              }));
+            }
           }
+
+          const userProfile = {
+            name: p.full_name,
+            email: authUser.email,
+            bloodGroup: p.blood_group,
+            donorId: `RD-${p.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`,
+            phone: p.phone_number,
+            division: p.division,
+            district: p.district,
+            upazila: p.upazila,
+            location: `${p.district}${p.upazila ? ', ' + p.upazila : ''}`,
+            userId: p.id,
+            isVerified: p.is_verified ?? true,
+            isAvailable: dp.is_available ?? true,
+            lastDonationDate: dp.last_donation_date || 'নতুন নিবন্ধিত',
+            nextEligibleDate: 'এখনই প্রস্তুত',
+            daysRemaining: 0,
+            totalDonations: dp.total_donations || donationHistory.length || 0,
+            livesImpacted: (dp.total_donations || donationHistory.length || 0) * 3,
+            emergencyResponses: 0,
+            quietHoursEnabled: false,
+            quietHoursStart: '২৩:০০',
+            quietHoursEnd: '০৬:০০',
+            notificationRadiusKm: 15,
+            phoneVisibility: 'all_registered' as const,
+            language: 'bn' as const,
+            textSize: p.text_size_preference || '100%',
+            reducedMotion: false,
+            isProfileComplete: Boolean(
+              p.phone_number &&
+              p.phone_number.length >= 11 &&
+              p.blood_group &&
+              p.district &&
+              p.division
+            ),
+            badges: [
+              { id: 'b1', name: 'নতুন সদস্য', description: 'মানবিক পরিবারের গর্বিত সদস্য', icon: 'Heart', isEarned: true },
+            ],
+            donationHistory,
+          };
+
+          return NextResponse.json({
+            success: true,
+            source: 'supabase_live',
+            data: userProfile,
+          });
         }
-
-        const userProfile = {
-          name: p.full_name,
-          bloodGroup: p.blood_group,
-          donorId: p.id ? `RD-${p.id.slice(0, 6).toUpperCase()}` : 'RD-00102',
-          phone: p.phone_number,
-          location: `${p.district}${p.upazila ? ', ' + p.upazila : ''}`,
-          isVerified: p.is_verified ?? true,
-          isAvailable: dp.is_available ?? true,
-          lastDonationDate: dp.last_donation_date || '২০২৪-০৫-১০',
-          nextEligibleDate: 'এখনই রক্ত দিতে প্রস্তুত',
-          daysRemaining: 0,
-          totalDonations: dp.total_donations || donationHistory.length || 5,
-          livesImpacted: (dp.total_donations || donationHistory.length || 5) * 3,
-          emergencyResponses: 4,
-          quietHoursEnabled: false,
-          quietHoursStart: '২৩:০০',
-          quietHoursEnd: '০৬:০০',
-          notificationRadiusKm: 25,
-          phoneVisibility: 'all_registered' as const,
-          language: 'bn' as const,
-          textSize: p.text_size_preference || '100%',
-          reducedMotion: false,
-          isProfileComplete: true,
-          badges: [
-            { id: 'b1', name: 'লাইফসেভার', description: '৫ বার রক্তদান সম্পন্ন', icon: 'Heart', isEarned: true },
-            { id: 'b2', name: 'গোল্ডেন ডোনার', description: '১০ বার সফল রক্তদান', icon: 'Award', isEarned: (dp.total_donations || 0) >= 10 },
-            { id: 'b3', name: 'কমিউনিটি হিরো', description: 'জরুরি পরিস্থিতিতে দ্রুত সাড়া', icon: 'Shield', isEarned: true },
-          ],
-          donationHistory,
-        };
-
-        return NextResponse.json({
-          success: true,
-          source: 'supabase_live',
-          data: userProfile,
-        });
       }
     }
 
+    // Fallback for guest mode
     return NextResponse.json({
       success: true,
       source: 'fallback',
@@ -93,29 +129,77 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { isAvailable } = body;
     const supabase = getSupabaseServerClient();
+    if (!supabase) {
+      return NextResponse.json(
+        { success: false, error: 'ডাটাবেস সংযোগ অনুপস্থিত।' },
+        { status: 503 }
+      );
+    }
 
-    if (supabase) {
-      const { data: dps } = await (supabase as any).from('donor_profiles').select('id, user_id').limit(1);
-      if (dps && dps[0]) {
-        await (supabase as any)
-          .from('donor_profiles')
-          .update({ is_available: isAvailable })
-          .eq('id', (dps[0] as any).id);
+    const authUser = await getAuthUser(req, supabase);
+    if (!authUser?.id) {
+      return NextResponse.json(
+        { success: false, error: 'অননুমোদিত: আপনি শুধুমাত্র নিজের প্রোফাইল পরিবর্তন করতে পারবেন।' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { isAvailable, full_name, phone_number, blood_group, division, district, upazila } = body;
+
+    // Check duplicate phone if phone is being changed
+    if (phone_number) {
+      const { data: existing } = await (supabase as any)
+        .from('profiles')
+        .select('id')
+        .eq('phone_number', phone_number)
+        .neq('id', authUser.id)
+        .maybeSingle();
+
+      if (existing) {
+        return NextResponse.json(
+          { success: false, error: 'এই মোবাইল নম্বরটি ইতিমধ্যে অন্য একটি অ্যাকাউন্টে নিবন্ধিত আছে।' },
+          { status: 409 }
+        );
       }
+    }
+
+    // Update public.profiles strictly for authUser.id
+    const profileUpdates: any = { updated_at: new Date().toISOString() };
+    if (full_name !== undefined) profileUpdates.full_name = full_name;
+    if (phone_number !== undefined) profileUpdates.phone_number = phone_number;
+    if (blood_group !== undefined) profileUpdates.blood_group = blood_group;
+    if (division !== undefined) profileUpdates.division = division;
+    if (district !== undefined) profileUpdates.district = district;
+    if (upazila !== undefined) profileUpdates.upazila = upazila;
+
+    if (Object.keys(profileUpdates).length > 1) {
+      await (supabase as any)
+        .from('profiles')
+        .update(profileUpdates)
+        .eq('id', authUser.id);
+    }
+
+    // Update public.donor_profiles strictly for authUser.id
+    if (isAvailable !== undefined) {
+      await (supabase as any)
+        .from('donor_profiles')
+        .update({
+          is_available: isAvailable,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', authUser.id);
     }
 
     return NextResponse.json({
       success: true,
-      isAvailable,
-      message: `রক্তদান প্রাপ্যতা স্ট্যাটাস ${isAvailable ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে`,
+      message: 'প্রোফাইল সফলভাবে আপডেট করা হয়েছে।',
     });
   } catch (error: any) {
     console.error('API PATCH /api/profile error:', error);
     return NextResponse.json(
-      { success: false, error: 'প্রোফাইল আপডেট ব্যর্থ হয়েছে' },
+      { success: false, error: error?.message || 'প্রোফাইল আপডেট ব্যর্থ হয়েছে' },
       { status: 500 }
     );
   }

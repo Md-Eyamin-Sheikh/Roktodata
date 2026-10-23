@@ -205,18 +205,25 @@
 
 ## 🗄️ ডেটাবেজ স্কিমা | Database Schema
 
-Supabase PostgreSQL ডেটাবেজে ৯টি অপ্টিমাইজড টেবিল ব্যবহৃত হয়:
+Supabase PostgreSQL ডেটাবেজে ১৫টি প্রোডাকশন টেবিল ও ভৌগোলিক রেফারেন্স ব্যবহৃত হয়:
 
 ```
-📦 profiles                 — id (UUID), phone_number, full_name, blood_group, division, district, is_verified
-📦 donor_profiles           — user_id (FK), is_available, total_donations, last_donation_date, next_eligible_date
+📦 profiles                 — id (UUID PK), phone_number, full_name, blood_group, division, district, role, is_verified
+📦 donor_profiles           — user_id (FK), is_available, total_donations, last_donation_date, next_eligible_date, points
 📦 emergency_requests       — blood_group, bags_needed, hospital_name, district, urgency, status, contact_phone
-📦 donor_responses          — request_id, donor_id, status (accepted/on_the_way/confirmed), eta_minutes
-📦 hospitals_and_banks      — name, type, district, address, hotline, operating_hours
-📦 blood_inventory          — hospital_id, blood_group, units_available, status
-📦 ambulances               — driver_name, service_type, district, phone_number, is_available_24_7
-📦 donation_camps           — organizer, venue, district, camp_date, target_units, registered_count
-📦 notifications            — user_id, category, title, description, is_unread
+📦 donor_responses          — request_id (FK), donor_id (FK), status, eta_minutes, distance_km (UNIQUE constraint)
+📦 hospitals_and_banks      — name, type, division, district, address, hotline, operating_hours, has_blood_bank
+📦 blood_inventory          — hospital_id (FK), blood_group, units_available, status (UNIQUE constraint)
+📦 ambulances               — driver_name, service_type, division, district, phone_number, is_available_24_7
+📦 donation_camps           — organizer, venue, district, camp_date, target_units, registered_count, status
+📦 donation_history         — donor_id (FK), hospital_name, donation_date, blood_group, badge_earned (donation_records)
+📦 notifications            — user_id (FK), category, title, description, blood_group, action_type, is_unread
+📦 chat_messages            — request_id (FK), sender_id (FK), receiver_id (FK), message, is_read
+📦 reports                  — reporter_id (FK), reported_user_id (FK), request_id (FK), reason, details, status
+📦 donor_bookmarks          — user_id (FK), donor_id (FK) (UNIQUE constraint)
+📦 campaign_rsvps           — camp_id (FK), user_id (FK), status (UNIQUE constraint)
+📦 push_subscriptions       — user_id (FK), endpoint, p256dh, auth, district, blood_group, is_active
+🗺️ districts                — id, name_bn, name_en, division_bn, lat, lng, upazilas (JSONB)
 ```
 
 ---

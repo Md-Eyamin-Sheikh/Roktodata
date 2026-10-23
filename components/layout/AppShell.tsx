@@ -20,6 +20,8 @@ import { DonorResponseModal } from '@/components/donor-response/DonorResponseMod
 import { DonorProfileSetupWizard } from '@/components/auth/DonorProfileSetupWizard';
 import { SafeChatModal } from '@/components/chat/SafeChatModal';
 import { ReportModal } from '@/components/report/ReportModal';
+import { PushNotificationBanner } from '@/components/notifications/PushNotificationBanner';
+import { CreateCampModal } from '@/components/camps/CreateCampModal';
 import { VerificationExplainerSheet } from '@/components/verification/VerificationExplainerSheet';
 import { LiveDatabaseViewer } from '@/components/database/LiveDatabaseViewer';
 import { QuickSearchModal } from '@/components/search/QuickSearchModal';
@@ -44,9 +46,15 @@ import {
   DonationCamp,
   HospitalBloodBank,
   AmbulanceService,
+  TransportMode,
 } from '@/lib/types';
 import { Phone, ShieldCheck, Heart, Building2, Truck, Plus, Sparkles, Clock, AlertCircle } from 'lucide-react';
 import { toBengaliDigits } from '@/lib/bengali-utils';
+import {
+  registerServiceWorker,
+  subscribeToWebPush,
+  getPushPermissionState,
+} from '@/lib/services/pushNotificationService';
 import {
   fetchRequestsByDistrict,
   fetchCampsByDistrict,
@@ -57,9 +65,17 @@ import {
   subscribeToDistrictEvents,
   createEmergencyRequest,
   submitDonorResponse,
+  fetchDonorResponsesForRequest,
+  updateDonorResponseStatus,
+  fulfillEmergencyRequest,
+  getTransportLabel,
   fetchNotifications,
   markAllNotificationsAsRead,
   subscribeToNotifications,
+  fetchRequestById,
+  updateEmergencyRequestStatus,
+  isValidStatusTransition,
+  toggleCampRsvp,
 } from '@/lib/services/bloodService';
 import {
   playNotificationSound,
@@ -102,6 +118,9 @@ export const AppShell: React.FC = () => {
   // Active chat & reports
   const [activeChatDonor, setActiveChatDonor] = useState<RespondingDonor | null>(null);
   const [reportTargetName, setReportTargetName] = useState<string | null>(null);
+  const [reportTargetUserId, setReportTargetUserId] = useState<string | null>(null);
+  const [reportRequestId, setReportRequestId] = useState<string | null>(null);
+  const [isCreateCampOpen, setIsCreateCampOpen] = useState(false);
   const [selectedBloodGroupFilter, setSelectedBloodGroupFilter] = useState<BloodGroup | null>(null);
   const [isQuickSearchOpen, setIsQuickSearchOpen] = useState(false);
 
@@ -137,12 +156,12 @@ export const AppShell: React.FC = () => {
   const [notifications, setNotifications] = useState(initialNotifications);
   const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
 
-  // Sync live Supabase Auth session on app launch (captures Google / Facebook OAuth redirects)
+  // Sync live Supabase Auth session on app launch & register Service Worker
   React.useEffect(() => {
+    registerServiceWorker();
     syncSupabaseAuthSession().then((synced) => {
-      if (synced && (!synced.phone || synced.phone.length < 5)) {
-        setAuthInitialMode('complete_contact');
-        setIsAuthOpen(true);
+      if (synced && !synced.isProfileComplete) {
+        setIsDonorSetupOpen(true);
       }
     });
   }, []);
@@ -177,7 +196,7 @@ export const AppShell: React.FC = () => {
 
     loadDistrictData();
 
-    // 2. Setup Supabase Realtime channel for district broadcast
+    // 2. Setup Supabase Realtime channel for live district broadcast & postgres changes
     const unsubscribeDistrict = subscribeToDistrictEvents(
       currentDistrict,
       (newReq) => {
@@ -186,6 +205,13 @@ export const AppShell: React.FC = () => {
         const title = `🚨 নতুন রক্তের আবেদন: ${newReq.blood_group || 'রক্ত'} প্রয়োজন`;
         const desc = `${newReq.hospital_name || 'হাসপাতাল'} থেকে রক্তের আবেদন এসেছে।`;
         triggerNativeNotification(title, desc);
+
+        // Instantly update nearbyRequests list without page refresh
+        setNearbyRequests((prev) => {
+          if (prev.some((r) => r.id === newReq.id)) return prev;
+          return [newReq, ...prev];
+        });
+
         setNotifications((prev) => [
           {
             id: `NOTIF-REALTIME-${Date.now()}`,
@@ -195,6 +221,7 @@ export const AppShell: React.FC = () => {
             timestamp: 'এইমাত্র',
             bloodGroup: newReq.blood_group,
             isUnread: true,
+            actionType: 'respond',
           },
           ...prev,
         ]);
@@ -203,8 +230,26 @@ export const AppShell: React.FC = () => {
         if (!isMounted) return;
         playNotificationSound();
         const title = '✅ একজন রক্তদাতা সাড়া দিয়েছেন!';
-        const desc = `আনুমানিক ${newResponse.eta_minutes || 30} মিনিটে পৌঁছাবেন।`;
+        const desc = `আনুমানিক ${newResponse.donor?.etaMinutes || newResponse.eta_minutes || 30} মিনিটে পৌঁছাবেন।`;
         triggerNativeNotification(title, desc);
+
+        // If donor object is present, immediately show under active request
+        if (newResponse.donor) {
+          setRespondingDonors((prev) => {
+            if (prev.some((d) => d.id === newResponse.donor.id)) return prev;
+            return [newResponse.donor, ...prev];
+          });
+        }
+
+        // Update responding count on request in nearbyRequests
+        setNearbyRequests((prev) =>
+          prev.map((r) =>
+            r.id === newResponse.requestId
+              ? { ...r, respondingDonorsCount: (r.respondingDonorsCount || 0) + 1 }
+              : r
+          )
+        );
+
         setNotifications((prev) => [
           {
             id: `NOTIF-RESP-${Date.now()}`,
@@ -213,9 +258,40 @@ export const AppShell: React.FC = () => {
             description: desc,
             timestamp: 'এইমাত্র',
             isUnread: true,
+            actionType: 'call',
+            actionUrl: newResponse.donor?.phone ? `tel:${newResponse.donor.phone}` : undefined,
           },
           ...prev,
         ]);
+      },
+      (updatedReq) => {
+        if (!isMounted) return;
+        // Instantly update request in nearby list without page refresh
+        setNearbyRequests((prev) =>
+          prev.map((r) =>
+            r.id === updatedReq.requestId
+              ? {
+                  ...r,
+                  status: updatedReq.status,
+                  trackingStep: (updatedReq.trackingStep as any) || r.trackingStep,
+                  bagsFulfilled: typeof updatedReq.bagsFulfilled === 'number' ? updatedReq.bagsFulfilled : r.bagsFulfilled,
+                }
+              : r
+          )
+        );
+
+        if (myRequest && myRequest.id === updatedReq.requestId) {
+          setMyRequest((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: updatedReq.status,
+                  trackingStep: (updatedReq.trackingStep as any) || prev.trackingStep,
+                  bagsFulfilled: typeof updatedReq.bagsFulfilled === 'number' ? updatedReq.bagsFulfilled : prev.bagsFulfilled,
+                }
+              : null
+          );
+        }
       }
     );
 
@@ -234,11 +310,39 @@ export const AppShell: React.FC = () => {
     };
   }, [currentDistrict]);
 
-  // My Active Request State (defaults to null for real users until they post an emergency request)
+  // My Active Request State (restores persisted request across browser reload)
   const [myRequest, setMyRequest] = useState<EmergencyRequest | null>(null);
+
+  // Restore active emergency request from localStorage on page load / refresh
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const activeId = localStorage.getItem('roktodata_my_active_request_id');
+      if (activeId) {
+        fetchRequestById(activeId).then((req: EmergencyRequest | null) => {
+          if (
+            req &&
+            ['open', 'active', 'partially_fulfilled', 'in_progress'].includes(req.status || 'open')
+          ) {
+            setMyRequest(req);
+          }
+        });
+      }
+    }
+  }, []);
 
   // Responding Donors for active request (populated in real-time when donors respond)
   const [respondingDonors, setRespondingDonors] = useState<RespondingDonor[]>([]);
+
+  // Fetch real-time donor responses when user has an active emergency request
+  React.useEffect(() => {
+    if (myRequest?.id) {
+      fetchDonorResponsesForRequest(myRequest.id).then((responses: RespondingDonor[]) => {
+        if (responses && responses.length > 0) {
+          setRespondingDonors(responses);
+        }
+      });
+    }
+  }, [myRequest?.id]);
 
   // Selected Request for Donor Response Modal
   const [selectedResponseReq, setSelectedResponseReq] = useState<EmergencyRequest | null>(null);
@@ -252,6 +356,10 @@ export const AppShell: React.FC = () => {
       handleOpenAuth('login');
       return;
     }
+    if (!userProfile.isProfileComplete) {
+      setIsDonorSetupOpen(true);
+      return;
+    }
     const nextVal = !userProfile.isAvailable;
     setDonorAvailability(userProfile.donorId, nextVal);
     updateAuthenticatedUser({ isAvailable: nextVal });
@@ -260,6 +368,11 @@ export const AppShell: React.FC = () => {
   // Real login success handler
   const handleSuccessLogin = (user: UserProfileType) => {
     setIsAuthOpen(false);
+    if (!user.isProfileComplete) {
+      setTimeout(() => {
+        setIsDonorSetupOpen(true);
+      }, 400);
+    }
     setNotifications((prev) => [
       {
         id: `NOTIF-AUTH-${Date.now()}`,
@@ -276,29 +389,36 @@ export const AppShell: React.FC = () => {
   // Real logout handler
   const handleLogout = async () => {
     await logoutRealUser();
-    setNotifications((prev) => [
+    // Strict Data Clearance on Logout: eliminate all private patient, response & chat data
+    setMyRequest(null);
+    setRespondingDonors([]);
+    setSelectedResponseReq(null);
+    setActiveChatDonor(null);
+    setReportTargetName(null);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('roktodata_admin_key');
+    }
+    setNotifications([
       {
         id: `NOTIF-LOGOUT-${Date.now()}`,
         category: 'my-req',
         title: 'লগআউট সম্পন্ন হয়েছে',
-        description: 'আপনি সফলভাবে অ্যাকাউন্ট থেকে প্রস্থান করেছেন।',
+        description: 'আপনি সফলভাবে অ্যাকাউন্ট থেকে প্রস্থান করেছেন। পূর্ববর্তী সেশনের ব্যক্তিগত ডেটা মুছে ফেলা হয়েছে।',
         timestamp: 'এইমাত্র',
         isUnread: true,
       },
-      ...prev,
     ]);
   };
 
-  // Submit Blood Request from Wizard
-  const handleCreateRequest = async (newReq: Partial<EmergencyRequest>) => {
+  // Submit Blood Request from Wizard with real ID return
+  const handleCreateRequest = async (newReq: Partial<EmergencyRequest>): Promise<EmergencyRequest> => {
     const created = await createEmergencyRequest({
       ...newReq,
       location: currentDistrict,
     });
 
     setMyRequest(created);
-    setNearbyRequests((prev) => [created, ...prev]);
-    setActiveTab('requests');
+    setNearbyRequests((prev) => [created, ...prev.filter((r) => r.id !== created.id)]);
 
     // Add alert notification
     setNotifications((prev) => [
@@ -306,41 +426,80 @@ export const AppShell: React.FC = () => {
         id: `NOTIF-${Date.now()}`,
         category: 'my-req',
         title: 'আপনার জরুরি রক্তের অনুরোধ প্রকাশিত হয়েছে',
-        description: `${created.bloodGroup} রক্তের জন্য নিকটস্থ সকল ডোনারদের কাছে নোটিফিকেশন পাঠানো হয়েছে।`,
+        description: `${created.bloodGroup} রক্তের জন্য (${created.hospitalName}) নিকটস্থ রক্তদাতাদের নোটিফিকেশন পাঠানো হয়েছে। আইডি: ${created.id}`,
         timestamp: 'এইমাত্র',
         isUnread: true,
       },
       ...prev,
     ]);
+
+    return created;
   };
 
   // Donor Responds to a request
-  const handleRespondToRequest = (reqId: string, etaMinutes: number) => {
+  const handleRespondToRequest = (
+    reqId: string,
+    etaMinutes: number,
+    transportMode: TransportMode = 'motorcycle'
+  ) => {
     // Send to Supabase
-    submitDonorResponse(reqId, userProfile.name, userProfile.bloodGroup, userProfile.phone, etaMinutes);
+    submitDonorResponse({
+      requestId: reqId,
+      donorName: userProfile.name,
+      bloodGroup: userProfile.bloodGroup,
+      phone: userProfile.phone,
+      etaMinutes,
+      transportMode,
+      status: 'on_the_way',
+    });
 
-    const target = nearbyRequests.find((r) => r.id === reqId);
+    const target = nearbyRequests.find((r) => r.id === reqId) || myRequest;
     if (target) {
       if (myRequest && myRequest.id === reqId) {
-        setRespondingDonors((prev) => [
-          ...prev,
-          {
-            id: `RESP-${Date.now()}`,
-            name: userProfile.name,
-            bloodGroup: userProfile.bloodGroup,
-            phone: userProfile.phone,
-            distanceKm: target.distanceKm,
-            etaMinutes,
-            isVerified: true,
-            lastDonationMonths: 4,
-            status: 'on_the_way',
-          },
-        ]);
+        setRespondingDonors((prev) => {
+          const exists = prev.find((d) => d.name === userProfile.name);
+          if (exists) {
+            return prev.map((d) =>
+              d.name === userProfile.name
+                ? {
+                    ...d,
+                    etaMinutes,
+                    transportMode,
+                    transportLabel: getTransportLabel(transportMode),
+                    status: 'on_the_way',
+                  }
+                : d
+            );
+          }
+          return [
+            ...prev,
+            {
+              id: `RESP-${Date.now()}`,
+              name: userProfile.name,
+              bloodGroup: userProfile.bloodGroup,
+              phone: userProfile.phone,
+              distanceKm: target.distanceKm,
+              etaMinutes,
+              transportMode,
+              transportLabel: getTransportLabel(transportMode),
+              isVerified: true,
+              totalDonations: userProfile.totalDonations || 3,
+              lastDonationMonths: 4,
+              status: 'on_the_way',
+            },
+          ];
+        });
       } else {
         setNearbyRequests((prev) =>
           prev.map((r) =>
             r.id === reqId
-              ? { ...r, hasResponded: true, userResponseEta: etaMinutes }
+              ? {
+                  ...r,
+                  hasResponded: true,
+                  userResponseEta: etaMinutes,
+                  userTransportMode: transportMode,
+                  respondingDonorsCount: (r.respondingDonorsCount || 0) + 1,
+                }
               : r
           )
         );
@@ -351,7 +510,7 @@ export const AppShell: React.FC = () => {
           id: `NOTIF-${Date.now()}`,
           category: 'urgent',
           title: 'রক্তদানে আপনার সাড়া সফলভাবে গৃহীত হয়েছে',
-          description: `হাসপাতালে পৌঁছানোর আনুমানিক সময়: ${etaMinutes} মিনিট। মানবিক সহায়তার জন্য ধন্যবাদ।`,
+          description: `হাসপাতালে পৌঁছানোর আনুমানিক সময়: ${toBengaliDigits(etaMinutes)} মিনিট (${getTransportLabel(transportMode)})। মানবিক সহায়তার জন্য আন্তরিক ধন্যবাদ।`,
           timestamp: 'এইমাত্র',
           isUnread: true,
         },
@@ -360,36 +519,118 @@ export const AppShell: React.FC = () => {
     }
   };
 
-  // RSVP to camp
-  const handleRsvpCamp = (campId: string) => {
+  // RSVP to camp with duplicate prevention and database sync
+  const handleRsvpCamp = async (campId: string) => {
+    const currentCamp = camps.find((c) => c.id === campId);
+    const willRsvp = !currentCamp?.isRsvp;
+
     setCamps((prev) =>
       prev.map((c) =>
         c.id === campId
           ? {
               ...c,
-              isRsvp: !c.isRsvp,
-              registeredCount: c.isRsvp ? c.registeredCount - 1 : c.registeredCount + 1,
+              isRsvp: willRsvp,
+              registeredCount: willRsvp ? c.registeredCount + 1 : Math.max(0, c.registeredCount - 1),
             }
           : c
       )
     );
-  };
 
-  // Confirm specific donor
-  const handleConfirmDonor = (donorId: string) => {
-    setRespondingDonors((prev) =>
-      prev.map((d) => (d.id === donorId ? { ...d, status: 'confirmed' } : d))
-    );
-    if (myRequest) {
-      setMyRequest({ ...myRequest, trackingStep: 4 });
+    const result = await toggleCampRsvp(campId, userProfile.donorId || 'guest-user');
+    if (result.isRsvp) {
+      setNotifications((prev) => [
+        {
+          id: `NOTIF-RSVP-${Date.now()}`,
+          category: 'camps',
+          title: 'ক্যাম্পেইনে অংশগ্রহণ নিশ্চিত হয়েছে!',
+          description: 'রক্তদান ক্যাম্পেইনে আপনার উপস্থিতি সফলভাবে সংরক্ষিত হয়েছে।',
+          timestamp: 'এইমাত্র',
+          isUnread: true,
+        },
+        ...prev,
+      ]);
     }
   };
 
-  // Close active request
-  const handleCloseRequest = () => {
-    if (confirm('অনুরোধ বন্ধ করার কারণ নির্বাচন করুন: রক্ত পেয়েছি / আর প্রয়োজন নেই')) {
+  // Confirm specific donor
+  const handleConfirmDonor = async (donorId: string) => {
+    setRespondingDonors((prev) =>
+      prev.map((d) => (d.id === donorId ? { ...d, status: 'confirmed' } : d))
+    );
+
+    if (myRequest) {
+      const currentFulfilled = (myRequest.bagsFulfilled || 0) + 1;
+      const isComplete = currentFulfilled >= myRequest.bagsNeeded;
+      const newStatus = isComplete ? 'fulfilled' : 'partially_fulfilled';
+      const newStep = isComplete ? 5 : 4;
+
+      setMyRequest({
+        ...myRequest,
+        bagsFulfilled: currentFulfilled,
+        status: newStatus,
+        trackingStep: newStep,
+      });
+
+      // Sync with Supabase
+      await fulfillEmergencyRequest(myRequest.id, donorId);
+
+      setNotifications((prev) => [
+        {
+          id: `NOTIF-CONFIRM-${Date.now()}`,
+          category: 'my-req',
+          title: isComplete ? 'রক্ত সংগ্রহ সফলভাবে সম্পন্ন হয়েছে!' : 'রক্তদাতা নিশ্চিত করা হয়েছে',
+          description: isComplete
+            ? `প্রয়োজনীয় সকল রক্ত (${toBengaliDigits(currentFulfilled)}/${toBengaliDigits(myRequest.bagsNeeded)} ব্যাগ) সংগ্রহ নিশ্চিত হয়েছে।`
+            : `রক্তদাতার উপস্থিতি ও রক্তদান গ্রহণ নিশ্চিত হয়েছে (${toBengaliDigits(currentFulfilled)}/${toBengaliDigits(myRequest.bagsNeeded)} ব্যাগ)।`,
+          timestamp: 'এইমাত্র',
+          isUnread: true,
+        },
+        ...prev,
+      ]);
+    }
+  };
+
+  // Decline or cancel specific donor response
+  const handleDeclineDonor = async (donorId: string) => {
+    if (!window.confirm('আপনি কি এই ডোনারের সাড়া বাতিল করতে চান?')) return;
+    setRespondingDonors((prev) =>
+      prev.map((d) => (d.id === donorId ? { ...d, status: 'declined' } : d))
+    );
+    await updateDonorResponseStatus(donorId, 'declined');
+  };
+
+  // Close or update active emergency request status
+  const handleCloseRequest = async () => {
+    if (!myRequest) return;
+
+    const action = window.prompt(
+      'অনুরোধের বর্তমান অবস্থা নির্বাচন করুন:\n১. সম্পূর্ণ রক্ত পেয়েছি (1 টাইপ করুন - Fulfilled)\n২. আংশিক রক্ত পেয়েছি (2 টাইপ করুন - Partially Fulfilled)\n৩. অনুরোধ বাতিল করুন (3 টাইপ করুন - Cancelled)',
+      '1'
+    );
+
+    if (action === '1') {
+      await updateEmergencyRequestStatus(myRequest.id, 'fulfilled', myRequest.status, myRequest.bagsNeeded);
+      setMyRequest((prev) => (prev ? { ...prev, status: 'fulfilled', trackingStep: 5 } : null));
+      alert('অভিনন্দন! আপনার রক্তের আবেদন সফলভাবে সম্পন্ন (Fulfilled) হিসেবে সমাপ্ত হয়েছে।');
+      setTimeout(() => setMyRequest(null), 1200);
+    } else if (action === '2') {
+      const fulfilledBags = Math.min(myRequest.bagsNeeded, (myRequest.bagsFulfilled || 0) + 1);
+      await updateEmergencyRequestStatus(myRequest.id, 'partially_fulfilled', myRequest.status, fulfilledBags);
+      setMyRequest((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: 'partially_fulfilled',
+              bagsFulfilled: fulfilledBags,
+              trackingStep: 3,
+            }
+          : null
+      );
+      alert(`আংশিক রক্ত সংগ্রহ আপডেট করা হয়েছে (${toBengaliDigits(fulfilledBags)}/${toBengaliDigits(myRequest.bagsNeeded)} ব্যাগ)।`);
+    } else if (action === '3') {
+      await updateEmergencyRequestStatus(myRequest.id, 'cancelled', myRequest.status);
       setMyRequest(null);
-      alert('অনুরোধটি সফলভাবে সম্পন্ন হিসেবে বন্ধ করা হয়েছে।');
+      alert('অনুরোধটি বাতিল (Cancelled) করা হয়েছে।');
     }
   };
 
@@ -529,11 +770,19 @@ export const AppShell: React.FC = () => {
                   setActiveTab('request_form');
                 }}
                 initialBloodGroup={selectedBloodGroupFilter}
+                onOpenHospitalDashboard={() => {
+                  setIsHospitalDirectoryOpen(false);
+                  setIsHospitalDashboardOpen(true);
+                }}
+                userRole={userProfile.role}
+                currentDistrict={currentDistrict}
               />
             ) : isAmbulanceDirectoryOpen ? (
               <AmbulanceDirectoryView
                 ambulances={ambulances}
                 onBack={() => setIsAmbulanceDirectoryOpen(false)}
+                userRole={userProfile.role}
+                onAmbulanceAdded={(newAmb) => setAmbulances((prev) => [newAmb, ...prev])}
               />
             ) : isHealthEducationOpen ? (
               <HealthEducationView
@@ -543,6 +792,25 @@ export const AppShell: React.FC = () => {
             ) : isHospitalDashboardOpen ? (
               <HospitalDashboardView
                 onBack={() => setIsHospitalDashboardOpen(false)}
+                userProfile={userProfile}
+                hospitals={hospitals}
+                onStockUpdated={(hospId, group, count) => {
+                  setHospitals((prev) =>
+                    prev.map((h) => {
+                      if (h.id === hospId && h.stocks) {
+                        const nextStatus = count >= 5 ? 'adequate' : count >= 2 ? 'limited' : 'empty';
+                        return {
+                          ...h,
+                          stocks: {
+                            ...h.stocks,
+                            [group]: { count, status: nextStatus },
+                          },
+                        };
+                      }
+                      return h;
+                    })
+                  );
+                }}
               />
             ) : activeTab === 'home' ? (
               <HomeScreen
@@ -557,6 +825,7 @@ export const AppShell: React.FC = () => {
                 onOpenDonorResponse={(req) => setSelectedResponseReq(req)}
                 activeRequestCount={myRequest ? 1 : 0}
                 onRsvpCamp={handleRsvpCamp}
+                onOpenCreateCamp={() => setIsCreateCampOpen(true)}
                 onOpenHospitalDirectory={() => setIsHospitalDirectoryOpen(true)}
                 onOpenAmbulanceDirectory={() => setIsAmbulanceDirectoryOpen(true)}
                 onOpenHealthEducation={() => setIsHealthEducationOpen(true)}
@@ -573,24 +842,35 @@ export const AppShell: React.FC = () => {
                 nearbyRequests={nearbyRequests}
                 respondingDonors={respondingDonors}
                 onConfirmDonor={handleConfirmDonor}
+                onDeclineDonor={handleDeclineDonor}
                 onCloseRequest={handleCloseRequest}
                 onShareRequest={handleShareRequest}
                 onFindMoreDonors={() => setActiveTab('donors')}
                 onTabSelectRequestForm={() => setActiveTab('request_form')}
+                onOpenDonorResponse={(req) => setSelectedResponseReq(req)}
                 onOpenChat={(donor) => setActiveChatDonor(donor)}
-                onOpenReport={(name) => setReportTargetName(name)}
+                onOpenReport={(name, uId, reqId) => {
+                  setReportTargetName(name);
+                  setReportTargetUserId(uId || null);
+                  setReportRequestId(reqId || null);
+                }}
                 onOpenVerificationExplainer={() => setIsVerificationExplainerOpen(true)}
               />
             ) : activeTab === 'request_form' ? (
               <BloodRequestWizard
                 onClose={() => setActiveTab('home')}
                 onSubmitRequest={handleCreateRequest}
+                onViewCreatedRequest={() => setActiveTab('requests')}
+                initialDistrict={currentDistrict}
               />
             ) : activeTab === 'donors' ? (
               <DonorDirectoryView
                 donors={donors}
+                currentDistrict={currentDistrict}
+                onDistrictChange={setCurrentDistrict}
                 onRequestBloodClick={() => setActiveTab('request_form')}
                 onSendDirectRequest={handleSendDirectRequest}
+                currentUserId={userProfile.donorId || (cachedUser as any)?.id}
               />
             ) : activeTab === 'profile' ? (
               <UserProfileView
@@ -601,6 +881,8 @@ export const AppShell: React.FC = () => {
                 onOpenAuditLog={() => setIsSettingsOpen(true)}
                 onOpenAuth={() => handleOpenAuth('login')}
                 onLogout={handleLogout}
+                onOpenDonorSetup={() => setIsDonorSetupOpen(true)}
+                onUpdateProfile={(updates) => updateAuthenticatedUser(updates)}
               />
             ) : null}
           </main>
@@ -847,9 +1129,9 @@ export const AppShell: React.FC = () => {
       <DonorResponseModal
         request={selectedResponseReq}
         onClose={() => setSelectedResponseReq(null)}
-        onSuccessResponse={(etaMinutes) => {
+        onSuccessResponse={(etaMinutes, transportMode) => {
           if (selectedResponseReq) {
-            handleRespondToRequest(selectedResponseReq.id, etaMinutes);
+            handleRespondToRequest(selectedResponseReq.id, etaMinutes, transportMode);
           }
         }}
       />
@@ -858,9 +1140,20 @@ export const AppShell: React.FC = () => {
       <DonorProfileSetupWizard
         isOpen={isDonorSetupOpen}
         onClose={() => setIsDonorSetupOpen(false)}
-        onComplete={(updates) => {
-          updateAuthenticatedUser(updates);
-          alert('ডোনার প্রোফাইল সফলভাবে সংরক্ষিত হয়েছে!');
+        initialProfile={userProfile}
+        onComplete={(updatedUser) => {
+          setIsDonorSetupOpen(false);
+          setNotifications((prev) => [
+            {
+              id: `NOTIF-SETUP-${Date.now()}`,
+              category: 'my-req',
+              title: 'ডোনার প্রোফাইল সফলভাবে সংরক্ষিত হয়েছে!',
+              description: 'আপনার মোবাইল নম্বর, রক্তের গ্রুপ ও এলাকা নিশ্চিত করা হয়েছে।',
+              timestamp: 'এইমাত্র',
+              isUnread: true,
+            },
+            ...prev,
+          ]);
         }}
       />
 
@@ -868,8 +1161,17 @@ export const AppShell: React.FC = () => {
       {activeChatDonor && (
         <SafeChatModal
           donorName={activeChatDonor.name}
+          donorId={activeChatDonor.id}
+          donorBloodGroup={activeChatDonor.bloodGroup}
+          requestId={myRequest?.id || 'REQ-LIVE'}
+          currentUserId={userProfile.donorId || 'user-current'}
+          currentUserName={userProfile.name || 'রোগীর স্বজন'}
           onClose={() => setActiveChatDonor(null)}
-          onOpenReport={() => setReportTargetName(activeChatDonor.name)}
+          onOpenReport={(name, uId, reqId) => {
+            setReportTargetName(name);
+            setReportTargetUserId(uId || activeChatDonor.id);
+            setReportRequestId(reqId || myRequest?.id || 'REQ-LIVE');
+          }}
         />
       )}
 
@@ -877,7 +1179,36 @@ export const AppShell: React.FC = () => {
       <ReportModal
         isOpen={!!reportTargetName}
         targetName={reportTargetName || ''}
-        onClose={() => setReportTargetName(null)}
+        targetUserId={reportTargetUserId || undefined}
+        requestId={reportRequestId || myRequest?.id || undefined}
+        reporterId={userProfile.donorId || 'reporter-user'}
+        onClose={() => {
+          setReportTargetName(null);
+          setReportTargetUserId(null);
+          setReportRequestId(null);
+        }}
+        isAdmin={userProfile.role === 'admin' || userProfile.role === 'hospital_operator'}
+      />
+
+      {/* Create Donation Camp Modal */}
+      <CreateCampModal
+        isOpen={isCreateCampOpen}
+        onClose={() => setIsCreateCampOpen(false)}
+        onCampCreated={(newCamp) => {
+          setCamps((prev) => [newCamp, ...prev]);
+          setNotifications((prev) => [
+            {
+              id: `NOTIF-CAMP-${Date.now()}`,
+              category: 'camps',
+              title: 'নতুন রক্তদান ক্যাম্পেইন তৈরি হয়েছে',
+              description: `${newCamp.organizer} আয়োজিত ক্যাম্পেইনটি সফলভাবে যুক্ত হয়েছে।`,
+              timestamp: 'এইমাত্র',
+              isUnread: true,
+            },
+            ...prev,
+          ]);
+        }}
+        currentDistrict={currentDistrict}
       />
 
       {/* Verification Explainer Bottom Sheet */}
@@ -904,6 +1235,13 @@ export const AppShell: React.FC = () => {
       <LiveDatabaseViewer
         isOpen={isDbExplorerOpen}
         onClose={() => setIsDbExplorerOpen(false)}
+      />
+
+      {/* Browser Web Push Notification Permission Banner */}
+      <PushNotificationBanner
+        district={currentDistrict}
+        bloodGroup={userProfile.bloodGroup}
+        userId={userProfile.donorId}
       />
     </div>
   );

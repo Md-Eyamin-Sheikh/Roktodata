@@ -20,18 +20,28 @@ console.log(`   - Supabase Service Key: ${serviceKey ? '✅ DETECTED (' + servic
 // 2. Check SQL files for schema consistency
 console.log('\n2. SQL SCHEMA & SEED ALIGNMENT CHECK:');
 const schemaPath = path.join(__dirname, '..', 'supabase', 'schema.sql');
+const migrationPath = path.join(__dirname, '..', 'supabase', 'migrations', '20261023000000_complete_database_schema.sql');
 const seedPath = path.join(__dirname, '..', 'supabase', 'seed.sql');
 const fixRlsPath = path.join(__dirname, '..', 'supabase', 'fix_rls.sql');
 
 const schema = fs.readFileSync(schemaPath, 'utf8');
+const migrationExists = fs.existsSync(migrationPath);
+const migration = migrationExists ? fs.readFileSync(migrationPath, 'utf8') : '';
 const seed = fs.readFileSync(seedPath, 'utf8');
 const fixRls = fs.readFileSync(fixRlsPath, 'utf8');
 
 const checks = [
+  { name: 'Migration 20261023000000_complete_database_schema.sql exists', pass: migrationExists },
   { name: 'blood_inventory.hospital_id in schema.sql', pass: schema.includes('hospital_id UUID') },
   { name: 'donor_profiles.reward_points in schema.sql', pass: schema.includes('reward_points INTEGER') },
   { name: 'donor_profiles.badges in schema.sql', pass: schema.includes('badges JSONB') },
-  { name: 'notifications.user_id nullable in schema.sql', pass: schema.includes('user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,') },
+  { name: 'chat_messages table in migration', pass: migration.includes('public.chat_messages') },
+  { name: 'reports table in migration', pass: migration.includes('public.reports') },
+  { name: 'donor_bookmarks table in migration', pass: migration.includes('public.donor_bookmarks') },
+  { name: 'campaign_rsvps table in migration', pass: migration.includes('public.campaign_rsvps') },
+  { name: 'push_subscriptions table in migration', pass: migration.includes('public.push_subscriptions') },
+  { name: 'handle_updated_at trigger function in migration', pass: migration.includes('handle_updated_at') },
+  { name: 'sync_donor_history trigger in migration', pass: migration.includes('sync_donor_history') },
   { name: 'fix_rls.sql auto-repair column patches', pass: fixRls.includes('ADD COLUMN IF NOT EXISTS reward_points') && fixRls.includes('ADD COLUMN IF NOT EXISTS hospital_id') },
 ];
 

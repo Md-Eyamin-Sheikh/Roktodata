@@ -25,6 +25,18 @@ export interface RegisterPayload {
   role?: 'donor' | 'recipient';
 }
 
+export interface CompleteDonorProfilePayload {
+  phone: string;
+  bloodGroup: BloodGroup;
+  division: string;
+  district: string;
+  upazila?: string;
+  isAvailable?: boolean;
+  lastDonationDate?: string;
+  phoneVisibility?: 'verified_family' | 'all_registered';
+  quietHoursEnabled?: boolean;
+}
+
 /**
  * Normalizes Bangladeshi phone numbers into clean format: 01XXXXXXXXX
  */
@@ -72,6 +84,43 @@ export const formatBdPhoneDisplay = (phone: string): string => {
 };
 
 /**
+ * Checks if a phone number is already registered in public.profiles by another user
+ */
+export const checkPhoneDuplicate = async (
+  rawPhone: string,
+  excludeUserId?: string
+): Promise<{ isDuplicate: boolean; message?: string }> => {
+  const norm = normalizePhoneNumber(rawPhone);
+  if (!norm || norm.length < 11) {
+    return { isDuplicate: false };
+  }
+  const formatted = formatBdPhoneDisplay(norm);
+  const supabase = getSupabaseClient();
+  if (!supabase) return { isDuplicate: false };
+
+  try {
+    const { data, error } = await (supabase as any)
+      .from('profiles')
+      .select('id, phone_number, full_name')
+      .or(`phone_number.eq.${norm},phone_number.eq.${formatted}`);
+
+    if (!error && Array.isArray(data) && data.length > 0) {
+      const conflicting = data.find((row: any) => row.id !== excludeUserId);
+      if (conflicting) {
+        return {
+          isDuplicate: true,
+          message: `এই মোবাইল নম্বরটি (${formatted}) ইতিমধ্যে একজন রক্তদাতার অ্যাকাউন্টে নিবন্ধিত আছে। অনুগ্রহ করে আপনার নিজস্ব সচল নম্বর ব্যবহার করুন।`,
+        };
+      }
+    }
+  } catch (err: any) {
+    console.warn('Phone duplicate check note:', err?.message);
+  }
+
+  return { isDuplicate: false };
+};
+
+/**
  * Helper to build a standard UserProfile from raw data
  */
 export const createProfileObject = (
@@ -82,12 +131,21 @@ export const createProfileObject = (
   district: string,
   userId?: string,
   role: 'donor' | 'recipient' = 'donor',
-  avatarUrl?: string
+  division?: string,
+  upazila?: string
 ): UserProfile => {
   const formattedPhone = formatBdPhoneDisplay(phone);
   const donorId = userId
     ? `RD-${userId.replace(/-/g, '').slice(0, 6).toUpperCase()}`
     : `RD-${Math.floor(10000 + Math.random() * 90000)}`;
+
+  const isComplete = Boolean(
+    phone &&
+    normalizePhoneNumber(phone).length >= 11 &&
+    bloodGroup &&
+    district &&
+    division
+  );
 
   return {
     name: name.trim() || 'রক্তদাতা সদস্য',
@@ -96,6 +154,10 @@ export const createProfileObject = (
     donorId,
     phone: formattedPhone,
     location: district.trim() || 'বগুড়া সদর',
+    division: division || 'রাজশাহী',
+    district: district.trim() || 'বগুড়া সদর',
+    upazila: upazila || district.trim() || 'বগুড়া সদর',
+    userId,
     isVerified: true,
     isAvailable: role !== 'recipient',
     lastDonationDate: 'নতুন নিবন্ধিত',
@@ -112,7 +174,7 @@ export const createProfileObject = (
     language: 'bn',
     textSize: '100%',
     reducedMotion: false,
-    isProfileComplete: Boolean(phone && bloodGroup && district),
+    isProfileComplete: isComplete,
     badges: [
       { id: 'B-NEW', title: 'নতুন সদস্য', subtitle: 'মানবিক পরিবারের গর্বিত অংশীদার' },
     ],
@@ -156,6 +218,15 @@ export const registerWithEmail = async (payload: RegisterPayload): Promise<AuthR
     };
   }
 
+  // Pre-check phone uniqueness to avoid duplicate entries
+  const dupCheck = await checkPhoneDuplicate(normalizedPhone);
+  if (dupCheck.isDuplicate) {
+    return {
+      success: false,
+      error: dupCheck.message || 'এই মোবাইল নম্বরটি ইতিমধ্যে নিবন্ধিত আছে।',
+    };
+  }
+
   const formattedPhone = formatBdPhoneDisplay(normalizedPhone);
   const supabase = getSupabaseClient();
   let createdUser: UserProfile | null = null;
@@ -171,13 +242,14 @@ export const registerWithEmail = async (payload: RegisterPayload): Promise<AuthR
             full_name: cleanName,
             phone_number: formattedPhone,
             blood_group: payload.bloodGroup,
+            division: payload.division || 'রাজশাহী',
             district: payload.district,
+            upazila: payload.upazila || payload.district,
           },
         },
       });
 
       if (authError) {
-        // If user already registered, provide friendly Bengali message
         if (authError.message?.toLowerCase().includes('already registered')) {
           return {
             success: false,
@@ -190,7 +262,11 @@ export const registerWithEmail = async (payload: RegisterPayload): Promise<AuthR
         };
       }
 
-      const userId = authData.user?.id || `usr-${Date.now()}`;
+      const userId = authData.user?.id;
+      if (!userId) {
+        throw new Error('Supabase Auth-এ ব্যবহারকারী ID তৈরি হয়নি।');
+      }
+
       createdUser = createProfileObject(
         cleanName,
         cleanEmail,
@@ -198,39 +274,53 @@ export const registerWithEmail = async (payload: RegisterPayload): Promise<AuthR
         payload.bloodGroup,
         payload.district,
         userId,
-        payload.role
+        payload.role,
+        payload.division || 'রাজশাহী',
+        payload.upazila || payload.district
       );
 
-      // 2. Insert into Supabase public.profiles table
-      try {
-        await (supabase as any).from('profiles').upsert(
-          {
-            id: userId,
-            phone_number: formattedPhone,
-            full_name: cleanName,
-            blood_group: payload.bloodGroup,
-            division: payload.division || 'রাজশাহী',
-            district: payload.district,
-            upazila: payload.upazila || payload.district,
-            is_verified: true,
-          },
-          { onConflict: 'id' }
-        );
+      // 2. Insert into Supabase public.profiles table (strictly linked by UUID)
+      const { error: profileError } = await (supabase as any).from('profiles').upsert(
+        {
+          id: userId,
+          phone_number: formattedPhone,
+          full_name: cleanName,
+          blood_group: payload.bloodGroup,
+          division: payload.division || 'রাজশাহী',
+          district: payload.district,
+          upazila: payload.upazila || payload.district,
+          is_verified: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
 
-        // 3. Insert into Supabase public.donor_profiles table
-        await (supabase as any).from('donor_profiles').upsert(
-          {
-            user_id: userId,
-            is_available: payload.role !== 'recipient',
-            total_donations: 0,
-            reward_points: 100,
-            badges: ['নতুন সদস্য'],
-          },
-          { onConflict: 'user_id' }
-        );
-      } catch (dbErr: any) {
-        console.warn('Database table sync note:', dbErr?.message);
+      if (profileError) {
+        if (
+          profileError.code === '23505' ||
+          profileError.message?.includes('duplicate key') ||
+          profileError.message?.includes('profiles_phone_number_key')
+        ) {
+          return {
+            success: false,
+            error: 'এই মোবাইল নম্বরটি ইতিমধ্যে অন্য একজন রক্তদাতার অ্যাকাউন্টে ব্যবহৃত হচ্ছে।',
+          };
+        }
+        console.warn('Profiles table insert error:', profileError.message);
       }
+
+      // 3. Insert into Supabase public.donor_profiles table
+      await (supabase as any).from('donor_profiles').upsert(
+        {
+          user_id: userId,
+          is_available: payload.role !== 'recipient',
+          total_donations: 0,
+          reward_points: 100,
+          badges: ['নতুন সদস্য'],
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
     } catch (err: any) {
       console.warn('Supabase auth execution note:', err?.message);
     }
@@ -245,7 +335,9 @@ export const registerWithEmail = async (payload: RegisterPayload): Promise<AuthR
       payload.bloodGroup,
       payload.district,
       undefined,
-      payload.role
+      payload.role,
+      payload.division,
+      payload.upazila
     );
   }
 
@@ -263,6 +355,7 @@ export const registerWithEmail = async (payload: RegisterPayload): Promise<AuthR
 
 /**
  * 2. Login with Email & Password
+ * Retrieves existing profile without re-creating or overwriting
  */
 export const loginWithEmail = async (
   email: string,
@@ -312,7 +405,7 @@ export const loginWithEmail = async (
         const u = data.user;
         let profileData: any = null;
 
-        // Fetch user from public.profiles
+        // Fetch existing user record from public.profiles
         try {
           const { data: pData } = await (supabase as any)
             .from('profiles')
@@ -327,13 +420,31 @@ export const loginWithEmail = async (
         const donorProfile = profileData?.donor_profiles?.[0] || {};
         const meta = u.user_metadata || {};
 
+        const phone = profileData?.phone_number || meta.phone_number || '';
+        const bloodGroup = (profileData?.blood_group || meta.blood_group || 'B+') as BloodGroup;
+        const district = profileData?.district || meta.district || '';
+        const division = profileData?.division || meta.division || '';
+        const upazila = profileData?.upazila || meta.upazila || '';
+
+        const isComplete = Boolean(
+          phone &&
+          normalizePhoneNumber(phone).length >= 11 &&
+          bloodGroup &&
+          district &&
+          division
+        );
+
         const userProfile: UserProfile = {
           name: profileData?.full_name || meta.full_name || meta.name || cleanEmail.split('@')[0],
           email: u.email || cleanEmail,
-          bloodGroup: (profileData?.blood_group || meta.blood_group || 'B+') as BloodGroup,
+          bloodGroup,
           donorId: `RD-${u.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`,
-          phone: profileData?.phone_number || meta.phone_number || '',
-          location: profileData?.district || meta.district || 'বগুড়া সদর',
+          phone: formatBdPhoneDisplay(phone),
+          location: district ? `${district}${upazila ? ', ' + upazila : ''}` : 'বগুড়া সদর',
+          division: division || 'রাজশাহী',
+          district: district || 'বগুড়া সদর',
+          upazila: upazila || '',
+          userId: u.id,
           isVerified: Boolean(profileData?.is_verified ?? true),
           isAvailable: donorProfile.is_available !== false,
           lastDonationDate: donorProfile.last_donation_date || 'নতুন রক্তদাতা',
@@ -350,7 +461,7 @@ export const loginWithEmail = async (
           language: 'bn',
           textSize: '100%',
           reducedMotion: false,
-          isProfileComplete: Boolean(profileData?.phone_number || meta.phone_number),
+          isProfileComplete: isComplete,
           badges: Array.isArray(donorProfile.badges)
             ? donorProfile.badges.map((b: string, i: number) => ({
                 id: `B-${i}`,
@@ -370,7 +481,7 @@ export const loginWithEmail = async (
           success: true,
           user: userProfile,
           message: 'সফলভাবে লগইন সম্পন্ন হয়েছে!',
-          needsContactDetails: !userProfile.phone,
+          needsContactDetails: !isComplete,
         };
       }
     } catch (err: any) {
@@ -406,7 +517,6 @@ export const loginWithEmail = async (
 
 /**
  * 3. Single-Click Social Login via Google or Facebook
- * Completely free on Supabase (included in standard free tier)
  */
 export const loginWithOAuth = async (
   provider: 'google' | 'facebook'
@@ -453,7 +563,7 @@ export const loginWithOAuth = async (
 };
 
 /**
- * 4. Send Password Reset Email (Free tier feature)
+ * 4. Send Password Reset Email
  */
 export const sendPasswordResetEmail = async (email: string): Promise<AuthResponse> => {
   const cleanEmail = (email || '').trim().toLowerCase();
@@ -493,66 +603,175 @@ export const sendPasswordResetEmail = async (email: string): Promise<AuthRespons
 };
 
 /**
- * 5. Complete Donor Contact Information for Social Logins
- * Ensures every donor has a verified Mobile Number & Blood Group stored in Supabase
+ * Update user password after recovery link clicked
  */
-export const completeDonorContactInfo = async (
-  phone: string,
-  bloodGroup: BloodGroup,
-  district: string,
-  extraUpdates: Partial<UserProfile> = {}
+export const updateUserPassword = async (newPassword: string): Promise<AuthResponse> => {
+  if (!newPassword || newPassword.length < 6) {
+    return {
+      success: false,
+      error: 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।',
+    };
+  }
+
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    return { success: false, error: 'Supabase সংযোগ পাওয়া যায়নি।' };
+  }
+
+  try {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      return {
+        success: false,
+        error: error.message || 'পাসওয়ার্ড পরিবর্তন ব্যর্থ হয়েছে।',
+      };
+    }
+    return {
+      success: true,
+      message: 'পাসওয়ার্ড সফলভাবে পরিবর্তন করা হয়েছে!',
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || 'ত্রুটি দেখা দিয়েছে।',
+    };
+  }
+};
+
+/**
+ * 5. Complete Donor Profile (Called from DonorProfileSetupWizard)
+ * Collects Phone, Blood Group, Division, District, Upazila & Donor Availability.
+ * Enforces phone uniqueness and connects directly to auth user UUID.
+ */
+export const completeDonorProfile = async (
+  payload: CompleteDonorProfilePayload
 ): Promise<AuthResponse> => {
-  const normalizedPhone = normalizePhoneNumber(phone);
-  if (!isValidBdPhoneNumber(normalizedPhone)) {
+  const normPhone = normalizePhoneNumber(payload.phone);
+  if (!isValidBdPhoneNumber(normPhone)) {
     return {
       success: false,
       error: 'জরুরি প্রয়োজনে যোগাযোগের জন্য সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: ০১৭১২-৩৪৫৬৭৮)।',
     };
   }
 
-  const formattedPhone = formatBdPhoneDisplay(normalizedPhone);
-  const current = getAuthenticatedUser();
+  if (!payload.bloodGroup) {
+    return {
+      success: false,
+      error: 'অনুগ্রহ করে আপনার রক্তের গ্রুপ নির্বাচন করুন।',
+    };
+  }
+
+  if (!payload.district || !payload.division) {
+    return {
+      success: false,
+      error: 'অনুগ্রহ করে আপনার বিভাগ ও জেলা নির্বাচন করুন।',
+    };
+  }
+
   const supabase = getSupabaseClient();
+  let userId: string | null = null;
+  let userEmail: string = '';
+  let userName: string = '';
 
-  const updatedProfile: UserProfile = {
-    ...(current || createProfileObject('রক্তদাতা', '', formattedPhone, bloodGroup, district)),
-    phone: formattedPhone,
-    bloodGroup,
-    location: district.trim() || 'বগুড়া সদর',
-    isProfileComplete: true,
-    ...extraUpdates,
-  };
-
-  // Sync with Supabase public.profiles
   if (supabase) {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
-
-      if (userId) {
-        await (supabase as any).from('profiles').upsert(
-          {
-            id: userId,
-            phone_number: formattedPhone,
-            full_name: updatedProfile.name,
-            blood_group: bloodGroup,
-            district: district.trim(),
-            is_verified: true,
-          },
-          { onConflict: 'id' }
-        );
-
-        await (supabase as any).from('donor_profiles').upsert(
-          {
-            user_id: userId,
-            is_available: true,
-            total_donations: updatedProfile.totalDonations || 0,
-          },
-          { onConflict: 'user_id' }
-        );
+      const sessionUser = sessionData?.session?.user;
+      if (sessionUser) {
+        userId = sessionUser.id;
+        userEmail = sessionUser.email || '';
+        userName = sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name || '';
       }
+    } catch {
+      // Offline fallback
+    }
+  }
+
+  const current = getAuthenticatedUser();
+  if (!userId && current?.userId) {
+    userId = current.userId;
+  }
+  if (!userName && current?.name) {
+    userName = current.name;
+  }
+  if (!userEmail && current?.email) {
+    userEmail = current.email || '';
+  }
+
+  // Enforce duplicate phone number prevention
+  const dupCheck = await checkPhoneDuplicate(normPhone, userId || undefined);
+  if (dupCheck.isDuplicate) {
+    return {
+      success: false,
+      error: dupCheck.message || 'এই মোবাইল নম্বরটি ইতিমধ্যে নিবন্ধিত আছে।',
+    };
+  }
+
+  const formattedPhone = formatBdPhoneDisplay(normPhone);
+  const locationDisplay = `${payload.district}${payload.upazila ? ', ' + payload.upazila : ''}`;
+
+  const updatedProfile: UserProfile = {
+    ...(current || createProfileObject(userName || 'রক্তদাতা', userEmail, formattedPhone, payload.bloodGroup, payload.district, userId || undefined)),
+    name: userName || current?.name || 'রক্তদাতা সদস্য',
+    email: userEmail || current?.email,
+    userId: userId || current?.userId,
+    phone: formattedPhone,
+    bloodGroup: payload.bloodGroup,
+    division: payload.division,
+    district: payload.district,
+    upazila: payload.upazila,
+    location: locationDisplay,
+    isAvailable: payload.isAvailable ?? true,
+    lastDonationDate: payload.lastDonationDate || current?.lastDonationDate || 'কখনো দিইনি',
+    phoneVisibility: payload.phoneVisibility || 'verified_family',
+    quietHoursEnabled: payload.quietHoursEnabled ?? true,
+    isProfileComplete: true,
+  };
+
+  // Sync with Supabase public.profiles & public.donor_profiles
+  if (supabase && userId) {
+    try {
+      const { error: profileError } = await (supabase as any).from('profiles').upsert(
+        {
+          id: userId,
+          phone_number: formattedPhone,
+          full_name: updatedProfile.name,
+          blood_group: payload.bloodGroup,
+          division: payload.division,
+          district: payload.district,
+          upazila: payload.upazila || payload.district,
+          is_verified: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
+
+      if (profileError) {
+        if (
+          profileError.code === '23505' ||
+          profileError.message?.includes('duplicate key') ||
+          profileError.message?.includes('profiles_phone_number_key')
+        ) {
+          return {
+            success: false,
+            error: 'এই মোবাইল নম্বরটি ইতিমধ্যে অন্য একটি অ্যাকাউন্টে সংরক্ষিত আছে।',
+          };
+        }
+        console.warn('Profiles table upsert note:', profileError.message);
+      }
+
+      await (supabase as any).from('donor_profiles').upsert(
+        {
+          user_id: userId,
+          is_available: payload.isAvailable ?? true,
+          last_donation_date: payload.lastDonationDate && payload.lastDonationDate !== 'কখনো দিইনি' ? payload.lastDonationDate : null,
+          privacy_hide_phone: payload.phoneVisibility === 'verified_family',
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
     } catch (err: any) {
-      console.warn('Supabase contact info update note:', err?.message);
+      console.warn('Supabase completeDonorProfile error:', err?.message);
     }
   }
 
@@ -564,12 +783,35 @@ export const completeDonorContactInfo = async (
   return {
     success: true,
     user: updatedProfile,
-    message: 'মোবাইল নম্বর ও রক্তদাতার তথ্য সফলভাবে সংরক্ষিত হয়েছে!',
+    message: 'রক্তদাতা প্রোফাইল সফলভাবে সংরক্ষিত হয়েছে!',
   };
 };
 
 /**
+ * Backward compatibility alias for completeDonorContactInfo
+ */
+export const completeDonorContactInfo = async (
+  phone: string,
+  bloodGroup: BloodGroup,
+  district: string,
+  extraUpdates: Partial<UserProfile> = {}
+): Promise<AuthResponse> => {
+  return completeDonorProfile({
+    phone,
+    bloodGroup,
+    division: (extraUpdates.division as string) || 'রাজশাহী',
+    district,
+    upazila: extraUpdates.upazila,
+    isAvailable: extraUpdates.isAvailable,
+    lastDonationDate: extraUpdates.lastDonationDate,
+    phoneVisibility: extraUpdates.phoneVisibility,
+    quietHoursEnabled: extraUpdates.quietHoursEnabled,
+  });
+};
+
+/**
  * 6. Background synchronization with live Supabase session (e.g. after Google/Facebook redirect)
+ * Checks if profile exists in public.profiles. If found, loads it without recreation.
  */
 export const syncSupabaseAuthSession = async (): Promise<UserProfile | null> => {
   if (typeof window === 'undefined') return null;
@@ -601,22 +843,36 @@ export const syncSupabaseAuthSession = async (): Promise<UserProfile | null> => 
     const name = profileData?.full_name || meta.full_name || meta.name || current?.name || (user.email ? user.email.split('@')[0] : 'রক্তদাতা');
     const phone = profileData?.phone_number || meta.phone_number || current?.phone || '';
     const bloodGroup = (profileData?.blood_group || meta.blood_group || current?.bloodGroup || 'B+') as BloodGroup;
-    const district = profileData?.district || meta.district || current?.location || 'বগুড়া সদর';
+    const district = profileData?.district || meta.district || current?.district || '';
+    const division = profileData?.division || meta.division || current?.division || '';
+    const upazila = profileData?.upazila || meta.upazila || current?.upazila || '';
+
+    const isComplete = Boolean(
+      phone &&
+      normalizePhoneNumber(phone).length >= 11 &&
+      bloodGroup &&
+      district &&
+      division
+    );
 
     const mergedProfile: UserProfile = {
       name,
       email: user.email,
       bloodGroup,
       donorId: `RD-${user.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`,
-      phone,
-      location: district,
+      phone: phone ? formatBdPhoneDisplay(phone) : '',
+      location: district ? `${district}${upazila ? ', ' + upazila : ''}` : (current?.location || 'বগুড়া সদর'),
+      division: division || current?.division || 'রাজশাহী',
+      district: district || current?.district || 'বগুড়া সদর',
+      upazila: upazila || current?.upazila || '',
+      userId: user.id,
       isVerified: Boolean(profileData?.is_verified ?? true),
       isAvailable: donorProfile.is_available !== false,
-      lastDonationDate: donorProfile.last_donation_date || 'নতুন রক্তদাতা',
+      lastDonationDate: donorProfile.last_donation_date || current?.lastDonationDate || 'নতুন রক্তদাতা',
       nextEligibleDate: 'এখনই প্রস্তুত',
       daysRemaining: 0,
-      totalDonations: donorProfile.total_donations || 0,
-      livesImpacted: (donorProfile.total_donations || 0) * 3,
+      totalDonations: donorProfile.total_donations || current?.totalDonations || 0,
+      livesImpacted: (donorProfile.total_donations || current?.totalDonations || 0) * 3,
       emergencyResponses: 0,
       quietHoursEnabled: false,
       quietHoursStart: '২৩:০০',
@@ -626,7 +882,7 @@ export const syncSupabaseAuthSession = async (): Promise<UserProfile | null> => 
       language: 'bn',
       textSize: '100%',
       reducedMotion: false,
-      isProfileComplete: Boolean(phone && phone.length >= 11),
+      isProfileComplete: isComplete,
       badges: [{ id: 'B-NEW', title: 'যাচাইকৃত সদস্য', subtitle: 'মানবিক পরিবারের অংশীদার' }],
       donationHistory: [],
     };
@@ -735,11 +991,25 @@ export const getAuthenticatedUser = (): UserProfile | null => {
   return null;
 };
 
+/**
+ * Updates authenticated user profile strictly scoped to the active session user ID.
+ * Prevents modifying other users' data.
+ */
 export const updateAuthenticatedUser = async (
   updates: Partial<UserProfile>
 ): Promise<UserProfile | null> => {
   const current = getAuthenticatedUser();
   if (!current) return null;
+
+  // If phone number is being updated, verify it is not already taken by another user
+  if (updates.phone) {
+    const norm = normalizePhoneNumber(updates.phone);
+    const dupCheck = await checkPhoneDuplicate(norm, current.userId);
+    if (dupCheck.isDuplicate) {
+      throw new Error(dupCheck.message || 'এই মোবাইল নম্বরটি ইতিমধ্যে অন্য একজন সদস্যের অ্যাকাউন্টে ব্যবহৃত হচ্ছে।');
+    }
+    updates.phone = formatBdPhoneDisplay(norm);
+  }
 
   const merged: UserProfile = {
     ...current,
@@ -755,33 +1025,54 @@ export const updateAuthenticatedUser = async (
   if (supabase) {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
-      if (userId) {
-        await (supabase as any)
-          .from('profiles')
-          .update({
-            full_name: merged.name,
-            blood_group: merged.bloodGroup,
-            district: merged.location.split(',')[0].trim(),
-            phone_number: merged.phone,
-          })
-          .eq('id', userId);
+      const sessionUserId = sessionData?.session?.user?.id;
+      // Strictly scope to current authenticated user's ID
+      const targetUserId = sessionUserId || current.userId;
 
-        if (updates.isAvailable !== undefined) {
+      if (targetUserId) {
+        const profileUpdate: any = {
+          updated_at: new Date().toISOString(),
+        };
+        if (updates.name !== undefined) profileUpdate.full_name = merged.name;
+        if (updates.bloodGroup !== undefined) profileUpdate.blood_group = merged.bloodGroup;
+        if (updates.division !== undefined) profileUpdate.division = merged.division;
+        if (updates.district !== undefined) profileUpdate.district = merged.district;
+        if (updates.upazila !== undefined) profileUpdate.upazila = merged.upazila;
+        if (updates.phone !== undefined) profileUpdate.phone_number = merged.phone;
+        if (updates.textSize !== undefined) profileUpdate.text_size_preference = updates.textSize;
+
+        if (Object.keys(profileUpdate).length > 1) {
+          await (supabase as any)
+            .from('profiles')
+            .update(profileUpdate)
+            .eq('id', targetUserId);
+        }
+
+        if (updates.isAvailable !== undefined || updates.lastDonationDate !== undefined) {
+          const donorUpdate: any = {
+            updated_at: new Date().toISOString(),
+          };
+          if (updates.isAvailable !== undefined) donorUpdate.is_available = updates.isAvailable;
+          if (updates.lastDonationDate !== undefined && updates.lastDonationDate !== 'কখনো দিইনি') {
+            donorUpdate.last_donation_date = updates.lastDonationDate;
+          }
           await (supabase as any)
             .from('donor_profiles')
-            .update({ is_available: updates.isAvailable })
-            .eq('user_id', userId);
+            .update(donorUpdate)
+            .eq('user_id', targetUserId);
         }
       }
-    } catch {
-      // Offline fallback
+    } catch (err: any) {
+      console.warn('Supabase updateAuthenticatedUser error:', err?.message);
     }
   }
 
   return merged;
 };
 
+/**
+ * Logout authenticated user
+ */
 export const logoutRealUser = async (): Promise<void> => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(AUTH_STORAGE_KEY);
@@ -796,3 +1087,4 @@ export const logoutRealUser = async (): Promise<void> => {
     }
   }
 };
+

@@ -22,6 +22,7 @@ import {
   TrendingUp,
   Zap,
   MapPin,
+  Plus,
 } from 'lucide-react';
 import { EmergencyRequest, DonationCamp } from '@/lib/types';
 import { toBengaliDigits } from '@/lib/bengali-utils';
@@ -41,6 +42,7 @@ interface HomeScreenProps {
   onOpenDonorResponse: (req: EmergencyRequest) => void;
   activeRequestCount: number;
   onRsvpCamp: (campId: string) => void;
+  onOpenCreateCamp?: () => void;
   onOpenHospitalDirectory: () => void;
   onOpenAmbulanceDirectory: () => void;
   onOpenHealthEducation: () => void;
@@ -64,6 +66,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenDonorResponse,
   activeRequestCount,
   onRsvpCamp,
+  onOpenCreateCamp,
   onOpenHospitalDirectory,
   onOpenAmbulanceDirectory,
   onOpenHealthEducation,
@@ -153,9 +156,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <span className="w-2 h-2 rounded-full bg-[#0B7A50] animate-pulse" />
             <span>{t.home.pulseFulfillment}</span>
           </div>
-          <span className="text-[17px] sm:text-xl font-black text-[#1B1B1F] tracking-tight">
-            {formatDigits('94.8%')}
-          </span>
+          <div className="flex items-center gap-1">
+            <span className="text-[17px] sm:text-xl font-black text-[#1B1B1F] tracking-tight">
+              {formatDigits('94.8%')}
+            </span>
+            <span className="text-[9px] bg-amber-50 text-amber-800 font-bold px-1.5 py-0.5 rounded border border-amber-200">
+              {language === 'bn' ? 'ডেমো' : 'Demo'}
+            </span>
+          </div>
           <span className="text-[9.5px] sm:text-[10px] text-[#5B5F6B] mt-0.5">
             {t.home.pulseFulfillmentSub}
           </span>
@@ -166,9 +174,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <Zap className="w-3 h-3 fill-[#C41E3A]" />
             <span>{t.home.pulseAvgSpeed}</span>
           </div>
-          <span className="text-[17px] sm:text-xl font-black text-[#1B1B1F] tracking-tight">
-            {formatDigits('7.4')} {language === 'bn' ? 'মিনিট' : 'mins'}
-          </span>
+          <div className="flex items-center gap-1">
+            <span className="text-[17px] sm:text-xl font-black text-[#1B1B1F] tracking-tight">
+              {formatDigits('7.4')} {language === 'bn' ? 'মিনিট' : 'mins'}
+            </span>
+            <span className="text-[9px] bg-amber-50 text-amber-800 font-bold px-1.5 py-0.5 rounded border border-amber-200">
+              {language === 'bn' ? 'প্রাক্কলিত' : 'Est.'}
+            </span>
+          </div>
           <span className="text-[9.5px] sm:text-[10px] text-[#5B5F6B] mt-0.5">
             {t.home.pulseAvgSpeedSub}
           </span>
@@ -179,9 +192,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <Heart className="w-3 h-3 fill-[#1D5FD0]" />
             <span>{t.home.pulseReadyDonors}</span>
           </div>
-          <span className="text-[17px] sm:text-xl font-black text-[#1B1B1F] tracking-tight">
-            {formatDigits(62)} {language === 'bn' ? 'জন' : 'Donors'}
-          </span>
+          <div className="flex items-center gap-1">
+            <span className="text-[17px] sm:text-xl font-black text-[#1B1B1F] tracking-tight">
+              {formatDigits(62)} {language === 'bn' ? 'জন' : 'Donors'}
+            </span>
+            <span className="text-[9px] bg-[#E8F5E9] text-[#005938] font-bold px-1.5 py-0.5 rounded border border-[#C8E6C9]">
+              {language === 'bn' ? 'লাইভ' : 'Live'}
+            </span>
+          </div>
           <span className="text-[9.5px] sm:text-[10px] text-[#0B7A50] font-bold mt-0.5">
             {t.home.pulseReadyDonorsSub}
           </span>
@@ -556,12 +574,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <section id="donation-camps-section" className="w-full space-y-3 pt-2">
         <div className="flex items-center justify-between px-0.5">
           <h2 className="font-bold text-[18px] text-[#1B1B1F]">{t.home.donationCampsTitle}</h2>
-          <button
-            onClick={onViewAllCampsClick}
-            className="text-xs sm:text-[13px] text-[#C41E3A] font-semibold hover:underline cursor-pointer"
-          >
-            {language === 'bn' ? 'সব দেখুন' : 'View All'}
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenCreateCamp && (
+              <button
+                onClick={onOpenCreateCamp}
+                className="px-2.5 py-1 rounded-xl bg-[#FDECEF] hover:bg-[#FCD8DF] text-[#C41E3A] font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{language === 'bn' ? 'ক্যাম্পেইন যোগ করুন' : 'Add Camp'}</span>
+              </button>
+            )}
+            <button
+              onClick={onViewAllCampsClick}
+              className="text-xs sm:text-[13px] text-[#C41E3A] font-semibold hover:underline cursor-pointer"
+            >
+              {language === 'bn' ? 'সব দেখুন' : 'View All'}
+            </button>
+          </div>
         </div>
 
         {/* Responsive Camps: Scrollable on mobile, xl:grid-cols-3 on desktop */}

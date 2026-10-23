@@ -37,6 +37,7 @@ import {
   requestPushPermission,
   triggerNativeNotification
 } from '@/lib/audioUtils';
+import { subscribeToWebPush } from '@/lib/services/pushNotificationService';
 
 interface NotificationScreenProps {
   notifications: AppNotification[];
@@ -92,14 +93,20 @@ export const NotificationScreen: React.FC<NotificationScreenProps> = ({
   };
 
   const handleEnablePush = async () => {
-    const perm = await requestPushPermission();
-    setPushStatus(perm);
-    if (perm === 'granted') {
+    const pushRes = await subscribeToWebPush();
+    if (pushRes.success) {
+      setPushStatus('granted');
       playNotificationSound();
       triggerNativeNotification('রক্তদাতা নোটিফিকেশন সক্রিয়', 'জরুরি রক্তের আবেদন সরাসরি আপনার ফোনে পাওয়া যাবে।');
-      showToast(language === 'bn' ? 'পুশ নোটিফিকেশন সফলভাবে সক্রিয় হয়েছে!' : 'Push notifications enabled successfully!', 'success');
+      showToast(language === 'bn' ? 'পুশ নোটিফিকেশন সফলভাবে সক্রিয় ও নিবন্ধিত হয়েছে!' : 'Push notifications enabled and registered!', 'success');
     } else {
-      showToast(language === 'bn' ? 'পুশ নোটিফিকেশন পারমিশন মেলেনি' : 'Push permission denied', 'warning');
+      const perm = await requestPushPermission();
+      setPushStatus(perm);
+      if (perm === 'granted') {
+        showToast(language === 'bn' ? 'নোটিফিকেশন সক্রিয় করা হয়েছে' : 'Notifications enabled', 'info');
+      } else {
+        showToast(language === 'bn' ? 'পুশ নোটিফিকেশন পারমিশন মেলেনি' : 'Push permission denied', 'warning');
+      }
     }
   };
 
@@ -122,6 +129,19 @@ export const NotificationScreen: React.FC<NotificationScreenProps> = ({
     setNotifications((prev) => [saved, ...prev]);
 
     triggerNativeNotification(saved.title, saved.description);
+
+    // Send Web Push dispatch
+    fetch('/api/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: saved.title,
+        body: saved.description,
+        bloodGroup: randomBg,
+        url: '/',
+      }),
+    }).catch(() => {});
+
     showToast(language === 'bn' ? 'লাইভ টেস্ট নোটিফিকেশন পাঠানো হয়েছে!' : 'Test notification sent live!', 'success');
     setIsSendingTest(false);
   };

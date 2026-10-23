@@ -1,5 +1,5 @@
 // Roktodata Service Worker for Offline Fallback & Web Push Notifications
-const CACHE_NAME = 'roktodata-v1';
+const CACHE_NAME = 'roktodata-v2';
 const STATIC_ASSETS = ['/', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -24,6 +24,10 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  // Don't cache API or supabase requests
+  if (event.request.url.includes('/api/') || event.request.url.includes('supabase.co')) {
+    return;
+  }
   event.respondWith(
     fetch(event.request).catch(() => {
       return caches.match(event.request);
@@ -33,19 +37,72 @@ self.addEventListener('fetch', (event) => {
 
 // Push notification receiver
 self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : {};
-  const title = data.title || 'রক্তদাতা — জরুরি রক্তের ডাক';
-  const options = {
-    body: data.body || 'আপনার এলাকায় জরুরি রক্তের প্রয়োজন!',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
-    vibrate: [200, 100, 200],
-    data: { url: data.url || '/' },
-  };
-  event.waitUntil(self.registration.showNotification(title, options));
+  let data = {};
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch {
+      data = { title: event.data.text() };
+    }
+  }
+
+  const showNotificationPromise = (async () => {
+    // If title is missing, fallback to fetching latest notification from API
+    if (!data.title) {
+      try {
+        const res = await fetch('/api/notifications');
+        const json = await res.json();
+        if (json.data && json.data.length > 0) {
+          const latest = json.data[0];
+          data.title = latest.title;
+          data.body = latest.description;
+        }
+      } catch (e) {
+        data.title = '🚨 রক্তদাতা — জরুরি রক্তের ডাক';
+        data.body = 'আপনার এলাকায় নতুন রক্তের অনুরোধ এসেছে!';
+      }
+    }
+
+    const title = data.title || '🚨 রক্তদাতা — জরুরি রক্তের ডাক';
+    const options = {
+      body: data.body || 'আপনার এলাকায় জরুরি রক্তের প্রয়োজন!',
+      icon: '/favicon.ico',
+      badge: '/favicon.ico',
+      vibrate: [200, 100, 200, 100, 200],
+      tag: data.tag || 'roktodata-alert',
+      renotify: true,
+      data: { url: data.url || '/' },
+      actions: [
+        { action: 'open', title: 'অ্যাপ খুলুন' },
+        { action: 'dismiss', title: 'বাতিল' },
+      ],
+    };
+
+    return self.registration.showNotification(title, options);
+  })();
+
+  event.waitUntil(showNotificationPromise);
 });
 
+// Notification click event handler
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification.data?.url || '/'));
+
+  if (event.action === 'dismiss') return;
+
+  const targetUrl = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url && 'focus' in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
 });

@@ -21,6 +21,16 @@ ALTER TABLE IF EXISTS public.blood_inventory DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.ambulances DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.donation_camps DISABLE ROW LEVEL SECURITY;
 
+-- ডোনার বুকমার্ক টেবিল (Donor Bookmarks)
+CREATE TABLE IF NOT EXISTS public.donor_bookmarks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  donor_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(user_id, donor_id)
+);
+ALTER TABLE IF EXISTS public.donor_bookmarks DISABLE ROW LEVEL SECURITY;
+
 -- =========================================================================
 -- ২. Profiles Table (২০ জন রক্তদাতা ও ব্যবহারকারী)
 -- =========================================================================
@@ -137,6 +147,22 @@ CROSS JOIN LATERAL (
   SELECT id FROM public.donor_profiles ORDER BY RANDOM() LIMIT 1
 ) don
 ON CONFLICT (request_id, donor_id) DO NOTHING;
+
+-- =========================================================================
+-- ৭. Storage Buckets & Policies (প্রেসক্রিপশন আপলোড - Private Bucket)
+-- =========================================================================
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'prescriptions',
+  'prescriptions',
+  false,
+  5242880,
+  ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = false,
+  file_size_limit = 5242880,
+  allowed_mime_types = ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
 
 -- সম্পন্ন!
 SELECT '🎉 অভিনন্দন! সব টেবিল সফলভাবে ১৫+ ডেটা দিয়ে সিড করা হয়েছে।' AS result;

@@ -192,18 +192,6 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </div>
 
-            {/* Database Explorer Quick Button */}
-            {onOpenDbExplorer && (
-              <button
-                onClick={onOpenDbExplorer}
-                title="লাইভ সুপাবেস ডেটাবেস টেবিলসমূহ"
-                aria-label="ডেটাবেস এক্সপ্লোরার"
-                className="h-8 sm:h-8.5 px-2 sm:px-2.5 rounded-full bg-[#E8F5E9] hover:bg-[#D4F4DF] text-[#00744B] border border-[#A7E8BD] flex items-center gap-1.5 active:scale-95 transition-all shrink-0 cursor-pointer text-[11px] sm:text-xs font-bold"
-              >
-                <Database className="w-3.5 h-3.5" />
-                <span className="hidden xs:inline">লাইভ ডেটা</span>
-              </button>
-            )}
 
             {/* Notification Bell */}
             <button

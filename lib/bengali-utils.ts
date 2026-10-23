@@ -44,3 +44,14 @@ export const formatBengaliPhone = (phone: string): string => {
   }
   return phone;
 };
+
+export const maskPhoneNumber = (phone: string, lang: 'bn' | 'en' = 'bn'): string => {
+  if (!phone) return '';
+  const clean = toEnglishDigits(phone).replace(/\D/g, '');
+  if (clean.length >= 11) {
+    const rawMasked = `${clean.slice(-11, -6)}***${clean.slice(-3)}`;
+    const formatted = `${rawMasked.slice(0, 5)}-${rawMasked.slice(5)}`;
+    return lang === 'bn' ? toBengaliDigits(formatted) : formatted;
+  }
+  return lang === 'bn' ? toBengaliDigits(phone) : phone;
+};

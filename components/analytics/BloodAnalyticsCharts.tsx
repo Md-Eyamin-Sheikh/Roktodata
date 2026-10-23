@@ -24,7 +24,17 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 type ChartTimeframe = 'today' | 'week' | 'month' | 'year';
 type ChartCategory = 'timeline' | 'demand' | 'velocity' | 'regional';
 
-export const BloodAnalyticsCharts: React.FC = () => {
+interface BloodAnalyticsChartsProps {
+  activeRequestCount?: number;
+  completedRequestCount?: number;
+  totalDonorsCount?: number;
+}
+
+export const BloodAnalyticsCharts: React.FC<BloodAnalyticsChartsProps> = ({
+  activeRequestCount,
+  completedRequestCount,
+  totalDonorsCount,
+}) => {
   const { language, formatDigits } = useLanguage();
   const [timeframe, setTimeframe] = useState<ChartTimeframe>('month');
   const [activeTab, setActiveTab] = useState<ChartCategory>('timeline');
@@ -185,6 +195,10 @@ export const BloodAnalyticsCharts: React.FC = () => {
                 <span className="w-1.5 h-1.5 rounded-full bg-[#00744B] animate-pulse" />
                 <span>{language === 'bn' ? 'লাইভ সিঙ্ক' : 'Live Sync'}</span>
               </span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200">
+                <Sparkles className="w-3 h-3 text-amber-600" />
+                <span>{language === 'bn' ? 'ঐতিহাসিক প্রক্ষেপণ ও ডেমো মডেল' : 'Simulation & Analytics Model'}</span>
+              </span>
             </div>
             <p className="text-xs sm:text-[13px] text-[#5B5F6B] mt-0.5 leading-relaxed">
               {language === 'bn'
@@ -220,6 +234,21 @@ export const BloodAnalyticsCharts: React.FC = () => {
         </div>
       </div>
 
+      {/* Transparency & Audit Disclaimer Notice */}
+      <div className="p-3 bg-[#FAF9FB] rounded-2xl border border-[#E4E6EB] flex items-start gap-2.5 text-xs text-[#5B5F6B]">
+        <Info className="w-4 h-4 text-[#0D58C9] shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <span className="font-bold text-[#1B1B1F] block text-xs">
+            {language === 'bn' ? 'উপাত্তের স্বচ্ছতা ও ডেমো সিমুলেশন নীতি:' : 'Data Transparency & Simulation Model Policy:'}
+          </span>
+          <p className="text-[11px] mt-0.5 leading-relaxed text-[#5B5F6B]">
+            {language === 'bn'
+              ? 'জরুরি রক্তের আবেদন, রক্তদাতার সাড়া ও হাসপাতাল স্টক সরাসরি ডেটাবেসের সাথে সংযুক্ত। তবে ১২ মাসের সাইকেল গ্রাফ, ৯৪.৮% পূরণ হার ও ৭.৪ মিনিটের গতিশীলতা ঐতিহাসিক প্রক্ষেপণ ও ডেমো সিমুলেশন মডেলের ভিত্তিতে প্রাক্কলিত।'
+              : 'Live emergency matching is database-backed. The 12-month trend charts, 94.8% fulfillment and 7.4m response velocity are projected using algorithmic simulation.'}
+          </p>
+        </div>
+      </div>
+
       {/* ================= 2. 4 CORE METRIC CARDS (BALANCED RESPONSIVE GRID) ================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
         
@@ -230,9 +259,9 @@ export const BloodAnalyticsCharts: React.FC = () => {
               <span className="text-[12px] font-bold text-[#9E0027]">
                 {language === 'bn' ? 'জরুরি সাড়ার গতি' : 'Response Velocity'}
               </span>
-              <div className="w-7 h-7 rounded-xl bg-[#FDECEF] flex items-center justify-center text-[#C41E3A] shrink-0">
-                <Zap className="w-4 h-4 fill-current" />
-              </div>
+              <span className="text-[9.5px] font-bold bg-[#FDECEF] text-[#9E0027] px-2 py-0.5 rounded-full border border-[#FFDAD6]">
+                {language === 'bn' ? 'ডেমো প্রাক্কলন' : 'Demo Metric'}
+              </span>
             </div>
             
             <div className="flex items-baseline gap-1.5">
@@ -273,9 +302,9 @@ export const BloodAnalyticsCharts: React.FC = () => {
               <span className="text-[12px] font-bold text-[#005938]">
                 {language === 'bn' ? 'চাহিদা পূরণ হার' : 'Fulfillment Rate'}
               </span>
-              <div className="w-7 h-7 rounded-xl bg-[#E8F5E9] flex items-center justify-center text-[#00744B] shrink-0">
-                <CheckCircle2 className="w-4 h-4 stroke-[2.4]" />
-              </div>
+              <span className="text-[9.5px] font-bold bg-[#E8F5E9] text-[#005938] px-2 py-0.5 rounded-full border border-[#C8E6C9]">
+                {language === 'bn' ? 'সিমুলেশন মডেল' : 'Simulation'}
+              </span>
             </div>
 
             <div className="flex items-baseline gap-1.5">
@@ -285,8 +314,14 @@ export const BloodAnalyticsCharts: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-1 text-[11px] text-[#5B5F6B] mt-1.5">
-              <span className="text-[#005938] font-bold">৯১/৯৬টি</span>
-              <span className="truncate">{language === 'bn' ? 'আবেদন সফলভাবে সম্পন্ন' : 'requests fulfilled'}</span>
+              <span className="text-[#005938] font-bold">
+                {formatDigits(completedRequestCount ?? 91)}টি সম্পন্ন
+              </span>
+              {activeRequestCount !== undefined && (
+                <span className="text-[#C41E3A] font-bold">
+                  • {formatDigits(activeRequestCount)}টি সক্রিয়
+                </span>
+              )}
             </div>
           </div>
 
@@ -338,14 +373,14 @@ export const BloodAnalyticsCharts: React.FC = () => {
               <span className="text-[12px] font-bold text-[#805000]">
                 {language === 'bn' ? 'আজ প্রস্তুত রক্তদাতা' : 'Ready Donors Today'}
               </span>
-              <div className="w-7 h-7 rounded-xl bg-[#FFF0D0] flex items-center justify-center text-[#9A5B00] shrink-0">
-                <Activity className="w-4 h-4 stroke-[2.4]" />
-              </div>
+              <span className="text-[9.5px] font-bold bg-[#E8F5E9] text-[#005938] px-2 py-0.5 rounded-full border border-[#C8E6C9]">
+                {language === 'bn' ? 'লাইভ ডেটাবেস' : 'Live DB'}
+              </span>
             </div>
 
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl sm:text-3xl font-black text-[#1B1B1F] tracking-tight">
-                {formatDigits(62)}
+                {formatDigits(totalDonorsCount ?? 62)}
               </span>
               <span className="text-xs font-bold text-[#005938] bg-[#E8F5E9] px-2 py-0.5 rounded-full">
                 {language === 'bn' ? 'সক্রিয়' : 'Active'}
