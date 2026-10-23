@@ -808,7 +808,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const estimatedHb = daysRemaining === 0 ? '14.5' : (13.2 + (cyclePercent / 100) * 1.3).toFixed(1);
 
   return (
-    <div className="flex flex-col w-full max-w-5xl mx-auto pb-24">
+    <div className="flex flex-col w-full pb-24">
       {/* Guest Mode Notice Banner */}
       {!isLoggedIn && (
         <div className="mx-3 sm:mx-4 mt-2 mb-2 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
@@ -1493,10 +1493,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             </div>
           </div>
 
-          {/* ================= 6. LIVE BLOOD DONATION & HEALTH ANALYTICS ================= */}
-          <BloodAnalyticsCharts />
-
-          {/* ================= 7. DONATION HISTORY (100% FUNCTIONAL) ================= */}
+          {/* ================= 6. DONATION HISTORY (100% FUNCTIONAL) ================= */}
           <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-[#E4E6EB]/80 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <div>
@@ -1579,6 +1576,11 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             )}
           </div>
         </div>
+      </div>
+
+      {/* ================= 7. LIVE BLOOD DONATION & HEALTH ANALYTICS (FULL WIDTH) ================= */}
+      <div className="px-3 sm:px-4 mt-4 w-full">
+        <BloodAnalyticsCharts />
       </div>
 
       {/* ================= MODAL 1: 100% FUNCTIONAL SHARE SHEET ================= */}

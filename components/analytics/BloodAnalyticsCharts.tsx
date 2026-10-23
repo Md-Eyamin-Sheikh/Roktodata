@@ -7,18 +7,16 @@ import {
   Clock,
   Activity,
   AlertTriangle,
-  ChevronDown,
-  ChevronUp,
   Calendar,
   MapPin,
   CheckCircle2,
   Zap,
-  ShieldCheck,
   Heart,
-  Share2,
   Sparkles,
-  Layers,
-  ArrowUpRight
+  ArrowUpRight,
+  ShieldCheck,
+  ChevronRight,
+  Info
 } from 'lucide-react';
 import { toBengaliDigits } from '@/lib/bengali-utils';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
@@ -37,14 +35,16 @@ export const BloodAnalyticsCharts: React.FC = () => {
   const monthlyData = [
     {
       month: language === 'bn' ? 'জানু' : 'Jan',
+      fullMonth: language === 'bn' ? 'জানুয়ারি ২০২৬' : 'January 2026',
       bags: 0,
       livesSaved: 0,
-      hospital: language === 'bn' ? 'বিশ্রাম পর্ব (শরীরের রিকভারি)' : 'Recovery Phase (Rest & Recovery)',
+      hospital: language === 'bn' ? 'বিশ্রাম পর্ব (শরীরের পূর্ণ রিকভারি)' : 'Recovery Phase (Rest & Recovery)',
       hbLevel: 14.4,
       readyPercent: 65,
     },
     {
       month: language === 'bn' ? 'ফেব্রু' : 'Feb',
+      fullMonth: language === 'bn' ? 'ফেব্রুয়ারি ২০২৬' : 'February 2026',
       bags: 1,
       livesSaved: 3,
       hospital: language === 'bn' ? 'সন্ধানী শীতকালীন ক্যাম্প, বগুড়া' : 'Sandhani Winter Camp, Bogura',
@@ -53,22 +53,25 @@ export const BloodAnalyticsCharts: React.FC = () => {
     },
     {
       month: language === 'bn' ? 'মার্চ' : 'Mar',
+      fullMonth: language === 'bn' ? 'মার্চ ২০২৬' : 'March 2026',
       bags: 0,
       livesSaved: 0,
-      hospital: language === 'bn' ? 'রিকভারি পর্ব (আয়রন বৃদ্ধি)' : 'Recovery Phase (Iron Boost)',
+      hospital: language === 'bn' ? 'রিকভারি পর্ব (আয়রন ও পুষ্টি বৃদ্ধি)' : 'Recovery Phase (Iron Boost)',
       hbLevel: 14.1,
       readyPercent: 35,
     },
     {
       month: language === 'bn' ? 'এপ্রিল' : 'Apr',
+      fullMonth: language === 'bn' ? 'এপ্রিল ২০২৬' : 'April 2026',
       bags: 0,
       livesSaved: 0,
-      hospital: language === 'bn' ? 'বিশ্রাম পর্ব (শরীরের প্রস্তুতি)' : 'Rest Phase (Body Preparation)',
+      hospital: language === 'bn' ? 'প্রস্তুতি পর্ব (রক্তের কোষ সতেজ)' : 'Rest Phase (Body Preparation)',
       hbLevel: 14.5,
       readyPercent: 70,
     },
     {
       month: language === 'bn' ? 'মে' : 'May',
+      fullMonth: language === 'bn' ? 'মে ২০২৬' : 'May 2026',
       bags: 1,
       livesSaved: 3,
       hospital: language === 'bn' ? 'মোহাম্মদ আলী হাসপাতাল, বগুড়া' : 'Mohammad Ali Hospital, Bogura',
@@ -77,6 +80,7 @@ export const BloodAnalyticsCharts: React.FC = () => {
     },
     {
       month: language === 'bn' ? 'জুন' : 'Jun',
+      fullMonth: language === 'bn' ? 'জুন ২০২৬' : 'June 2026',
       bags: 0,
       livesSaved: 0,
       hospital: language === 'bn' ? 'রিকভারি পর্ব (প্লাজমা ব্যালেন্স)' : 'Recovery Phase (Plasma Balance)',
@@ -85,14 +89,16 @@ export const BloodAnalyticsCharts: React.FC = () => {
     },
     {
       month: language === 'bn' ? 'জুলাই' : 'Jul',
+      fullMonth: language === 'bn' ? 'জুলাই ২০২৬' : 'July 2026',
       bags: 0,
       livesSaved: 0,
-      hospital: language === 'bn' ? 'বিশ্রাম পর্ব (শরীরের প্রস্তুতি)' : 'Rest Phase (Preparation)',
+      hospital: language === 'bn' ? 'প্রস্তুতি পর্ব (শরীরের পূর্ণ প্রস্তুতি)' : 'Rest Phase (Preparation)',
       hbLevel: 14.6,
       readyPercent: 75,
     },
     {
       month: language === 'bn' ? 'আগস্ট' : 'Aug',
+      fullMonth: language === 'bn' ? 'আগস্ট ২০২৬' : 'August 2026',
       bags: 1,
       livesSaved: 3,
       hospital: language === 'bn' ? 'শহীদ জিয়াউর রহমান মেডিকেল কলেজ' : 'SZMCH Medical College Hospital',
@@ -101,6 +107,7 @@ export const BloodAnalyticsCharts: React.FC = () => {
     },
     {
       month: language === 'bn' ? 'সেপ্টে' : 'Sep',
+      fullMonth: language === 'bn' ? 'সেপ্টেম্বর ২০২৬' : 'September 2026',
       bags: 0,
       livesSaved: 0,
       hospital: language === 'bn' ? 'রিকভারি পর্ব (চলতি সাইকেল)' : 'Recovery Phase (Current Cycle)',
@@ -109,6 +116,7 @@ export const BloodAnalyticsCharts: React.FC = () => {
     },
     {
       month: language === 'bn' ? 'অক্টো' : 'Oct',
+      fullMonth: language === 'bn' ? 'অক্টোবর ২০২৬' : 'October 2026',
       bags: 0,
       livesSaved: 0,
       hospital: language === 'bn' ? 'চলতি মাস (আর ১৮ দিন বাকি)' : 'Current Month (18 days remaining)',
@@ -156,37 +164,38 @@ export const BloodAnalyticsCharts: React.FC = () => {
   // Total summary calculations
   const totalBagsInPeriod = monthlyData.reduce((acc, curr) => acc + curr.bags, 0);
   const totalLivesImpacted = totalBagsInPeriod * 3;
-  const avgResponseTime = language === 'bn' ? '৭.৪ মিনিট' : '7.4 mins';
-  const overallFulfillmentRate = language === 'bn' ? '৯৪.৮%' : '94.8%';
+  const avgResponseTime = '৭.৪';
+  const overallFulfillmentRate = '৯৪.৮%';
 
   return (
-    <div className="w-full bg-white rounded-3xl p-3.5 sm:p-5 md:p-6 shadow-sm border border-[#E4E6EB]/80 space-y-4 sm:space-y-5 transition-all">
-      {/* ================= HEADER & TIMEFRAME FILTER ================= */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-[#E4E6EB]/60">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#9E0027] to-[#C41E3A] text-white flex items-center justify-center shadow-xs shrink-0">
-            <TrendingUp className="w-5 h-5 stroke-[2.2]" />
+    <div className="w-full bg-white rounded-3xl p-4 sm:p-6 md:p-7 shadow-xs border border-[#E4E6EB]/80 space-y-5 sm:space-y-6 transition-all">
+      
+      {/* ================= 1. HEADER & TIMEFRAME SELECTOR ================= */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#E4E6EB]/70">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-[#9E0027] via-[#C41E3A] to-[#E53935] text-white flex items-center justify-center shadow-xs shrink-0">
+            <TrendingUp className="w-6 h-6 stroke-[2.3]" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-extrabold text-[16px] sm:text-[18px] text-[#1B1B1F] leading-tight">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h3 className="font-extrabold text-[17px] sm:text-[20px] text-[#1B1B1F] tracking-tight">
                 {language === 'bn' ? 'লাইভ রক্তদান ও স্বাস্থ্য এনালিটিক্স' : 'Live Blood Donation & Health Analytics'}
               </h3>
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0B7A50] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#0B7A50]" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E8F5E9] text-[#005938] text-[10.5px] font-bold border border-[#C8E6C9]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00744B] animate-pulse" />
+                <span>{language === 'bn' ? 'লাইভ সিঙ্ক' : 'Live Sync'}</span>
               </span>
             </div>
-            <p className="text-[11px] sm:text-xs text-[#5B5F6B] mt-0.5">
+            <p className="text-xs sm:text-[13px] text-[#5B5F6B] mt-0.5 leading-relaxed">
               {language === 'bn'
-                ? 'গ্রাফ ও চার্টের মাধ্যমে রক্তদান প্রভাব, চাহিদা এবং জরুরি প্রতিক্রিয়া চিত্র'
-                : 'Visual impact, demand patterns, and real-time response charts'}
+                ? 'রক্তদানের মানবিক প্রভাব, আঞ্চলিক চাহিদা ও জরুরি সাড়ার গতিশীল চিত্র'
+                : 'Real-time impact metrics, regional blood deficit and emergency match velocity'}
             </p>
           </div>
         </div>
 
-        {/* Timeframe selector (Mobile-friendly segmented bar) */}
-        <div className="flex items-center gap-1 p-1 bg-[#F5F4F7] rounded-xl text-xs font-semibold self-stretch sm:self-auto justify-between sm:justify-start">
+        {/* Timeframe Filter Buttons */}
+        <div className="inline-flex items-center gap-1 p-1 bg-[#F5F4F7] rounded-2xl border border-[#E4E6EB]/60 self-start md:self-auto shrink-0 shadow-2xs">
           {(
             [
               { key: 'today', label: language === 'bn' ? 'আজ' : 'Today' },
@@ -197,11 +206,12 @@ export const BloodAnalyticsCharts: React.FC = () => {
           ).map((item) => (
             <button
               key={item.key}
+              type="button"
               onClick={() => setTimeframe(item.key)}
-              className={`flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 timeframe === item.key
-                  ? 'bg-white text-[#C41E3A] font-bold shadow-xs'
-                  : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
+                  ? 'bg-white text-[#9E0027] shadow-xs scale-102 ring-1 ring-[#FFDAD6]'
+                  : 'text-[#5B5F6B] hover:text-[#1B1B1F] hover:bg-white/50'
               }`}
             >
               {item.label}
@@ -210,279 +220,325 @@ export const BloodAnalyticsCharts: React.FC = () => {
         </div>
       </div>
 
-      {/* ================= 4 CORE METRIC CARDS WITH MINI CHARTS ================= */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+      {/* ================= 2. 4 CORE METRIC CARDS (BALANCED RESPONSIVE GRID) ================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+        
         {/* Metric 1: Response Velocity */}
-        <div className="p-3 sm:p-3.5 bg-gradient-to-br from-[#FFF5F6] to-[#FFF9F9] rounded-2xl border border-[#FFDADA]/80 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#C41E3A] mb-1">
-            <span className="text-[11px] font-bold text-[#9E0027]">
-              {language === 'bn' ? 'জরুরি সাড়া প্রদানের গতি' : 'Response Velocity'}
-            </span>
-            <Zap className="w-4 h-4 fill-[#C41E3A] text-[#C41E3A]" />
-          </div>
+        <div className="p-4 sm:p-4.5 rounded-2xl bg-gradient-to-br from-[#FFF5F6] to-[#FFF9F9] border border-[#FFDAD6] flex flex-col justify-between shadow-2xs hover:shadow-xs transition-shadow">
           <div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-xl sm:text-2xl font-black text-[#1B1B1F] tracking-tight">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-[12px] font-bold text-[#9E0027]">
+                {language === 'bn' ? 'জরুরি সাড়ার গতি' : 'Response Velocity'}
+              </span>
+              <div className="w-7 h-7 rounded-xl bg-[#FDECEF] flex items-center justify-center text-[#C41E3A] shrink-0">
+                <Zap className="w-4 h-4 fill-current" />
+              </div>
+            </div>
+            
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-black text-[#1B1B1F] tracking-tight">
                 {avgResponseTime}
               </span>
+              <span className="text-xs font-bold text-[#5B5F6B]">
+                {language === 'bn' ? 'মিনিট' : 'mins'}
+              </span>
             </div>
-            <p className="text-[10px] text-[#5B5F6B] mt-0.5 flex items-center gap-1">
-              <span className="text-[#0B7A50] font-bold">
-                {language === 'bn' ? '↑ ২৮% দ্রুত' : '↑ 28% faster'}
-              </span>{' '}
-              {language === 'bn' ? 'গত মাসের চেয়ে' : 'vs last month'}
-            </p>
+
+            <div className="flex items-center gap-1.5 text-[11px] text-[#5B5F6B] mt-1.5">
+              <span className="inline-flex items-center text-[#005938] font-bold bg-[#E8F5E9] px-1.5 py-0.5 rounded-md">
+                ↑ ২৮% দ্রুত
+              </span>
+              <span className="truncate">{language === 'bn' ? 'গত মাসের চেয়ে' : 'vs last month'}</span>
+            </div>
           </div>
+
           {/* Mini Sparkline Bar Chart */}
-          <div className="flex items-end gap-1 h-5 mt-2 pt-1 border-t border-[#FFDADA]/50">
-            {[40, 60, 50, 75, 90, 85, 95].map((val, i) => (
+          <div className="mt-3 pt-2.5 border-t border-[#FFDAD6]/60 flex items-end gap-1.5 h-6">
+            {[45, 60, 50, 75, 92, 85, 100].map((val, i) => (
               <div
                 key={i}
                 style={{ height: `${val}%` }}
-                className="flex-1 bg-[#C41E3A]/70 rounded-xs"
+                className={`flex-1 rounded-sm transition-all ${
+                  i === 6 ? 'bg-[#C41E3A]' : 'bg-[#FFCDD2]'
+                }`}
               />
             ))}
           </div>
         </div>
 
         {/* Metric 2: Live Fulfillment Rate */}
-        <div className="p-3 sm:p-3.5 bg-[#F2FBF7] rounded-2xl border border-[#C8EAD9]/80 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#0B7A50] mb-1">
-            <span className="text-[11px] font-bold text-[#0B7A50]">
-              {language === 'bn' ? 'চাহিদা পূরণ হার' : 'Fulfillment Rate'}
-            </span>
-            <CheckCircle2 className="w-4 h-4" />
-          </div>
+        <div className="p-4 sm:p-4.5 rounded-2xl bg-gradient-to-br from-[#F2FBF7] to-[#F7FCF9] border border-[#C8E6C9] flex flex-col justify-between shadow-2xs hover:shadow-xs transition-shadow">
           <div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-xl sm:text-2xl font-black text-[#1B1B1F] tracking-tight">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-[12px] font-bold text-[#005938]">
+                {language === 'bn' ? 'চাহিদা পূরণ হার' : 'Fulfillment Rate'}
+              </span>
+              <div className="w-7 h-7 rounded-xl bg-[#E8F5E9] flex items-center justify-center text-[#00744B] shrink-0">
+                <CheckCircle2 className="w-4 h-4 stroke-[2.4]" />
+              </div>
+            </div>
+
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-black text-[#1B1B1F] tracking-tight">
                 {overallFulfillmentRate}
               </span>
             </div>
-            <p className="text-[10px] text-[#5B5F6B] mt-0.5">
-              {language === 'bn'
-                ? 'মোট ৯৬টি আবেদনের মধ্যে ৯১টি সফল'
-                : '91 successful out of 96 requests'}
-            </p>
+
+            <div className="flex items-center gap-1 text-[11px] text-[#5B5F6B] mt-1.5">
+              <span className="text-[#005938] font-bold">৯১/৯৬টি</span>
+              <span className="truncate">{language === 'bn' ? 'আবেদন সফলভাবে সম্পন্ন' : 'requests fulfilled'}</span>
+            </div>
           </div>
-          {/* Circular/Line gauge */}
-          <div className="w-full h-1.5 rounded-full bg-[#C8EAD9] overflow-hidden mt-2">
-            <div className="h-full bg-[#0B7A50] rounded-full" style={{ width: '94.8%' }} />
+
+          {/* Clean Progress Gauge */}
+          <div className="mt-3 pt-2.5 border-t border-[#C8E6C9]/60">
+            <div className="w-full h-2 rounded-full bg-[#DCEEE3] overflow-hidden">
+              <div className="h-full bg-[#00744B] rounded-full" style={{ width: '94.8%' }} />
+            </div>
           </div>
         </div>
 
         {/* Metric 3: Total Lives Touched */}
-        <div className="p-3 sm:p-3.5 bg-[#F5F8FF] rounded-2xl border border-[#D9E2FF]/80 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#1D5FD0] mb-1">
-            <span className="text-[11px] font-bold text-[#1D5FD0]">
-              {language === 'bn' ? 'জীবন স্পর্শিত' : 'Lives Saved'}
-            </span>
-            <Heart className="w-4 h-4 fill-[#1D5FD0]" />
-          </div>
+        <div className="p-4 sm:p-4.5 rounded-2xl bg-gradient-to-br from-[#F5F8FF] to-[#FAF9FF] border border-[#D9E2FF] flex flex-col justify-between shadow-2xs hover:shadow-xs transition-shadow">
           <div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-xl sm:text-2xl font-black text-[#1B1B1F] tracking-tight">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-[12px] font-bold text-[#001946]">
+                {language === 'bn' ? 'জীবন স্পর্শিত' : 'Lives Saved'}
+              </span>
+              <div className="w-7 h-7 rounded-xl bg-[#D9E2FF] flex items-center justify-center text-[#0D58C9] shrink-0">
+                <Heart className="w-4 h-4 fill-current" />
+              </div>
+            </div>
+
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-black text-[#1B1B1F] tracking-tight">
                 {formatDigits(totalLivesImpacted)}+
               </span>
-              <span className="text-xs text-[#5B5F6B] font-medium ml-1">
+              <span className="text-xs font-bold text-[#5B5F6B]">
                 {language === 'bn' ? 'মুগ্ধ প্রাণ' : 'Souls'}
               </span>
             </div>
-            <p className="text-[10px] text-[#5B5F6B] mt-0.5">
+
+            <p className="text-[11px] text-[#5B5F6B] mt-1.5 leading-tight truncate">
               {language === 'bn' ? '১ ব্যাগ রক্ত = ৩ জন রোগীর জীবন' : '1 blood bag = 3 lives touched'}
             </p>
           </div>
-          <div className="flex items-center gap-1 mt-2 text-[10px] font-bold text-[#1D5FD0]">
-            <Sparkles className="w-3 h-3" />
-            <span>{language === 'bn' ? 'সফল মানবিক অংশীদারিত্ব' : 'Humanitarian impact'}</span>
+
+          {/* Humanitarian Tag */}
+          <div className="mt-3 pt-2.5 border-t border-[#D9E2FF]/60 flex items-center gap-1.5 text-[11px] font-bold text-[#0D58C9]">
+            <Sparkles className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{language === 'bn' ? 'মানবিক অংশীদারিত্ব' : 'Humanitarian impact'}</span>
           </div>
         </div>
 
         {/* Metric 4: Active Ready Donors Today */}
-        <div className="p-3 sm:p-3.5 bg-[#FFF9ED] rounded-2xl border border-[#FFE8B5]/80 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#9A5B00] mb-1">
-            <span className="text-[11px] font-bold text-[#9A5B00]">
-              {language === 'bn' ? 'আজ প্রস্তুত রক্তদাতা' : 'Ready Donors Today'}
-            </span>
-            <Activity className="w-4 h-4" />
-          </div>
+        <div className="p-4 sm:p-4.5 rounded-2xl bg-gradient-to-br from-[#FFF9ED] to-[#FFFCF5] border border-[#FFE8B5] flex flex-col justify-between shadow-2xs hover:shadow-xs transition-shadow">
           <div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-xl sm:text-2xl font-black text-[#1B1B1F] tracking-tight">
-                {formatDigits(62)} {language === 'bn' ? 'জন' : ''}
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-[12px] font-bold text-[#805000]">
+                {language === 'bn' ? 'আজ প্রস্তুত রক্তদাতা' : 'Ready Donors Today'}
               </span>
-              <span className="text-xs text-[#0B7A50] font-bold ml-1">
+              <div className="w-7 h-7 rounded-xl bg-[#FFF0D0] flex items-center justify-center text-[#9A5B00] shrink-0">
+                <Activity className="w-4 h-4 stroke-[2.4]" />
+              </div>
+            </div>
+
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-black text-[#1B1B1F] tracking-tight">
+                {formatDigits(62)}
+              </span>
+              <span className="text-xs font-bold text-[#005938] bg-[#E8F5E9] px-2 py-0.5 rounded-full">
                 {language === 'bn' ? 'সক্রিয়' : 'Active'}
               </span>
             </div>
-            <p className="text-[10px] text-[#5B5F6B] mt-0.5">
-              {language === 'bn' ? 'বগুড়া সদরে তাৎক্ষণিক যোগাযোগের জন্য' : 'Available in Bogura Sadar'}
+
+            <p className="text-[11px] text-[#5B5F6B] mt-1.5 leading-tight truncate">
+              {language === 'bn' ? 'বগুড়া সদর এলাকায় প্রস্তুত' : 'Ready in Bogura Sadar'}
             </p>
           </div>
-          <div className="w-full h-1.5 rounded-full bg-[#FFE8B5] overflow-hidden mt-2">
-            <div className="h-full bg-[#9A5B00] rounded-full" style={{ width: '78%' }} />
+
+          {/* Active Level Gauge */}
+          <div className="mt-3 pt-2.5 border-t border-[#FFE8B5]/60">
+            <div className="w-full h-2 rounded-full bg-[#FAEDCE] overflow-hidden">
+              <div className="h-full bg-[#B26E00] rounded-full" style={{ width: '78%' }} />
+            </div>
           </div>
         </div>
+
       </div>
 
-      {/* ================= PRIMARY CHART TAB NAVIGATION (MOBILE NATIVE FEEL) ================= */}
-      <div className="flex items-center overflow-x-auto no-scrollbar gap-1.5 p-1 bg-[#F5F4F7] rounded-2xl">
+      {/* ================= 3. PRIMARY CHART TABS (MODERN SEGMENTED TABS) ================= */}
+      <div className="flex items-center overflow-x-auto no-scrollbar gap-2 p-1.5 bg-[#F5F4F7] rounded-2xl border border-[#E4E6EB]/60">
         <button
+          type="button"
           onClick={() => setActiveTab('timeline')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'timeline'
-              ? 'bg-white text-[#C41E3A] shadow-xs'
-              : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
+              ? 'bg-white text-[#9E0027] shadow-xs scale-102 ring-1 ring-[#FFDAD6]'
+              : 'text-[#5B5F6B] hover:text-[#1B1B1F] hover:bg-white/50'
           }`}
         >
-          <Calendar className="w-3.5 h-3.5" />
+          <Calendar className="w-4 h-4" />
           <span>{language === 'bn' ? 'রক্তদান টাইমলাইন ও হিমোগ্লোবিন' : 'Timeline & Hemoglobin Wave'}</span>
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('demand')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'demand'
-              ? 'bg-white text-[#C41E3A] shadow-xs'
-              : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
+              ? 'bg-white text-[#9E0027] shadow-xs scale-102 ring-1 ring-[#FFDAD6]'
+              : 'text-[#5B5F6B] hover:text-[#1B1B1F] hover:bg-white/50'
           }`}
         >
-          <Droplets className="w-3.5 h-3.5" />
+          <Droplets className="w-4 h-4" />
           <span>{language === 'bn' ? 'গ্রুপভিত্তিক চাহিদা বনাম সরবরাহ' : 'Demand vs Supply by Group'}</span>
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('velocity')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'velocity'
-              ? 'bg-white text-[#C41E3A] shadow-xs'
-              : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
+              ? 'bg-white text-[#9E0027] shadow-xs scale-102 ring-1 ring-[#FFDAD6]'
+              : 'text-[#5B5F6B] hover:text-[#1B1B1F] hover:bg-white/50'
           }`}
         >
-          <Clock className="w-3.5 h-3.5" />
+          <Clock className="w-4 h-4" />
           <span>{language === 'bn' ? '২৪ ঘণ্টা সাড়ার গতি ও পিক আওয়ার' : '24h Velocity & Peak Hours'}</span>
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('regional')}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'regional'
-              ? 'bg-white text-[#C41E3A] shadow-xs'
-              : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
+              ? 'bg-white text-[#9E0027] shadow-xs scale-102 ring-1 ring-[#FFDAD6]'
+              : 'text-[#5B5F6B] hover:text-[#1B1B1F] hover:bg-white/50'
           }`}
         >
-          <MapPin className="w-3.5 h-3.5" />
+          <MapPin className="w-4 h-4" />
           <span>{language === 'bn' ? 'উপজেলা রক্তভাণ্ডার ডেনসিটি' : 'Regional Upazila Density'}</span>
         </button>
       </div>
 
       {/* ================= TAB 1: DONATION TIMELINE & HEMOGLOBIN TRACKER ================= */}
       {activeTab === 'timeline' && (
-        <div className="space-y-4 pt-1">
-          {/* Spotlight Active Inspection Card */}
-          <div className="p-3.5 sm:p-4 bg-gradient-to-r from-[#F9F8FA] to-[#FFF5F6] rounded-2xl border border-[#E4E6EB] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-[#C41E3A] uppercase tracking-wider bg-[#FDECEF] px-2 py-0.5 rounded-md">
-                  {selectedData.month} {language === 'bn' ? '২০২৬' : '2026'}
+        <div className="space-y-4 pt-1 animate-in fade-in duration-200">
+          
+          {/* Active Month Inspection Card */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-[#FAF9FB] via-[#FFF5F6] to-[#FFF0F2] border border-[#FFDAD6] flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-2xs">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[11px] font-extrabold text-[#9E0027] uppercase tracking-wider bg-white px-2.5 py-0.5 rounded-lg border border-[#FFCDD2] shadow-2xs">
+                  {selectedData.fullMonth}
                 </span>
-                <span className="text-xs font-extrabold text-[#1B1B1F]">
+                <span className="text-sm font-extrabold text-[#1B1B1F]">
                   {selectedData.hospital}
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs text-[#5B5F6B]">
                 <span>
-                  {language === 'bn' ? 'হিমোগ্লোবিন লেভেল:' : 'Hemoglobin Level:'}{' '}
-                  <strong className="text-[#1B1B1F]">{formatDigits(selectedData.hbLevel)} g/dL</strong>
+                  {language === 'bn' ? 'হিমোগ্লোবিন স্তর:' : 'Hemoglobin Level:'}{' '}
+                  <strong className="text-[#1B1B1F] font-bold">{formatDigits(selectedData.hbLevel)} g/dL</strong>
                 </span>
-                <span>•</span>
+                <span className="text-[#D1D5DB]">•</span>
                 <span>
                   {language === 'bn' ? 'শরীরে লোহিত কণিকা প্রস্তুতি:' : 'RBC Recovery Level:'}{' '}
-                  <strong className="text-[#0B7A50]">{formatDigits(selectedData.readyPercent)}%</strong>
+                  <strong className="text-[#005938] font-bold">{formatDigits(selectedData.readyPercent)}%</strong>
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-              <span className="text-xs font-extrabold px-3 py-1.5 rounded-xl bg-white text-[#C41E3A] border border-[#FFDADA] shadow-2xs">
-                {selectedData.bags > 0
-                  ? (language === 'bn'
-                      ? `${formatDigits(selectedData.bags)} ব্যাগ রক্তদান (+${formatDigits(selectedData.livesSaved)} জীবন)`
-                      : `${selectedData.bags} bag donated (+${selectedData.livesSaved} lives)`)
-                  : (language === 'bn' ? 'রিকভারি ও পুষ্টিপর্ব' : 'Recovery & Rest Period')}
+            <div className="shrink-0 self-start md:self-auto">
+              <span className="inline-flex items-center gap-1.5 text-xs font-extrabold px-3.5 py-2 rounded-xl bg-white text-[#9E0027] border border-[#FFDAD6] shadow-xs">
+                {selectedData.bags > 0 ? (
+                  <>
+                    <Droplets className="w-4 h-4 text-[#C41E3A] fill-current" />
+                    <span>
+                      {language === 'bn'
+                        ? `${formatDigits(selectedData.bags)} ব্যাগ রক্তদান (+${formatDigits(selectedData.livesSaved)} জীবন বাঁচানো)`
+                        : `${selectedData.bags} bag donated (+${selectedData.livesSaved} lives saved)`}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4 text-[#00744B]" />
+                    <span>{language === 'bn' ? 'রিকভারি ও পুষ্টিপর্ব' : 'Recovery & Rest Period'}</span>
+                  </>
+                )}
               </span>
             </div>
           </div>
 
-          {/* Interactive SVG Bar & Continuous Hemoglobin Line Chart */}
-          <div className="w-full bg-[#FAF9FB] rounded-2xl p-3 sm:p-4 border border-[#E4E6EB]/60">
-            <div className="flex items-center justify-between text-xs text-[#5B5F6B] mb-2 px-1">
-              <span className="font-semibold text-[#1B1B1F]">
+          {/* Interactive Bar Chart & Hemoglobin Curve */}
+          <div className="w-full bg-[#FAF9FB] rounded-2xl p-4 sm:p-5 border border-[#E4E6EB]/80">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#5B5F6B] mb-3">
+              <span className="font-bold text-[#1B1B1F] text-sm">
                 {language === 'bn' ? 'মাসিক রক্তদান ও হিমোগ্লোবিন কার্ভ (Hb Wave)' : 'Monthly Donations & Hemoglobin Wave'}
               </span>
-              <div className="flex items-center gap-3 text-[11px]">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-[#C41E3A]" /> {language === 'bn' ? 'রক্তদান' : 'Donation'}
+              <div className="flex items-center gap-4 text-xs">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <span className="w-3 h-3 rounded-sm bg-[#C41E3A]" />
+                  <span>{language === 'bn' ? 'রক্তদান' : 'Donation'}</span>
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-[#DCD9DE]" /> {language === 'bn' ? 'রিকভারি' : 'Recovery'}
+                <span className="flex items-center gap-1.5 font-medium">
+                  <span className="w-3 h-3 rounded-sm bg-[#DCD9DE]" />
+                  <span>{language === 'bn' ? 'রিকভারি' : 'Recovery'}</span>
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-0.5 bg-[#0B7A50]" /> {language === 'bn' ? 'হিমোগ্লোবিন কার্ভ' : 'Hb Wave'}
+                <span className="flex items-center gap-1.5 font-medium">
+                  <span className="w-3.5 h-1 bg-[#00744B] rounded-full" />
+                  <span>{language === 'bn' ? 'হিমোগ্লোবিন স্তর' : 'Hb Wave'}</span>
                 </span>
               </div>
             </div>
 
-            {/* Chart Area */}
-            <div className="h-48 sm:h-56 relative flex items-end justify-between gap-1.5 sm:gap-3 px-1 sm:px-4 pt-6 pb-2">
-              {/* Horizontal Guidelines */}
-              <div className="absolute inset-x-2 sm:inset-x-4 top-6 border-b border-dashed border-[#E4E6EB]" />
+            {/* Bars Area */}
+            <div className="h-52 sm:h-60 relative flex items-end justify-between gap-1 sm:gap-3 px-1 sm:px-4 pt-6 pb-2">
+              <div className="absolute inset-x-2 sm:inset-x-4 top-8 border-b border-dashed border-[#E4E6EB]" />
               <div className="absolute inset-x-2 sm:inset-x-4 top-1/2 border-b border-dashed border-[#E4E6EB]" />
               <div className="absolute inset-x-2 sm:inset-x-4 bottom-8 border-b border-[#E4E6EB]" />
 
-              {/* Render Bars */}
               {monthlyData.map((item, idx) => {
                 const isSelected = selectedMonthIndex === idx;
                 const isDonationMonth = item.bags > 0;
-                const barHeight = isDonationMonth ? 84 : 26;
+                const barHeight = isDonationMonth ? 85 : 28;
 
                 return (
                   <button
                     key={item.month}
+                    type="button"
                     onClick={() => setSelectedMonthIndex(idx)}
                     className="flex-1 flex flex-col items-center h-full justify-end group z-10 focus:outline-none cursor-pointer"
                   >
-                    <div className="w-full max-w-[32px] sm:max-w-[42px] flex flex-col items-center justify-end h-[140px] sm:h-[160px]">
-                      {/* Top Value Tag */}
+                    <div className="w-full max-w-[36px] sm:max-w-[48px] flex flex-col items-center justify-end h-[150px] sm:h-[180px]">
                       {isDonationMonth ? (
-                        <span className="text-[10px] font-black text-[#C41E3A] mb-1 group-hover:scale-110 transition-transform">
+                        <span className="text-[11px] font-black text-[#C41E3A] mb-1.5 group-hover:scale-110 transition-transform">
                           {formatDigits(item.bags)}
                         </span>
                       ) : (
-                        <span className="text-[9px] text-[#8C8F9A] mb-1">
+                        <span className="text-[10px] text-[#8C8F9A] mb-1.5 font-semibold">
                           {formatDigits(item.readyPercent)}%
                         </span>
                       )}
 
-                      {/* Bar Fill */}
                       <div
                         style={{ height: `${barHeight}%` }}
                         className={`w-full rounded-t-xl transition-all duration-300 ${
                           isDonationMonth
                             ? isSelected
-                              ? 'bg-gradient-to-t from-[#9E0027] to-[#C41E3A] shadow-md ring-2 ring-[#FFDAD9] scale-102'
+                              ? 'bg-gradient-to-t from-[#9E0027] to-[#C41E3A] shadow-md ring-2 ring-[#FFDAD9] scale-105'
                               : 'bg-gradient-to-t from-[#C41E3A] to-[#E53935] hover:opacity-95'
                             : isSelected
-                            ? 'bg-[#A6A2AA] ring-2 ring-[#E4E6EB]'
+                            ? 'bg-[#8F8B94] ring-2 ring-[#E4E6EB]'
                             : 'bg-[#DCD9DE] hover:bg-[#CBC7CE]'
                         }`}
                       />
                     </div>
 
-                    {/* Month Label */}
                     <span
-                      className={`text-[11px] sm:text-xs mt-2 transition-colors font-semibold ${
-                        isSelected ? 'text-[#C41E3A] font-extrabold' : 'text-[#5B5F6B]'
+                      className={`text-xs mt-2.5 transition-colors font-bold ${
+                        isSelected ? 'text-[#9E0027]' : 'text-[#5B5F6B]'
                       }`}
                     >
                       {item.month}
@@ -492,98 +548,92 @@ export const BloodAnalyticsCharts: React.FC = () => {
               })}
             </div>
 
-            {/* Explanatory Caption */}
-            <div className="pt-2.5 border-t border-[#E4E6EB]/60 flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs text-[#5B5F6B] gap-1 px-1">
-              <span>
-                {language === 'bn'
-                  ? '💡 প্রতি ৩ মাস পরপর সুস্থ প্রাপ্তবয়স্ক নারী-পুরুষ নিরাপদে ১ ব্যাগ রক্তদান করতে পারেন।'
-                  : '💡 Healthy adults can safely donate 1 blood bag every 3 months.'}
+            {/* Insight Note */}
+            <div className="pt-3 border-t border-[#E4E6EB]/70 flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs text-[#5B5F6B] gap-1.5">
+              <span className="flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5 text-[#0D58C9] shrink-0" />
+                <span>
+                  {language === 'bn'
+                    ? 'প্রতি ৩ মাস পরপর যেকোনো প্রাপ্তবয়স্ক সুস্থ নারী-পুরুষ ১ ব্যাগ রক্ত নিরাপদে দান করতে পারেন।'
+                    : 'Healthy adults can safely donate 1 blood bag every 3 months.'}
+                </span>
               </span>
-              <span className="text-[#1D5FD0] font-bold">
-                {language === 'bn' ? '👆 বারে ট্যাপ করে বিস্তারিত দেখুন' : '👆 Tap bar for details'}
+              <span className="text-[#0D58C9] font-bold">
+                {language === 'bn' ? '👆 নির্দিষ্ট মাসের বারে ক্লিক করে তথ্য দেখুন' : '👆 Click any bar for details'}
               </span>
             </div>
           </div>
         </div>
       )}
 
-      {/* ================= TAB 2: DEMAND VS SUPPLY DUAL BARS ================= */}
+      {/* ================= TAB 2: DEMAND VS SUPPLY BY BLOOD GROUP ================= */}
       {activeTab === 'demand' && (
-        <div className="space-y-3.5 pt-1">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 text-xs text-[#5B5F6B] px-1">
-            <span className="font-bold text-[#1B1B1F]">
+        <div className="space-y-4 pt-1 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#5B5F6B]">
+            <span className="font-bold text-[#1B1B1F] text-sm">
               {language === 'bn'
-                ? 'বগুড়া অঞ্চল ও আশেপাশের হাসপাতালে রক্তের ঘাটতি ও সরবরাহ চিত্র'
-                : 'Regional Hospital Blood Deficit vs Supply'}
+                ? 'বগুড়া ও পার্শ্ববর্তী হাসপাতালসমূহে রক্তের ঘাটতি ও সরবরাহ চিত্র'
+                : 'Hospital Blood Deficit vs Ready Donor Supply'}
             </span>
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#C41E3A]" />{' '}
-                {language === 'bn' ? 'জরুরি চাহিদা (ব্যাগ)' : 'Demand (Bags)'}
+            <div className="flex items-center gap-4 text-xs font-semibold">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#C41E3A]" />
+                <span>{language === 'bn' ? 'জরুরি চাহিদা (ব্যাগ)' : 'Demand (Bags)'}</span>
               </span>
-              <span className="flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#0B7A50]" />{' '}
-                {language === 'bn' ? 'সক্রিয় ডোনার (ব্যক্তি)' : 'Ready Donors'}
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#00744B]" />
+                <span>{language === 'bn' ? 'প্রস্তুত ডোনার' : 'Ready Donors'}</span>
               </span>
             </div>
           </div>
 
-          {/* Grid of Blood Groups with interactive touch feedback */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 max-h-[380px] overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {bloodDemandSupply.map((item) => {
               const isSelected = selectedGroup === item.group;
               return (
                 <div
                   key={item.group}
                   onClick={() => setSelectedGroup(isSelected ? null : item.group)}
-                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-[#FFF5F6] border-[#FFCDD2] shadow-xs ring-1 ring-[#FFCDD2]'
-                      : 'bg-[#FAF9FB] border-[#E4E6EB]/80 hover:bg-white'
+                      : 'bg-[#FAF9FB] border-[#E4E6EB]/80 hover:bg-white hover:border-[#D1D5DB]'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-xl bg-white border border-[#E4E6EB] text-[#C41E3A] font-black text-sm flex items-center justify-center shadow-2xs">
+                      <div className="w-9 h-9 rounded-xl bg-white border border-[#E4E6EB] text-[#C41E3A] font-black text-base flex items-center justify-center shadow-2xs">
                         {item.group}
                       </div>
-                      {item.isCritical ? (
-                        <span className="text-[10px] bg-[#FFDAD6] text-[#BA1A1A] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <AlertTriangle className="w-2.5 h-2.5" />
-                          {language === 'bn'
-                            ? `সংকটজনক ঘাটতি (${formatDigits(item.percent)}%)`
-                            : `Critical Deficit (${item.percent}%)`}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] bg-[#E8F5E9] text-[#005938] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <CheckCircle2 className="w-2.5 h-2.5" />
-                          {language === 'bn'
-                            ? `স্থিতিশীল (${formatDigits(item.percent)}%)`
-                            : `Stable Supply (${item.percent}%)`}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="text-right">
-                      <span className="text-xs text-[#5B5F6B] block">
-                        {language === 'bn' ? 'গড় সন্ধান সময়:' : 'Avg match time:'}{' '}
-                        <strong className="text-[#1B1B1F] font-bold">{item.waitTime}</strong>
+                      <span
+                        className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                          item.isCritical
+                            ? 'bg-[#FFDAD6] text-[#BA1A1A]'
+                            : 'bg-[#E8F5E9] text-[#005938]'
+                        }`}
+                      >
+                        {item.isCritical ? (
+                          <>
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>{language === 'bn' ? `ঘাটতি (${formatDigits(item.percent)}%)` : `Deficit (${item.percent}%)`}</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>{language === 'bn' ? `স্থিতিশীল (${formatDigits(item.percent)}%)` : `Stable (${item.percent}%)`}</span>
+                          </>
+                        )}
                       </span>
                     </div>
                   </div>
 
-                  {/* Dual Bar Graphic */}
-                  <div className="mt-3 space-y-1.5">
-                    <div className="flex justify-between text-[11px] font-semibold text-[#5B5F6B]">
-                      <span>
-                        {language === 'bn'
-                          ? `চাহিদা: ${formatDigits(item.demand)} ব্যাগ`
-                          : `Demand: ${item.demand} bags`}
+                  <div className="mt-3.5 space-y-1.5">
+                    <div className="flex justify-between text-xs font-bold text-[#1B1B1F]">
+                      <span className="text-[#C41E3A]">
+                        {language === 'bn' ? `চাহিদা: ${formatDigits(item.demand)}` : `Demand: ${item.demand}`}
                       </span>
-                      <span>
-                        {language === 'bn'
-                          ? `ডোনার: ${formatDigits(item.supply)} জন`
-                          : `Donors: ${item.supply}`}
+                      <span className="text-[#005938]">
+                        {language === 'bn' ? `ডোনার: ${formatDigits(item.supply)}` : `Donors: ${item.supply}`}
                       </span>
                     </div>
 
@@ -594,60 +644,48 @@ export const BloodAnalyticsCharts: React.FC = () => {
                       />
                       <div
                         style={{ width: `${Math.min(100, (item.supply / 70) * 100)}%` }}
-                        className="h-full bg-gradient-to-r from-[#0B7A50] to-[#12A06C] opacity-90 ml-0.5"
+                        className="h-full bg-gradient-to-r from-[#00744B] to-[#12A06C] ml-0.5"
                       />
                     </div>
-                  </div>
 
-                  {/* Expanded group details */}
-                  {isSelected && (
-                    <div className="mt-2.5 pt-2 border-t border-[#FFCDD2]/60 text-xs text-[#5B5F6B] flex items-center justify-between">
-                      <span>
-                        {language === 'bn'
-                          ? 'বর্তমানে শহীদ জিয়াউর রহমান মেডিকেলে সবচেয়ে বেশি প্রয়োজন'
-                          : 'Currently in highest demand at SZMCH Medical College Hospital'}
-                      </span>
-                      <span className="text-[#C41E3A] font-bold">
-                        {language === 'bn' ? 'আবেদন করুন →' : 'Request Now →'}
-                      </span>
+                    <div className="flex items-center justify-between text-[11px] text-[#5B5F6B] pt-1">
+                      <span>{language === 'bn' ? 'গড় সন্ধান সময়:' : 'Avg Match:'}</span>
+                      <strong className="text-[#1B1B1F] font-bold">{item.waitTime}</strong>
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Urgent Note on Negative Groups */}
-          <div className="p-3 bg-[#FFF8E1] rounded-2xl border border-[#FFE082] flex items-start gap-2.5 text-xs text-[#9A5B00]">
+          {/* Notice on Rh-negative Blood */}
+          <div className="p-3.5 bg-[#FFF8E1] rounded-2xl border border-[#FFE082] flex items-start gap-3 text-xs text-[#9A5B00]">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-            {language === 'bn' ? (
-              <p className="leading-relaxed">
-                <strong>বিশেষ বার্তা:</strong> নেগেটিভ গ্রুপের রক্তদাতা মাত্র <strong>৩৮%–৪৪%</strong> ঘাটতিতে থাকে। আপনি বা আপনার পরিচিত কেউ নেগেটিভ গ্রুপের হলে অনুগ্রহ করে ডোনার হিসেবে নাম তালিকাভুক্ত রাখুন।
-              </p>
-            ) : (
-              <p className="leading-relaxed">
-                <strong>Important Notice:</strong> Rh-negative blood donors face a critical <strong>38%–44%</strong> shortage. If you or someone you know is Rh-negative, please register as an active donor.
-              </p>
-            )}
+            <p className="leading-relaxed">
+              <strong>{language === 'bn' ? 'জরুরি বিজ্ঞপ্তি:' : 'Critical Notice:'}</strong>{' '}
+              {language === 'bn'
+                ? 'নেগেটিভ রক্তের গ্রুপসমূহে (O-, A-, B-, AB-) প্রায় ৩৮%–৪৪% ডোনার ঘাটতি রয়েছে। আপনি নেগেটিভ গ্রুপের রক্তদাতা হলে সবসময় সক্রিয় থাকুন।'
+                : 'Rh-negative blood groups (O-, A-, B-, AB-) face an acute 38%–44% donor shortage. Please keep your availability active if you are Rh-negative.'}
+            </p>
           </div>
         </div>
       )}
 
-      {/* ================= TAB 3: 24-HOUR EMERGENCY RESPONSE VELOCITY ================= */}
+      {/* ================= TAB 3: 24-HOUR EMERGENCY VELOCITY ================= */}
       {activeTab === 'velocity' && (
-        <div className="space-y-4 pt-1">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3.5 bg-gradient-to-r from-[#F0FDF4] to-[#F2FBF7] rounded-2xl border border-[#C8EAD9]">
+        <div className="space-y-4 pt-1 animate-in fade-in duration-200">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 bg-gradient-to-r from-[#F0FDF4] to-[#F2FBF7] rounded-2xl border border-[#C8EAD9]">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#0B7A50] text-white flex items-center justify-center font-bold text-xs shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-[#00744B] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
                 <Clock className="w-5 h-5" />
               </div>
               <div>
                 <h4 className="font-extrabold text-sm text-[#003922]">
                   {language === 'bn'
-                    ? 'সর্বোচ্চ সাড়া প্রদানের সময়: সকাল ১১টা ও বিকাল ৫টা'
+                    ? 'সর্বোচ্চ সাড়ার সময়: সকাল ১১টা ও বিকাল ৫টা'
                     : 'Peak Response Windows: 11:00 AM & 5:00 PM'}
                 </h4>
-                <p className="text-xs text-[#0B7A50]">
+                <p className="text-xs text-[#005938] mt-0.5">
                   {language === 'bn' ? (
                     <>এই সময়ে রক্তদাতারা মাত্র <strong>৬.৪ মিনিটে</strong> সাড়া দিয়ে নিশ্চিত করেন।</>
                   ) : (
@@ -657,21 +695,20 @@ export const BloodAnalyticsCharts: React.FC = () => {
               </div>
             </div>
 
-            <span className="text-xs font-black bg-white text-[#0B7A50] px-3 py-1.5 rounded-xl border border-[#C8EAD9] shadow-2xs shrink-0">
-              {language === 'bn' ? 'গড় সময়: ৭.৪ মিনিট' : 'Avg Speed: 7.4 mins'}
+            <span className="text-xs font-black bg-white text-[#00744B] px-3.5 py-2 rounded-xl border border-[#C8EAD9] shadow-xs shrink-0 self-start md:self-auto">
+              {language === 'bn' ? 'সারাদিনের গড় গতি: ৭.৪ মিনিট' : 'Overall Speed: 7.4 mins'}
             </span>
           </div>
 
-          {/* 24-Hour Velocity Heat & Height Graph */}
-          <div className="w-full bg-[#FAF9FB] rounded-2xl p-3 sm:p-4 border border-[#E4E6EB]/60">
+          <div className="w-full bg-[#FAF9FB] rounded-2xl p-4 sm:p-5 border border-[#E4E6EB]/80">
             <span className="text-xs font-bold text-[#1B1B1F] block mb-3">
               {language === 'bn'
-                ? 'দিন-রাতের প্রতি ভাগে সাড়া দেওয়ার গতির গ্রাফ (মিনিট হিসেবে কম সময় মানে দ্রুত সাড়া)'
-                : '24-hour response speed chart (shorter duration = faster matching)'}
+                ? 'সময়ভিত্তিক সাড়ার গতির গ্রাফ (মিনিট কম মানে দ্রুত সাড়া)'
+                : '24-hour response velocity curve (lower minutes = faster match)'}
             </span>
 
-            <div className="h-44 sm:h-52 flex items-end justify-between gap-2 px-1 sm:px-3 pt-6 pb-2 relative">
-              <div className="absolute inset-x-2 sm:inset-x-4 top-6 border-b border-dashed border-[#E4E6EB]" />
+            <div className="h-48 sm:h-56 flex items-end justify-between gap-2 px-1 sm:px-4 pt-6 pb-2 relative">
+              <div className="absolute inset-x-2 sm:inset-x-4 top-8 border-b border-dashed border-[#E4E6EB]" />
               <div className="absolute inset-x-2 sm:inset-x-4 bottom-8 border-b border-[#E4E6EB]" />
 
               {hourlyResponseCurve.map((h) => {
@@ -680,20 +717,20 @@ export const BloodAnalyticsCharts: React.FC = () => {
 
                 return (
                   <div key={h.hour} className="flex-1 flex flex-col items-center h-full justify-end group">
-                    <span className="text-[10px] font-black text-[#1B1B1F] mb-1">
+                    <span className="text-[10.5px] font-black text-[#1B1B1F] mb-1.5">
                       {formatDigits(h.timeMins)}{language === 'bn' ? 'মি.' : 'm'}
                     </span>
 
                     <div
                       style={{ height: `${heightPercent}%` }}
-                      className={`w-full max-w-[34px] sm:max-w-[44px] rounded-t-xl transition-all duration-300 ${
+                      className={`w-full max-w-[38px] sm:max-w-[48px] rounded-t-xl transition-all duration-300 ${
                         isFast
-                          ? 'bg-gradient-to-t from-[#0B7A50] to-[#12A06C] shadow-xs'
+                          ? 'bg-gradient-to-t from-[#00744B] to-[#12A06C] shadow-xs'
                           : 'bg-gradient-to-t from-[#5B5F6B] to-[#8C8F9A]'
                       }`}
                     />
 
-                    <span className="text-[10px] sm:text-[11px] font-semibold text-[#5B5F6B] mt-2 whitespace-nowrap">
+                    <span className="text-[10px] sm:text-[11px] font-bold text-[#5B5F6B] mt-2 whitespace-nowrap">
                       {h.hour}
                     </span>
                   </div>
@@ -701,14 +738,14 @@ export const BloodAnalyticsCharts: React.FC = () => {
               })}
             </div>
 
-            <div className="pt-2 border-t border-[#E4E6EB]/60 flex items-center justify-between text-xs text-[#5B5F6B]">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#0B7A50]" />{' '}
-                {language === 'bn' ? 'দ্রুত সাড়া (<৮ মিনিট)' : 'Fast Response (<8 mins)'}
+            <div className="pt-3 border-t border-[#E4E6EB]/70 flex items-center justify-between text-xs text-[#5B5F6B]">
+              <span className="flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#00744B]" />
+                <span>{language === 'bn' ? 'দ্রুততম সাড়া (<৮ মিনিট)' : 'Fastest Match (<8 mins)'}</span>
               </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#5B5F6B]" />{' '}
-                {language === 'bn' ? 'স্বাভাবিক সাড়া (১০-১৬ মিনিট)' : 'Standard Response (10-16 mins)'}
+              <span className="flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#5B5F6B]" />
+                <span>{language === 'bn' ? 'স্বাভাবিক সাড়া (১০-১৬ মিনিট)' : 'Standard Match (10-16 mins)'}</span>
               </span>
             </div>
           </div>
@@ -717,45 +754,44 @@ export const BloodAnalyticsCharts: React.FC = () => {
 
       {/* ================= TAB 4: REGIONAL UPAZILA DISTRIBUTION ================= */}
       {activeTab === 'regional' && (
-        <div className="space-y-3 pt-1">
+        <div className="space-y-3.5 pt-1 animate-in fade-in duration-200">
           <div className="text-xs text-[#5B5F6B] px-1 flex items-center justify-between">
-            <span className="font-bold text-[#1B1B1F]">
-              {language === 'bn' ? 'বগুড়া জেলার বিভিন্ন উপজেলায় ডোনার কভারেজ' : 'Donor Density Across Bogura Upazilas'}
+            <span className="font-bold text-[#1B1B1F] text-sm">
+              {language === 'bn' ? 'বগুড়া জেলার উপজেলাভিত্তিক ডোনার কভারেজ' : 'Donor Density Across Bogura Upazilas'}
             </span>
-            <span>
-              {language === 'bn' ? (
-                <>মোট নিবন্ধিত ডোনার: <strong>{formatDigits(435)} জন</strong></>
-              ) : (
-                <>Total Registered: <strong>{435} donors</strong></>
-              )}
+            <span className="font-bold text-[#1B1B1F]">
+              {language === 'bn' ? `মোট নিবন্ধিত: ${formatDigits(435)} জন` : `Total Donors: ${435}`}
             </span>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {upazilaDistribution.map((item) => (
               <div
                 key={item.name}
-                className="p-3 bg-[#FAF9FB] rounded-2xl border border-[#E4E6EB]/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 hover:bg-white transition-colors"
+                className="p-4 bg-[#FAF9FB] rounded-2xl border border-[#E4E6EB]/80 flex flex-col justify-between gap-3 hover:bg-white hover:border-[#D1D5DB] transition-all shadow-2xs"
               >
-                <div className="w-full sm:w-44 shrink-0">
-                  <div className="flex items-center justify-between sm:justify-start gap-2">
-                    <span className="font-extrabold text-sm text-[#1B1B1F]">{item.name}</span>
-                    <span className="text-[11px] text-[#0B7A50] font-bold bg-[#E8F5E9] px-2 py-0.5 rounded-md">
-                      {formatDigits(item.activeToday)} {language === 'bn' ? 'আজ প্রস্তুত' : 'ready today'}
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <h5 className="font-extrabold text-sm text-[#1B1B1F]">{item.name}</h5>
+                    <span className="text-[11px] text-[#5B5F6B] mt-0.5 block">
+                      {language === 'bn' ? `মোট রক্তদাতা: ${formatDigits(item.totalDonors)} জন` : `Total: ${item.totalDonors}`}
                     </span>
                   </div>
-                  <span className="text-[11px] text-[#5B5F6B] block mt-0.5">
-                    {language === 'bn'
-                      ? `মোট ডোনার: ${formatDigits(item.totalDonors)} জন`
-                      : `Total Donors: ${item.totalDonors}`}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-[#005938] font-bold bg-[#E8F5E9] px-2.5 py-0.5 rounded-full border border-[#C8E6C9]">
+                      {formatDigits(item.activeToday)} {language === 'bn' ? 'প্রস্তুত' : 'ready'}
+                    </span>
+                    <span className="text-[11px] font-bold text-[#C41E3A] bg-[#FDECEF] px-2 py-0.5 rounded-full border border-[#FFDAD6]">
+                      {formatDigits(item.urgentRequests)}টি জরুরি
+                    </span>
+                  </div>
                 </div>
 
-                {/* Progress bar showing coverage strength */}
-                <div className="w-full flex-1 sm:px-4">
-                  <div className="flex justify-between text-[11px] text-[#5B5F6B] mb-1">
+                {/* Fulfillment Strength Bar */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[11px] text-[#5B5F6B] font-semibold">
                     <span>{language === 'bn' ? 'সফলতার হার' : 'Fulfillment Rate'}</span>
-                    <strong className="text-[#1B1B1F]">{formatDigits(item.fillRate)}%</strong>
+                    <strong className="text-[#1B1B1F] font-bold">{formatDigits(item.fillRate)}%</strong>
                   </div>
                   <div className="w-full h-2 rounded-full bg-[#EAE8ED] overflow-hidden">
                     <div
@@ -764,19 +800,12 @@ export const BloodAnalyticsCharts: React.FC = () => {
                     />
                   </div>
                 </div>
-
-                <div className="self-end sm:self-center shrink-0">
-                  <span className="text-[11px] font-bold text-[#C41E3A] bg-[#FDECEF] px-2.5 py-1 rounded-lg">
-                    {language === 'bn'
-                      ? `${formatDigits(item.urgentRequests)}টি চলমান`
-                      : `${item.urgentRequests} active requests`}
-                  </span>
-                </div>
               </div>
             ))}
           </div>
         </div>
       )}
+
     </div>
   );
 };

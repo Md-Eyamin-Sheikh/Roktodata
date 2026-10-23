@@ -73,7 +73,7 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
   });
 
   return (
-    <div className="flex flex-col w-full max-w-5xl mx-auto pb-24">
+    <div className="flex flex-col w-full pb-24">
       {/* Search & View Toggle Section */}
       <div className="px-4 pt-3 pb-2 flex flex-col gap-2.5 bg-white border-b border-[#E4E6EB]/50 sticky top-14 md:top-16 z-20">
         {/* Search Bar */}
