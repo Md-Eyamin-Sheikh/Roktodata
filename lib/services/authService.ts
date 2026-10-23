@@ -421,10 +421,11 @@ export const loginWithOAuth = async (
 
   try {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const redirectTo = `${origin}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: origin,
+        redirectTo,
         queryParams: provider === 'google'
           ? { access_type: 'offline', prompt: 'consent' }
           : undefined,

@@ -40,7 +40,7 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccessLogin: (user: UserProfile) => void;
-  initialMode?: 'login' | 'register';
+  initialMode?: 'login' | 'register' | 'forgot' | 'complete_contact';
   currentDistrict?: string;
 }
 

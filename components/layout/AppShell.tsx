@@ -90,6 +90,12 @@ export const AppShell: React.FC = () => {
   const [isHealthEducationOpen, setIsHealthEducationOpen] = useState(false);
   const [isHospitalDashboardOpen, setIsHospitalDashboardOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authInitialMode, setAuthInitialMode] = useState<'login' | 'register' | 'forgot' | 'complete_contact'>('login');
+
+  const handleOpenAuth = (mode: 'login' | 'register' | 'forgot' | 'complete_contact' = 'login') => {
+    setAuthInitialMode(mode);
+    setIsAuthOpen(true);
+  };
   const [isDonorSetupOpen, setIsDonorSetupOpen] = useState(false);
   const [isVerificationExplainerOpen, setIsVerificationExplainerOpen] = useState(false);
 
@@ -135,6 +141,7 @@ export const AppShell: React.FC = () => {
   React.useEffect(() => {
     syncSupabaseAuthSession().then((synced) => {
       if (synced && (!synced.phone || synced.phone.length < 5)) {
+        setAuthInitialMode('complete_contact');
         setIsAuthOpen(true);
       }
     });
@@ -242,7 +249,7 @@ export const AppShell: React.FC = () => {
   // Toggle Donor Availability
   const handleToggleDonorAvailable = () => {
     if (!isLoggedIn) {
-      setIsAuthOpen(true);
+      handleOpenAuth('login');
       return;
     }
     const nextVal = !userProfile.isAvailable;
@@ -458,7 +465,7 @@ export const AppShell: React.FC = () => {
           unreadCount={unreadCount}
           onOpenNotifications={() => setIsNotificationsOpen(true)}
           onOpenProfile={() => setActiveTab('profile')}
-          onOpenAuth={() => setIsAuthOpen(true)}
+          onOpenAuth={() => handleOpenAuth('login')}
           isLoggedIn={isLoggedIn}
           donorName={isLoggedIn && userProfile.name ? userProfile.name : 'অতিথি'}
           donorBloodGroup={isLoggedIn ? userProfile.bloodGroup : ''}
@@ -592,7 +599,7 @@ export const AppShell: React.FC = () => {
                 onOpenSettings={() => setIsSettingsOpen(true)}
                 onToggleAvailability={handleToggleDonorAvailable}
                 onOpenAuditLog={() => setIsSettingsOpen(true)}
-                onOpenAuth={() => setIsAuthOpen(true)}
+                onOpenAuth={() => handleOpenAuth('login')}
                 onLogout={handleLogout}
               />
             ) : null}
@@ -832,6 +839,7 @@ export const AppShell: React.FC = () => {
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         onSuccessLogin={handleSuccessLogin}
+        initialMode={authInitialMode}
         currentDistrict={currentDistrict}
       />
 
