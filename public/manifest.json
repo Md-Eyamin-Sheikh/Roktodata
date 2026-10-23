@@ -1,0 +1,17 @@
+{
+  "name": "রক্তদাতা — মানবিক রক্তদান প্ল্যাটফর্ম",
+  "short_name": "রক্তদাতা",
+  "description": "জরুরি রক্তদান ও রক্তগ্রহীতা সংযোগের মানবিক ও নির্ভরযোগ্য প্ল্যাটফর্ম",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F7F9",
+  "theme_color": "#C41E3A",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

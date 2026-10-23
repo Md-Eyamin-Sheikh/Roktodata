@@ -94,7 +94,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pb-24 pt-1">
+    <div className="flex flex-col w-full max-w-7xl xl:max-w-[1440px] 2xl:max-w-[1560px] mx-auto px-3 sm:px-4 md:px-6 2xl:px-8 pb-24 pt-1">
       {/* ================= PAGE TITLE & BREADCRUMB (Visible on Tablet/Desktop) ================= */}
       <div className="hidden md:flex items-center justify-between pb-3 mb-2 border-b border-[#E4E6EB]/60">
         <div>
@@ -210,13 +210,13 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                   {/* Patient & Hospital Details Tags */}
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     <div className="p-2.5 bg-[#F7F7F9] rounded-xl border border-[#E4E6EB]/50">
-                      <span className="text-[10px] text-[#5B5F6B] font-medium block">রোগীর ধরণ / অবস্থা</span>
+                      <span className="text-xs text-[#5B5F6B] font-medium block">রোগীর ধরণ / অবস্থা</span>
                       <span className="text-xs font-bold text-[#1B1B1F] mt-0.5 block truncate">
                         {myRequest.patientType || 'জরুরি অপারেশন'}
                       </span>
                     </div>
                     <div className="p-2.5 bg-[#F7F7F9] rounded-xl border border-[#E4E6EB]/50">
-                      <span className="text-[10px] text-[#5B5F6B] font-medium block">ওয়ার্ড ও বেড নম্বর</span>
+                      <span className="text-xs text-[#5B5F6B] font-medium block">ওয়ার্ড ও বেড নম্বর</span>
                       <span className="text-xs font-bold text-[#1B1B1F] mt-0.5 block truncate">
                         {myRequest.wardBed || 'ওয়ার্ড ৪, বেড ১২'}
                       </span>
@@ -234,7 +234,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                         <span className="text-xs font-bold text-[#166534] block leading-tight">
                           নিকটস্থ ডোনারদের সাথে লাইভ কানেক্টেড
                         </span>
-                        <span className="text-[10px] text-[#15803D]">বগুড়া সদর ও ৫ কিমি ব্যাসার্ধ</span>
+                        <span className="text-xs text-[#15803D]">বগুড়া সদর ও ৫ কিমি ব্যাসার্ধ</span>
                       </div>
                     </div>
                     <span className="text-xs bg-white text-[#166534] font-extrabold px-2.5 py-1 rounded-full shadow-xs border border-[#BBF7D0]">
@@ -248,7 +248,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                       <span className="text-xs font-bold text-[#5B5F6B] uppercase tracking-wider">
                         রক্তদান ট্র্যাকিং অগ্রগতি
                       </span>
-                      <span className="text-[11px] font-extrabold text-[#C41E3A] bg-[#FDECEF] px-2.5 py-0.5 rounded-full">
+                      <span className="text-xs font-extrabold text-[#C41E3A] bg-[#FDECEF] px-2.5 py-0.5 rounded-full">
                         ধাপ {toBengaliDigits(myRequest.trackingStep || 3)} / {toBengaliDigits(5)}
                       </span>
                     </div>
@@ -261,7 +261,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                         </div>
                         <div className="absolute -left-[19px] top-5 w-0.5 h-4 bg-[#86EFAC]" />
                         <span className="text-xs font-bold text-[#1B1B1F]">অনুরোধ তৈরি ও যাচাই সম্পন্ন</span>
-                        <span className="text-[11px] text-[#5B5F6B]">১২:৪০ PM</span>
+                        <span className="text-xs text-[#5B5F6B]">১২:৪০ PM</span>
                       </div>
 
                       {/* Step 2 */}
@@ -272,7 +272,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                         <div className="absolute -left-[19px] top-5 w-0.5 h-4 bg-[#86EFAC]" />
                         <div>
                           <p className="text-xs font-bold text-[#1B1B1F]">১২ জন উপযুক্ত ডোনারকে বার্তা পাঠানো হয়েছে</p>
-                          <p className="text-[10px] text-[#5B5F6B]">৫ কিমি ব্যাসার্ধের মধ্যে ম্যাচিং</p>
+                          <p className="text-xs text-[#5B5F6B]">৫ কিমি ব্যাসার্ধের মধ্যে ম্যাচিং</p>
                         </div>
                         <span className="text-[11px] text-[#5B5F6B]">১২:৪২ PM</span>
                       </div>

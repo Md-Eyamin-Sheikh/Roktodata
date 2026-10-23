@@ -34,7 +34,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <div className="relative">
             <Home className={`w-5 h-5 transition-transform ${activeTab === 'home' ? 'scale-110 stroke-[2.4]' : 'stroke-[1.8]'}`} />
           </div>
-          <span className={`text-[10.5px] mt-1 transition-all ${activeTab === 'home' ? 'font-extrabold text-[#C41E3A]' : 'font-medium'}`}>
+          <span className={`text-xs mt-1 transition-all ${activeTab === 'home' ? 'font-extrabold text-[#C41E3A]' : 'font-medium'}`}>
             {t.nav.home}
           </span>
           {activeTab === 'home' && (
@@ -58,7 +58,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 rounded-full bg-[#C41E3A] ring-2 ring-white animate-pulse" />
             )}
           </div>
-          <span className={`text-[10.5px] mt-1 transition-all ${activeTab === 'requests' ? 'font-extrabold text-[#C41E3A]' : 'font-medium'}`}>
+          <span className={`text-xs mt-1 transition-all ${activeTab === 'requests' ? 'font-extrabold text-[#C41E3A]' : 'font-medium'}`}>
             {t.nav.requests}
           </span>
           {activeTab === 'requests' && (
@@ -75,7 +75,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           >
             <Droplet className="w-6 h-6 fill-white text-white drop-shadow-xs" />
           </button>
-          <span className="text-[10.5px] font-extrabold text-[#C41E3A] mt-1 select-none tracking-tight">
+          <span className="text-xs font-extrabold text-[#C41E3A] mt-1 select-none tracking-tight">
             {t.nav.requestBlood}
           </span>
         </div>
@@ -93,7 +93,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <div className="relative">
             <UserSearch className={`w-5 h-5 transition-transform ${activeTab === 'donors' ? 'scale-110 stroke-[2.4]' : 'stroke-[1.8]'}`} />
           </div>
-          <span className={`text-[10.5px] mt-1 transition-all ${activeTab === 'donors' ? 'font-extrabold text-[#C41E3A]' : 'font-medium'}`}>
+          <span className={`text-xs mt-1 transition-all ${activeTab === 'donors' ? 'font-extrabold text-[#C41E3A]' : 'font-medium'}`}>
             {t.nav.donors}
           </span>
           {activeTab === 'donors' && (
@@ -114,7 +114,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <div className="relative">
             <User className={`w-5 h-5 transition-transform ${activeTab === 'profile' ? 'scale-110 stroke-[2.4]' : 'stroke-[1.8]'}`} />
           </div>
-          <span className={`text-[10.5px] mt-1 transition-all ${activeTab === 'profile' ? 'font-extrabold text-[#C41E3A]' : 'font-medium'}`}>
+          <span className={`text-xs mt-1 transition-all ${activeTab === 'profile' ? 'font-extrabold text-[#C41E3A]' : 'font-medium'}`}>
             {t.nav.profile}
           </span>
           {activeTab === 'profile' && (

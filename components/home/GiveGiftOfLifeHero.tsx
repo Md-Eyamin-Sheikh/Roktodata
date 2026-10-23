@@ -121,7 +121,7 @@ export const GiveGiftOfLifeHero: React.FC<GiveGiftOfLifeHeroProps> = ({
             <span className="font-extrabold text-xs sm:text-sm text-[#9E0027] leading-tight block">
               {language === 'bn' ? 'বাঁচায় ৩টি প্রাণ' : 'Saves 3 Lives'}
             </span>
-            <span className="text-[10px] text-[#5B5F6B] mt-0.5 font-medium leading-none">
+            <span className="text-xs text-[#5B5F6B] mt-0.5 font-medium leading-none">
               {language === 'bn' ? 'মানবিক অঙ্গীকার' : 'Every Drop Counts'}
             </span>
           </div>

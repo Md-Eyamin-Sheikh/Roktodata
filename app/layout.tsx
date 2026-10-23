@@ -30,10 +30,13 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'রক্তদাতা — মানবিক রক্তদান প্ল্যাটফর্ম',
   description: 'প্রিমিয়াম মোবাইল-ফার্স্ট রক্তদান প্ল্যাটফর্ম: জরুরি রক্তের অনুরোধ, লাইভ ট্র্যাকিং, ডোনার ডিরেক্টরি ও মানবিক প্রভাব বিশ্লেষণ।',
+  manifest: '/manifest.json',
   openGraph: {
     title: 'রক্তদাতা — মানবিক রক্তদান প্ল্যাটফর্ম',
     description: 'প্রিমিয়াম মোবাইল-ফার্স্ট রক্তদান প্ল্যাটফর্ম: জরুরি রক্তের অনুরোধ, লাইভ ট্র্যাকিং, ডোনার ডিরেক্টরি ও মানবিক প্রভাব বিশ্লেষণ।',
     type: 'website',
+    locale: 'bn_BD',
+    siteName: 'রক্তদাতা — Roktodata',
   },
   twitter: {
     card: 'summary_large_image',

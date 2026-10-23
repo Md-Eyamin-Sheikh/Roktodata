@@ -18,6 +18,14 @@
     --slate-muted: #5b5f6b;
     --on-surface: #1b1b1f;
     --border-subtle: #e4e6eb;
+    --large-screen-scale: 1;
+  }
+
+  /* ≥1700px Large Screen Base Font Scale (+6%) */
+  @media (min-width: 1700px) {
+    :root {
+      --large-screen-scale: 1.06;
+    }
   }
 
   html {
@@ -66,4 +74,37 @@
 }
 .active-press:active {
   transform: scale(0.97);
+}
+
+/* Desktop-Native Interactive Card Elevate & Hover Lift */
+.interactive-card {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .interactive-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 4px 10px -2px rgba(0, 0, 0, 0.04);
+  }
+}
+
+/* Keyboard Accessible Focus Visible Ring */
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: 2px solid var(--primary-container);
+  outline-offset: 2px;
+}
+
+/* Accessibility: Prefers Reduced Motion Respect */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .interactive-card:hover {
+    transform: none !important;
+  }
 }

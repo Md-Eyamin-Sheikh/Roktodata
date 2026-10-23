@@ -48,7 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
     <>
       <header className="fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-b border-[#E4E6EB]/70 shadow-xs">
         {/* Responsive, strictly bounded container with zero horizontal overflow */}
-        <div className="h-14 md:h-16 w-full max-w-7xl mx-auto px-2.5 sm:px-4 md:px-3 lg:px-6 flex items-center justify-between gap-1.5 sm:gap-2 md:gap-2.5">
+        <div className="h-14 md:h-16 w-full max-w-7xl xl:max-w-[1440px] 2xl:max-w-[1560px] mx-auto px-2.5 sm:px-4 md:px-3 lg:px-6 2xl:px-8 flex items-center justify-between gap-1.5 sm:gap-2 md:gap-2.5">
           
           {/* ================= LEFT AREA: BRAND & DISTRICT ================= */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 min-w-0">

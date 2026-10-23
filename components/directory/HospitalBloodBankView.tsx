@@ -20,15 +20,20 @@ interface HospitalBloodBankViewProps {
   hospitals: HospitalBloodBank[];
   onBack: () => void;
   onRequestBlood: () => void;
+  initialBloodGroup?: BloodGroup | null;
 }
 
 export const HospitalBloodBankView: React.FC<HospitalBloodBankViewProps> = ({
   hospitals,
   onBack,
   onRequestBlood,
+  initialBloodGroup = null,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'hospital' | 'blood_bank'>('all');
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState<BloodGroup | 'all'>(
+    initialBloodGroup || 'all'
+  );
 
   const groups: BloodGroup[] = ['O+', 'B+', 'A+', 'AB+', 'O-', 'B-', 'A-', 'AB-'];
 
@@ -37,7 +42,10 @@ export const HospitalBloodBankView: React.FC<HospitalBloodBankViewProps> = ({
       h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       h.location.toLowerCase().includes(searchQuery.toLowerCase());
     const matchType = typeFilter === 'all' || h.type === typeFilter;
-    return matchSearch && matchType;
+    const matchBloodGroup =
+      selectedGroupFilter === 'all' ||
+      (h.stocks[selectedGroupFilter] && h.stocks[selectedGroupFilter].status !== 'empty');
+    return matchSearch && matchType && matchBloodGroup;
   });
 
   return (
@@ -81,13 +89,41 @@ export const HospitalBloodBankView: React.FC<HospitalBloodBankViewProps> = ({
             <button
               key={item.id}
               onClick={() => setTypeFilter(item.id as any)}
-              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 typeFilter === item.id
                   ? 'bg-[#FDECEF] text-[#C41E3A] ring-1 ring-[#C41E3A]'
                   : 'bg-[#F7F7F9] text-[#5B5F6B] hover:bg-[#F0EDF2]'
               }`}
             >
               {item.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Blood Group Filter Chips */}
+        <div className="pt-2 border-t border-[#E4E6EB]/50 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <span className="text-xs font-bold text-[#5B5F6B] shrink-0 mr-1">রক্তের গ্রুপ:</span>
+          <button
+            onClick={() => setSelectedGroupFilter('all')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              selectedGroupFilter === 'all'
+                ? 'bg-[#C41E3A] text-white'
+                : 'bg-[#F7F7F9] text-[#5B5F6B] hover:bg-[#F0EDF2]'
+            }`}
+          >
+            সব
+          </button>
+          {groups.map((grp) => (
+            <button
+              key={grp}
+              onClick={() => setSelectedGroupFilter(grp)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                selectedGroupFilter === grp
+                  ? 'bg-[#C41E3A] text-white shadow-2xs'
+                  : 'bg-[#F7F7F9] text-[#1B1B1F] hover:bg-[#FDECEF] hover:text-[#C41E3A]'
+              }`}
+            >
+              {grp}
             </button>
           ))}
         </div>

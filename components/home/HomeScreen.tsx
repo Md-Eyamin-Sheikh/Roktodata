@@ -21,6 +21,7 @@ import {
   BarChart3,
   TrendingUp,
   Zap,
+  MapPin,
 } from 'lucide-react';
 import { EmergencyRequest, DonationCamp } from '@/lib/types';
 import { toBengaliDigits } from '@/lib/bengali-utils';
@@ -48,6 +49,7 @@ interface HomeScreenProps {
   isProfileComplete?: boolean;
   onOpenVerificationExplainer: () => void;
   userName?: string;
+  userRole?: string;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -70,6 +72,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   isProfileComplete = true,
   onOpenVerificationExplainer,
   userName,
+  userRole = 'donor',
 }) => {
   const { language, t, formatDigits } = useLanguage();
   const [showActiveBanner, setShowActiveBanner] = useState(true);
@@ -78,30 +81,53 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(true);
 
+  // Desktop Live Demand vs Supply Strip data
+  const desktopDemandSupply = [
+    { group: 'O+', demand: 48, supply: 42, isCritical: false, percent: 88, waitTime: language === 'bn' ? '১২ মি.' : '12m' },
+    { group: 'B+', demand: 58, supply: 51, isCritical: false, percent: 88, waitTime: language === 'bn' ? '৯ মি.' : '9m' },
+    { group: 'A+', demand: 38, supply: 34, isCritical: false, percent: 89, waitTime: language === 'bn' ? '১৪ মি.' : '14m' },
+    { group: 'AB+', demand: 24, supply: 27, isCritical: false, percent: 112, waitTime: language === 'bn' ? '৮ মি.' : '8m' },
+    { group: 'O-', demand: 22, supply: 8, isCritical: true, percent: 36, waitTime: language === 'bn' ? '৪৫ মি.' : '45m' },
+    { group: 'B-', demand: 16, supply: 7, isCritical: true, percent: 43, waitTime: language === 'bn' ? '৩৫ মি.' : '35m' },
+    { group: 'A-', demand: 14, supply: 6, isCritical: true, percent: 42, waitTime: language === 'bn' ? '৪০ মি.' : '40m' },
+    { group: 'AB-', demand: 9, supply: 4, isCritical: true, percent: 44, waitTime: language === 'bn' ? '৫০ মি.' : '50m' },
+  ];
+
+  const isOperator = userRole === 'hospital_operator' || userRole === 'admin';
+
   return (
     <div className="flex flex-col w-full max-w-lg md:max-w-none mx-auto px-3 sm:px-4 md:px-0 space-y-4 md:space-y-6 pb-24 pt-2">
-      {/* Profile Incomplete Reminder Card (Section 9 requirement) */}
+      {/* Profile Incomplete Reminder Card: Compact & Dismissible */}
       {showIncompleteNotice && (
-        <div className="w-full bg-[#D9E2FF]/40 border border-[#D9E2FF] rounded-2xl p-3.5 flex items-center justify-between shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#0D58C9] text-white flex items-center justify-center font-bold text-xs shrink-0">
+        <div className="w-full bg-[#D9E2FF]/30 border border-[#D9E2FF] rounded-2xl px-3 py-2 sm:px-3.5 sm:py-2.5 flex items-center justify-between gap-2 shadow-xs transition-all">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0D58C9] text-white flex items-center justify-center font-bold text-xs shrink-0">
               {formatDigits('2/4')}
             </div>
-            <div>
-              <h4 className="font-bold text-xs text-[#001946]">
+            <div className="truncate">
+              <span className="font-bold text-xs text-[#001946] inline-block mr-1 sm:mr-2">
                 {language === 'bn' ? 'প্রোফাইল সম্পূর্ণ করুন (২/৪)' : 'Complete Profile (2/4)'}
-              </h4>
-              <p className="text-[11px] text-[#5B5F6B]">
-                {language === 'bn' ? 'ব্লাড গ্রুপ ও এলাকা নিশ্চিত করে ভেরিফাইড হন' : 'Verify blood group and area to get verified'}
-              </p>
+              </span>
+              <span className="text-xs text-[#5B5F6B] hidden sm:inline">
+                {language === 'bn' ? '— ব্লাড গ্রুপ ও এলাকা নিশ্চিত করে ভেরিফাইড হন' : '— verify blood group and area'}
+              </span>
             </div>
           </div>
-          <button
-            onClick={onOpenDonorSetup}
-            className="px-3 py-1.5 rounded-xl bg-[#0D58C9] text-white text-xs font-bold active:scale-95 shadow-xs shrink-0 cursor-pointer"
-          >
-            {language === 'bn' ? 'সম্পূর্ণ করুন' : 'Complete'}
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={onOpenDonorSetup}
+              className="px-2.5 py-1 rounded-lg bg-[#0D58C9] hover:bg-[#094196] text-white text-xs font-bold shadow-2xs cursor-pointer transition-colors"
+            >
+              {language === 'bn' ? 'সম্পূর্ণ করুন' : 'Complete'}
+            </button>
+            <button
+              onClick={() => setShowIncompleteNotice(false)}
+              aria-label={t.common.close}
+              className="p-1 rounded-lg text-[#5B5F6B] hover:text-[#001946] hover:bg-black/5 cursor-pointer transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -302,51 +328,120 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
       )}
 
-      {/* Quick Access Utility Bar (Section 7 & 15: Hospital Stock, Ambulance, Health Ed, Dashboard) */}
-      <div className="grid grid-cols-4 gap-2 md:gap-3">
+      {/* Role-based Quick Access Utility Bar */}
+      <div className={`grid ${isOperator ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-2 md:gap-3`}>
         <button
           onClick={onOpenHospitalDirectory}
-          className="bg-white hover:bg-[#FDECEF] p-3 rounded-2xl border border-[#E4E6EB]/70 flex flex-col items-center text-center transition-all shadow-xs active:scale-95 cursor-pointer group"
+          className="bg-white hover:bg-[#FDECEF] p-3 rounded-2xl border border-[#E4E6EB]/70 flex flex-col items-center text-center transition-all shadow-xs active:scale-95 cursor-pointer interactive-card group"
         >
           <div className="w-9 h-9 rounded-xl bg-[#FDECEF] text-[#C41E3A] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
             <Building className="w-4.5 h-4.5" />
           </div>
-          <span className="text-[11px] md:text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickStock}</span>
-          <span className="hidden sm:inline text-[10px] text-[#5B5F6B] mt-0.5">{t.home.quickStockSub}</span>
+          <span className="text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickStock}</span>
+          <span className="hidden sm:inline text-xs text-[#5B5F6B] mt-0.5">{t.home.quickStockSub}</span>
         </button>
 
         <button
           onClick={onOpenAmbulanceDirectory}
-          className="bg-white hover:bg-[#FDECEF] p-3 rounded-2xl border border-[#E4E6EB]/70 flex flex-col items-center text-center transition-all shadow-xs active:scale-95 cursor-pointer group"
+          className="bg-white hover:bg-[#FDECEF] p-3 rounded-2xl border border-[#E4E6EB]/70 flex flex-col items-center text-center transition-all shadow-xs active:scale-95 cursor-pointer interactive-card group"
         >
           <div className="w-9 h-9 rounded-xl bg-[#E8F5E9] text-[#0B7A50] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
             <Truck className="w-4.5 h-4.5" />
           </div>
-          <span className="text-[11px] md:text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickAmbulance}</span>
-          <span className="hidden sm:inline text-[10px] text-[#5B5F6B] mt-0.5">{t.home.quickAmbulanceSub}</span>
+          <span className="text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickAmbulance}</span>
+          <span className="hidden sm:inline text-xs text-[#5B5F6B] mt-0.5">{t.home.quickAmbulanceSub}</span>
         </button>
 
         <button
           onClick={onOpenHealthEducation}
-          className="bg-white hover:bg-[#FDECEF] p-3 rounded-2xl border border-[#E4E6EB]/70 flex flex-col items-center text-center transition-all shadow-xs active:scale-95 cursor-pointer group"
+          className="bg-white hover:bg-[#FDECEF] p-3 rounded-2xl border border-[#E4E6EB]/70 flex flex-col items-center text-center transition-all shadow-xs active:scale-95 cursor-pointer interactive-card group"
         >
           <div className="w-9 h-9 rounded-xl bg-[#E3F2FD] text-[#1D5FD0] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
             <BookOpen className="w-4.5 h-4.5" />
           </div>
-          <span className="text-[11px] md:text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickHealthEd}</span>
-          <span className="hidden sm:inline text-[10px] text-[#5B5F6B] mt-0.5">{t.home.quickHealthEdSub}</span>
+          <span className="text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickHealthEd}</span>
+          <span className="hidden sm:inline text-xs text-[#5B5F6B] mt-0.5">{t.home.quickHealthEdSub}</span>
         </button>
 
-        <button
-          onClick={onOpenHospitalDashboard}
-          className="bg-white hover:bg-[#FDECEF] p-3 rounded-2xl border border-[#E4E6EB]/70 flex flex-col items-center text-center transition-all shadow-xs active:scale-95 cursor-pointer group"
-        >
-          <div className="w-9 h-9 rounded-xl bg-[#FFF8E1] text-[#9A5B00] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
-            <LayoutDashboard className="w-4.5 h-4.5" />
+        {/* Hospital Dashboard is role-based: only visible to hospital operators / admins */}
+        {isOperator && (
+          <button
+            onClick={onOpenHospitalDashboard}
+            className="bg-white hover:bg-[#FFF8E1] p-3 rounded-2xl border border-amber-200 flex flex-col items-center text-center transition-all shadow-xs active:scale-95 cursor-pointer interactive-card group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-[#FFF8E1] text-[#9A5B00] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+              <LayoutDashboard className="w-4.5 h-4.5" />
+            </div>
+            <span className="text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickDashboard}</span>
+            <span className="hidden sm:inline text-xs text-[#5B5F6B] mt-0.5">{t.home.quickDashboardSub}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Desktop-Native Regional Demand vs Supply Live Data Strip (Visible on Desktop lg+) */}
+      <div className="hidden lg:block w-full bg-white rounded-3xl p-5 shadow-xs border border-[#E4E6EB]/80 space-y-3.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#FDECEF] text-[#C41E3A] flex items-center justify-center">
+              <BarChart3 className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-[#1B1B1F] leading-tight">
+                {language === 'bn' ? 'আজকের রক্তের চাহিদা বনাম সরবরাহ (লাইভ সিন্ডিকেট)' : "Today's Demand vs Supply (Live Syndicate)"}
+              </h3>
+              <p className="text-xs text-[#5B5F6B]">
+                {language === 'bn' ? 'আঞ্চলিক হাসপাতাল ও ব্লাড ব্যাংকের রিয়েল-টাইম মেট্রিক্স' : 'Real-time hospital & blood bank syndicate metrics'}
+              </p>
+            </div>
           </div>
-          <span className="text-[11px] md:text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickDashboard}</span>
-          <span className="hidden sm:inline text-[10px] text-[#5B5F6B] mt-0.5">{t.home.quickDashboardSub}</span>
-        </button>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-[#E8F5E9] text-[#005938]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00744B] animate-pulse" />
+              {language === 'bn' ? 'সক্রিয় মনিটরিং' : 'Active Monitoring'}
+            </span>
+          </div>
+        </div>
+
+        {/* 8 Blood Groups Horizontal Strip */}
+        <div className="grid grid-cols-4 xl:grid-cols-8 gap-2.5">
+          {desktopDemandSupply.map((item) => (
+            <div
+              key={item.group}
+              className={`p-3 rounded-2xl border transition-all text-center interactive-card ${
+                item.isCritical
+                  ? 'bg-[#FFDAD6]/30 border-[#FFDAD6] text-[#BA1A1A]'
+                  : 'bg-[#F7F7F9] border-[#E4E6EB] text-[#1B1B1F]'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-extrabold text-sm">{item.group}</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                  item.isCritical ? 'bg-[#FFDAD6] text-[#BA1A1A]' : 'bg-[#E8F5E9] text-[#005938]'
+                }`}>
+                  {item.isCritical ? (language === 'bn' ? 'সংকট' : 'Crit') : (language === 'bn' ? 'স্বাভাবিক' : 'Good')}
+                </span>
+              </div>
+              <div className="space-y-1 text-left">
+                <div className="flex justify-between text-[11px] text-[#5B5F6B]">
+                  <span>{language === 'bn' ? 'চাহিদা' : 'Req'}: <strong className="text-[#1B1B1F]">{formatDigits(item.demand)}</strong></span>
+                  <span>{language === 'bn' ? 'মজুদ' : 'Stock'}: <strong className="text-[#1B1B1F]">{formatDigits(item.supply)}</strong></span>
+                </div>
+                {/* Mini progress bar */}
+                <div className="w-full h-1.5 bg-[#E4E6EB] rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      item.isCritical ? 'bg-[#BA1A1A]' : 'bg-[#00744B]'
+                    }`}
+                    style={{ width: `${Math.min(item.percent, 100)}%` }}
+                  />
+                </div>
+                <div className="text-[10px] text-[#5B5F6B] text-center pt-0.5">
+                  {language === 'bn' ? `অপেক্ষা: ${item.waitTime}` : `Wait: ${item.waitTime}`}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Embedded Live Blood Analytics & Demand Charts Section (User explicitly requested rich data presentation) */}
@@ -363,7 +458,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
           <button
             onClick={onViewAllRequestsClick}
-            className="text-[13px] text-[#C41E3A] font-semibold hover:underline cursor-pointer"
+            className="text-xs sm:text-[13px] text-[#C41E3A] font-semibold hover:underline cursor-pointer"
           >
             {language === 'bn'
               ? `সব দেখুন (${toBengaliDigits(nearbyRequests.length + 1)})`
@@ -371,16 +466,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          {nearbyRequests.slice(0, 3).map((req) => {
+        {/* Desktop xl:grid-cols-2 layout as requested */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3.5 md:gap-4">
+          {nearbyRequests.slice(0, 4).map((req) => {
             const isUrgentNow = req.urgency === 'now';
             return (
               <article
                 key={req.id}
-                className="w-full bg-white rounded-2xl p-4 shadow-xs border border-[#E4E6EB]/60 flex flex-col justify-between gap-3 transition-transform active:scale-[0.99]"
+                className="w-full bg-white rounded-2xl p-4 shadow-xs border border-[#E4E6EB]/70 flex flex-col justify-between gap-3 interactive-card group"
               >
                 <div className="flex items-start gap-3">
-                  {/* Blood Group Badge */}
+                  {/* 1. Blood Group Badge */}
                   <div
                     className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 shadow-xs font-extrabold text-[22px] leading-none ${
                       isUrgentNow
@@ -391,15 +487,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     <span>{req.bloodGroup}</span>
                   </div>
 
-                  {/* Request Details */}
+                  {/* 2. Hospital & Urgency Details */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-1">
-                      <h3 className="font-bold text-[15px] text-[#1B1B1F] leading-tight line-clamp-1">
+                      <h3 className="font-bold text-[15px] text-[#1B1B1F] leading-tight line-clamp-1 group-hover:text-[#C41E3A] transition-colors">
                         {req.hospitalName}
                       </h3>
                       {/* Urgency Badge */}
                       <span
-                        className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                        className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-bold ${
                           isUrgentNow
                             ? 'bg-[#FFDAD6] text-[#BA1A1A]'
                             : 'bg-amber-100 text-[#9A5B00]'
@@ -414,28 +510,38 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       className="flex items-center gap-1 mt-1 text-[#1D5FD0] cursor-pointer hover:underline"
                     >
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      <span className="text-[12px] font-semibold">
+                      <span className="text-xs font-semibold">
                         {req.hasVerifiedHospital
                           ? (language === 'bn' ? 'যাচাইকৃত হাসপাতাল' : 'Verified Hospital')
                           : (language === 'bn' ? 'যাচাইকৃত কেস' : 'Verified Case')}
                       </span>
                     </div>
 
-                    <p className="text-[13px] text-[#5B5F6B] mt-0.5 truncate">
-                      {formatDigits(req.distanceKm)} {language === 'bn' ? 'কিমি' : 'km'} • {req.timeTarget} •{' '}
-                      {formatDigits(req.bagsNeeded)} {language === 'bn' ? 'ব্যাগ প্রয়োজন' : 'bags needed'}
-                    </p>
+                    {/* 3. Distance & 4. Bags Needed */}
+                    <div className="flex items-center gap-2 mt-1 text-xs text-[#5B5F6B]">
+                      <span className="inline-flex items-center gap-1 font-semibold text-[#1B1B1F]">
+                        <MapPin className="w-3 h-3 text-[#C41E3A]" />
+                        {formatDigits(req.distanceKm)} {language === 'bn' ? 'কিমি দূরে' : 'km away'}
+                      </span>
+                      <span>•</span>
+                      <span className="inline-flex items-center gap-1 font-bold text-[#C41E3A]">
+                        <Droplet className="w-3 h-3 fill-current" />
+                        {formatDigits(req.bagsNeeded)} {language === 'bn' ? 'ব্যাগ প্রয়োজন' : 'bags needed'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Bottom Action Row */}
-                <div className="pt-2 border-t border-[#E4E6EB]/50 flex items-center justify-between">
-                  <span className="text-[12px] text-[#5B5F6B] flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" /> {req.createdAt}
+                {/* Bottom Action Row: 5. Countdown & 6. Respond Button */}
+                <div className="pt-2.5 border-t border-[#E4E6EB]/50 flex items-center justify-between gap-2">
+                  <span className="text-xs text-[#5B5F6B] flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-[#E89A00]" />
+                    <span className="font-semibold text-[#9A5B00]">{req.timeTarget}</span>
+                    <span className="opacity-70">({req.createdAt})</span>
                   </span>
                   <button
                     onClick={() => onOpenDonorResponse(req)}
-                    className="h-9 px-4 bg-white hover:bg-[#FDECEF] border border-[#C41E3A] text-[#C41E3A] rounded-xl font-bold text-[13px] shadow-xs active:bg-[#C41E3A] active:text-white transition-all cursor-pointer"
+                    className="h-9 px-4 bg-[#C41E3A] hover:bg-[#A3182F] text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer focus-ring"
                   >
                     {language === 'bn' ? 'সাড়া দিন' : 'Respond'}
                   </button>
@@ -446,24 +552,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
       </section>
 
-      {/* 5. Upcoming Blood Donation Camps */}
+      {/* 5. Upcoming Blood Donation Camps (Desktop xl:grid-cols-3) */}
       <section id="donation-camps-section" className="w-full space-y-3 pt-2">
         <div className="flex items-center justify-between px-0.5">
           <h2 className="font-bold text-[18px] text-[#1B1B1F]">{t.home.donationCampsTitle}</h2>
           <button
             onClick={onViewAllCampsClick}
-            className="text-[13px] text-[#C41E3A] font-semibold hover:underline cursor-pointer"
+            className="text-xs sm:text-[13px] text-[#C41E3A] font-semibold hover:underline cursor-pointer"
           >
             {language === 'bn' ? 'সব দেখুন' : 'View All'}
           </button>
         </div>
 
-        {/* Responsive Camps: Scrollable on mobile, Grid on md/lg */}
-        <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-x-auto md:overflow-visible pb-2 -mx-3 px-3 md:mx-0 md:px-0 no-scrollbar snap-x snap-mandatory">
+        {/* Responsive Camps: Scrollable on mobile, xl:grid-cols-3 on desktop */}
+        <div className="flex md:grid md:grid-cols-2 xl:grid-cols-3 gap-3.5 md:gap-4 overflow-x-auto md:overflow-visible pb-2 -mx-3 px-3 md:mx-0 md:px-0 no-scrollbar snap-x snap-mandatory">
           {camps.map((camp) => (
             <div
               key={camp.id}
-              className="min-w-[270px] max-w-[280px] md:min-w-0 md:max-w-none bg-white rounded-2xl p-4 shadow-xs border border-[#E4E6EB]/60 snap-start flex flex-col justify-between shrink-0"
+              className="min-w-[270px] max-w-[280px] md:min-w-0 md:max-w-none bg-white rounded-2xl p-4 shadow-xs border border-[#E4E6EB]/60 snap-start flex flex-col justify-between shrink-0 interactive-card"
             >
               <div className="space-y-2.5">
                 <div className="flex items-center gap-2.5">
@@ -471,12 +577,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     <span className="block text-[16px] font-extrabold text-[#C41E3A] leading-none">
                       {formatDigits(camp.dateDay)}
                     </span>
-                    <span className="block text-[11px] text-[#9E0027] font-semibold mt-0.5">
+                    <span className="block text-xs text-[#9E0027] font-semibold mt-0.5">
                       {camp.dateMonth}
                     </span>
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[11px] text-[#5B5F6B] block truncate">
+                    <span className="text-xs text-[#5B5F6B] block truncate">
                       {camp.time}
                     </span>
                     <span className="text-[15px] text-[#1B1B1F] font-bold leading-snug line-clamp-1">
@@ -487,13 +593,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
                 <div className="flex items-center gap-1.5 text-[#5B5F6B]">
                   <Building className="w-4 h-4 shrink-0 text-[#5B5F6B]" />
-                  <span className="text-[12px] truncate">{camp.venue}</span>
+                  <span className="text-xs truncate">{camp.venue}</span>
                 </div>
               </div>
 
               <button
                 onClick={() => onRsvpCamp(camp.id)}
-                className={`mt-3 w-full h-9 rounded-xl text-[13px] font-bold transition-all flex items-center justify-center gap-1 active:scale-98 cursor-pointer ${
+                className={`mt-3 w-full h-9 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 active:scale-98 cursor-pointer focus-ring ${
                   camp.isRsvp
                     ? 'bg-[#0B7A50] text-white shadow-xs'
                     : 'bg-[#F0EDF2] text-[#1B1B1F] hover:bg-[#FDECEF] hover:text-[#C41E3A]'

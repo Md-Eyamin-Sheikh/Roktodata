@@ -22,6 +22,8 @@ import { SafeChatModal } from '@/components/chat/SafeChatModal';
 import { ReportModal } from '@/components/report/ReportModal';
 import { VerificationExplainerSheet } from '@/components/verification/VerificationExplainerSheet';
 import { LiveDatabaseViewer } from '@/components/database/LiveDatabaseViewer';
+import { QuickSearchModal } from '@/components/search/QuickSearchModal';
+import { isSupabaseConfigured } from '@/lib/supabase/client';
 
 import {
   initialEmergencyRequests,
@@ -94,6 +96,23 @@ export const AppShell: React.FC = () => {
   // Active chat & reports
   const [activeChatDonor, setActiveChatDonor] = useState<RespondingDonor | null>(null);
   const [reportTargetName, setReportTargetName] = useState<string | null>(null);
+  const [selectedBloodGroupFilter, setSelectedBloodGroupFilter] = useState<BloodGroup | null>(null);
+  const [isQuickSearchOpen, setIsQuickSearchOpen] = useState(false);
+
+  // Keyboard shortcut: / or Ctrl+K / Cmd+K opens Quick Search
+  React.useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsQuickSearchOpen((prev) => !prev);
+      } else if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+        e.preventDefault();
+        setIsQuickSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   // Data States - SSR-safe external store subscription (eliminates hydration mismatch and cascading renders)
   const cachedUser = React.useSyncExternalStore(
@@ -416,15 +435,18 @@ export const AppShell: React.FC = () => {
     { group: 'AB-', count: 0, status: 'critical' },
   ];
 
+  const isLiveSupabase = isSupabaseConfigured();
+  const baseTextMultiplier =
+    userProfile.textSize === '125%'
+      ? 1.125
+      : userProfile.textSize === '150%'
+      ? 1.25
+      : 1.0;
+
   return (
     <div
       style={{
-        fontSize:
-          userProfile.textSize === '125%'
-            ? '1.125rem'
-            : userProfile.textSize === '150%'
-            ? '1.25rem'
-            : '1rem',
+        fontSize: `calc(${baseTextMultiplier}rem * var(--large-screen-scale, 1))`,
       }}
       className="min-h-screen bg-[#F7F7F9] flex flex-col text-[#1B1B1F] selection:bg-[#FDECEF] selection:text-[#C41E3A] pb-20 md:pb-0"
     >
@@ -457,7 +479,7 @@ export const AppShell: React.FC = () => {
           !isSubPageOpen && activeTab !== 'request_form' ? 'pt-14 md:pt-16' : 'pt-0'
         }`}
       >
-        <div className="w-full max-w-7xl mx-auto px-0 sm:px-4 lg:px-6 py-2 sm:py-5 flex gap-6 items-start">
+        <div className="w-full max-w-7xl xl:max-w-[1440px] 2xl:max-w-[1560px] mx-auto px-0 sm:px-4 lg:px-6 2xl:px-8 py-2 sm:py-5 flex gap-6 items-start">
           
           {/* Primary View Container (Fluid on mobile, centered & spacious on desktop) */}
           <main className="flex-1 min-w-0 w-full">
@@ -491,11 +513,15 @@ export const AppShell: React.FC = () => {
             ) : isHospitalDirectoryOpen ? (
               <HospitalBloodBankView
                 hospitals={hospitals}
-                onBack={() => setIsHospitalDirectoryOpen(false)}
+                onBack={() => {
+                  setIsHospitalDirectoryOpen(false);
+                  setSelectedBloodGroupFilter(null);
+                }}
                 onRequestBlood={() => {
                   setIsHospitalDirectoryOpen(false);
                   setActiveTab('request_form');
                 }}
+                initialBloodGroup={selectedBloodGroupFilter}
               />
             ) : isAmbulanceDirectoryOpen ? (
               <AmbulanceDirectoryView
@@ -532,6 +558,7 @@ export const AppShell: React.FC = () => {
                 isProfileComplete={userProfile.isProfileComplete}
                 onOpenVerificationExplainer={() => setIsVerificationExplainerOpen(true)}
                 userName={isLoggedIn && userProfile.name ? userProfile.name : ''}
+                userRole={userProfile.role || 'donor'}
               />
             ) : activeTab === 'requests' ? (
               <BloodRequestsView
@@ -610,20 +637,43 @@ export const AppShell: React.FC = () => {
                 </div>
               </div>
 
-              {/* Live Blood Stock Snapshot Widget */}
+              {/* Live / Cached Blood Stock Snapshot Widget */}
               <div className="bg-white rounded-2xl p-4 shadow-xs border border-[#E4E6EB]/70 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-bold text-sm text-[#1B1B1F]">
-                      {language === 'bn' ? 'লাইভ ব্লাড ব্যাংক স্টক' : 'Live Blood Bank Stock'}
-                    </h3>
-                    <p className="text-[11px] text-[#5B5F6B]">
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-bold text-sm text-[#1B1B1F]">
+                        {isLiveSupabase
+                          ? (language === 'bn' ? 'লাইভ ব্লাড ব্যাংক স্টক' : 'Live Blood Bank Stock')
+                          : (language === 'bn' ? 'ব্লাড ব্যাংক স্টক' : 'Blood Bank Stock')}
+                      </h3>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 ${
+                          isLiveSupabase
+                            ? 'bg-[#E8F5E9] text-[#005938]'
+                            : 'bg-amber-100 text-[#9A5B00]'
+                        }`}
+                      >
+                        {isLiveSupabase ? (
+                          <>
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#00744B] animate-pulse" />
+                            <span>{language === 'bn' ? 'এইমাত্র আপডেট' : 'Updated now'}</span>
+                          </>
+                        ) : (
+                          <span>{language === 'bn' ? 'ক্যাশড ডেটা' : 'Cached Data'}</span>
+                        )}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#5B5F6B] mt-0.5">
                       {currentDistrict} {language === 'bn' ? 'এলাকা' : 'Area'}
                     </p>
                   </div>
                   <button
-                    onClick={() => setIsHospitalDashboardOpen(true)}
-                    className="text-[11px] text-[#C41E3A] font-bold hover:underline cursor-pointer"
+                    onClick={() => {
+                      setSelectedBloodGroupFilter(null);
+                      setIsHospitalDirectoryOpen(true);
+                    }}
+                    className="text-xs text-[#C41E3A] font-bold hover:underline cursor-pointer"
                   >
                     {language === 'bn' ? 'বিস্তারিত' : 'Details'}
                   </button>
@@ -631,28 +681,33 @@ export const AppShell: React.FC = () => {
 
                 <div className="grid grid-cols-4 gap-2">
                   {bloodStockSnapshot.map((item) => (
-                    <div
+                    <button
                       key={item.group}
-                      className={`p-2 rounded-xl text-center border ${
+                      onClick={() => {
+                        setSelectedBloodGroupFilter(item.group as BloodGroup);
+                        setIsHospitalDirectoryOpen(true);
+                      }}
+                      className={`p-2 rounded-xl text-center border cursor-pointer interactive-card transition-all ${
                         item.status === 'critical'
-                          ? 'bg-[#FFDAD6]/40 border-[#FFDAD6] text-[#BA1A1A]'
+                          ? 'bg-[#FFDAD6]/40 border-[#FFDAD6] text-[#BA1A1A] hover:bg-[#FFDAD6]/60'
                           : item.status === 'low'
-                          ? 'bg-amber-50 border-amber-200 text-[#9A5B00]'
-                          : 'bg-[#F7F7F9] border-[#E4E6EB] text-[#1B1B1F]'
+                          ? 'bg-amber-50 border-amber-200 text-[#9A5B00] hover:bg-amber-100'
+                          : 'bg-[#F7F7F9] border-[#E4E6EB] text-[#1B1B1F] hover:bg-white hover:border-[#C41E3A]'
                       }`}
+                      title={language === 'bn' ? `${item.group} ফিল্টার দেখতে ক্লিক করুন` : `Click to view ${item.group} hospitals`}
                     >
                       <span className="font-extrabold text-xs block leading-none">{item.group}</span>
-                      <span className="text-[11px] font-bold block mt-1">
-                        {formatDigits(item.count)}
+                      <span className="text-xs font-bold block mt-1">
+                        {formatDigits(item.count)} <span className="text-[10px] font-normal">{language === 'bn' ? 'ব্যাগ' : 'bags'}</span>
                       </span>
-                      <span className="text-[9px] block opacity-80 leading-none">
+                      <span className="text-[9px] block opacity-80 leading-none mt-0.5">
                         {item.status === 'critical'
                           ? (language === 'bn' ? 'সংকট' : 'Critical')
                           : item.status === 'low'
                           ? (language === 'bn' ? 'কম' : 'Low')
                           : (language === 'bn' ? 'পর্যাপ্ত' : 'Good')}
                       </span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -664,7 +719,10 @@ export const AppShell: React.FC = () => {
                 </h4>
                 <div className="space-y-1.5">
                   <button
-                    onClick={() => setIsHospitalDirectoryOpen(true)}
+                    onClick={() => {
+                      setSelectedBloodGroupFilter(null);
+                      setIsHospitalDirectoryOpen(true);
+                    }}
                     className="w-full p-2 rounded-xl hover:bg-[#F7F7F9] flex items-center justify-between text-left transition-colors cursor-pointer"
                   >
                     <span className="flex items-center gap-2 text-xs font-semibold text-[#1B1B1F]">
@@ -673,7 +731,7 @@ export const AppShell: React.FC = () => {
                         {language === 'bn' ? 'হাসপাতাল ও ব্লাড ব্যাংক তালিকা' : 'Hospitals & Blood Banks'}
                       </span>
                     </span>
-                    <span className="text-[10px] text-[#5B5F6B]">
+                    <span className="text-xs text-[#5B5F6B]">
                       {formatDigits(8)} {language === 'bn' ? 'টি' : ''}
                     </span>
                   </button>
@@ -688,7 +746,7 @@ export const AppShell: React.FC = () => {
                         {language === 'bn' ? 'জরুরি অ্যাম্বুলেন্স সেবা' : 'Emergency Ambulance'}
                       </span>
                     </span>
-                    <span className="text-[10px] text-[#5B5F6B]">
+                    <span className="text-xs text-[#5B5F6B]">
                       {formatDigits(6)} {language === 'bn' ? 'টি' : ''}
                     </span>
                   </button>
@@ -703,26 +761,36 @@ export const AppShell: React.FC = () => {
                         {language === 'bn' ? 'রক্তদানের নিয়ম ও স্বাস্থ্য নির্দেশিকা' : 'Donation Guidelines & Rules'}
                       </span>
                     </span>
-                    <span className="text-[10px] text-[#5B5F6B]">
+                    <span className="text-xs text-[#5B5F6B]">
                       {language === 'bn' ? 'গাইড' : 'Guide'}
                     </span>
                   </button>
                 </div>
               </div>
 
-              {/* Trust & Ethics Badge */}
-              <div className="p-3.5 bg-[#E8F5E9]/50 rounded-2xl border border-[#C8E6C9] flex items-start gap-2.5">
-                <ShieldCheck className="w-5 h-5 text-[#005938] shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-bold text-xs text-[#005938]">
-                    {language === 'bn' ? '১০০% স্বেচ্ছাসেবী মানবিক উদ্যোগ' : '100% Voluntary Humanitarian Mission'}
-                  </h4>
-                  <p className="text-[11px] text-[#2E7D32] mt-0.5 leading-relaxed">
-                    {language === 'bn'
-                      ? 'রক্ত কেনাবেচা দণ্ডনীয় অপরাধ। এই প্ল্যাটফর্ম শুধুমাত্র রক্তদাতা ও রোগীর স্বজনদের মাঝে নিঃস্বার্থ মানবিক সংযোগ ঘটিয়ে দেয়।'
-                      : 'Commercial trade of blood is illegal. This platform connects selfless donors directly with verified patients.'}
-                  </p>
+              {/* Trust & Ethics Badge with Suspicious Report Trigger */}
+              <div className="p-3.5 bg-[#E8F5E9]/50 rounded-2xl border border-[#C8E6C9] flex flex-col gap-2">
+                <div className="flex items-start gap-2.5">
+                  <ShieldCheck className="w-5 h-5 text-[#005938] shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-bold text-xs text-[#005938]">
+                      {language === 'bn' ? '১০০% স্বেচ্ছাসেবী মানবিক উদ্যোগ' : '100% Voluntary Humanitarian Mission'}
+                    </h4>
+                    <p className="text-xs text-[#2E7D32] mt-0.5 leading-relaxed">
+                      {language === 'bn'
+                        ? 'রক্ত কেনাবেচা দণ্ডনীয় অপরাধ। এই প্ল্যাটফর্ম শুধুমাত্র রক্তদাতা ও রোগীর স্বজনদের মাঝে নিঃস্বার্থ মানবিক সংযোগ ঘটিয়ে দেয়।'
+                        : 'Commercial trade of blood is illegal. This platform connects selfless donors directly with verified patients.'}
+                    </p>
+                  </div>
                 </div>
+
+                <button
+                  onClick={() => setReportTargetName('সাধারণ সন্দেহজনক কার্যকলাপ')}
+                  className="mt-1 pt-2 border-t border-[#C8E6C9]/80 text-xs font-bold text-[#C41E3A] hover:underline flex items-center gap-1.5 cursor-pointer self-start"
+                >
+                  <AlertCircle className="w-3.5 h-3.5 text-[#C41E3A]" />
+                  <span>{language === 'bn' ? 'সন্দেহজনক অনুরোধ রিপোর্ট করুন' : 'Report Suspicious Request'}</span>
+                </button>
               </div>
             </aside>
           )}
@@ -808,6 +876,20 @@ export const AppShell: React.FC = () => {
       <VerificationExplainerSheet
         isOpen={isVerificationExplainerOpen}
         onClose={() => setIsVerificationExplainerOpen(false)}
+      />
+
+      {/* Quick Search Modal (/ or Ctrl+K / Cmd+K) */}
+      <QuickSearchModal
+        isOpen={isQuickSearchOpen}
+        onClose={() => setIsQuickSearchOpen(false)}
+        onSelectDistrict={(dist) => setCurrentDistrict(dist)}
+        onSelectBloodGroup={(bg) => {
+          setSelectedBloodGroupFilter(bg);
+          setIsHospitalDirectoryOpen(true);
+        }}
+        onOpenHospitalDirectory={() => setIsHospitalDirectoryOpen(true)}
+        onRequestBlood={() => setActiveTab('request_form')}
+        onOpenAmbulance={() => setIsAmbulanceDirectoryOpen(true)}
       />
 
       {/* Live Supabase Database Tables Viewer */}

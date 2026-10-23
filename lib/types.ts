@@ -180,6 +180,7 @@ export interface UserProfile {
   textSize: '100%' | '125%' | '150%';
   reducedMotion: boolean;
   isProfileComplete?: boolean;
+  role?: 'donor' | 'hospital_operator' | 'admin';
   badges?: UserBadge[];
   donationHistory?: DonationRecord[];
 }
