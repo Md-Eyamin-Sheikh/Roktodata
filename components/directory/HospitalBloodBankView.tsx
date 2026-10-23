@@ -39,12 +39,12 @@ export const HospitalBloodBankView: React.FC<HospitalBloodBankViewProps> = ({
 
   const filtered = hospitals.filter((h) => {
     const matchSearch =
-      h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      h.location.toLowerCase().includes(searchQuery.toLowerCase());
+      (h.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (h.location || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchType = typeFilter === 'all' || h.type === typeFilter;
     const matchBloodGroup =
       selectedGroupFilter === 'all' ||
-      (h.stocks[selectedGroupFilter] && h.stocks[selectedGroupFilter].status !== 'empty');
+      (h.stocks?.[selectedGroupFilter]?.status && h.stocks[selectedGroupFilter].status !== 'empty');
     return matchSearch && matchType && matchBloodGroup;
   });
 
@@ -159,10 +159,10 @@ export const HospitalBloodBankView: React.FC<HospitalBloodBankViewProps> = ({
 
               <div className="grid grid-cols-4 gap-2">
                 {groups.map((grp) => {
-                  const stock = item.stocks[grp];
+                  const stock = item.stocks?.[grp] || { count: 0, status: 'empty' };
                   const isAdequate = stock.status === 'adequate';
                   const isLimited = stock.status === 'limited';
-                  const isEmpty = stock.status === 'empty';
+                  const isEmpty = stock.status === 'empty' || (!isAdequate && !isLimited);
 
                   return (
                     <div
@@ -186,9 +186,9 @@ export const HospitalBloodBankView: React.FC<HospitalBloodBankViewProps> = ({
                         }`}
                       >
                         {isAdequate
-                          ? `${toBengaliDigits(stock.count)} (পর্যাপ্ত)`
+                          ? `${toBengaliDigits(stock.count || 0)} (পর্যাপ্ত)`
                           : isLimited
-                          ? `${toBengaliDigits(stock.count)} (সীমিত)`
+                          ? `${toBengaliDigits(stock.count || 0)} (সীমিত)`
                           : 'শেষ (নেই)'}
                       </span>
                     </div>

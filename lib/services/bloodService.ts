@@ -6,6 +6,7 @@ import {
   DonationCamp,
   AmbulanceService,
   BloodGroup,
+  StockLevel,
   AppNotification,
 } from '@/lib/types';
 import {
@@ -161,6 +162,40 @@ export const fetchDonorsByDistrict = async (
   });
 };
 
+const createInitialStockMap = (): Record<BloodGroup, { count: number; status: StockLevel }> => ({
+  'O+': { count: 0, status: 'empty' },
+  'B+': { count: 0, status: 'empty' },
+  'A+': { count: 0, status: 'empty' },
+  'AB+': { count: 0, status: 'empty' },
+  'O-': { count: 0, status: 'empty' },
+  'B-': { count: 0, status: 'empty' },
+  'A-': { count: 0, status: 'empty' },
+  'AB-': { count: 0, status: 'empty' },
+});
+
+const mapInventoryToStocks = (
+  bloodInventory: any[]
+): Record<BloodGroup, { count: number; status: StockLevel }> => {
+  const stockMap = createInitialStockMap();
+  if (!bloodInventory || !Array.isArray(bloodInventory)) return stockMap;
+
+  for (const item of bloodInventory) {
+    if (item && item.blood_group && item.blood_group in stockMap) {
+      const count = Number(item.units_available) || 0;
+      let status: StockLevel = 'empty';
+      if (item.status === 'available' || count >= 5) {
+        status = 'adequate';
+      } else if (item.status === 'low' || item.status === 'limited' || count > 0) {
+        status = 'limited';
+      } else {
+        status = 'empty';
+      }
+      stockMap[item.blood_group as BloodGroup] = { count, status };
+    }
+  }
+  return stockMap;
+};
+
 /**
  * Fetch hospitals and blood banks by district
  */
@@ -188,16 +223,7 @@ export const fetchHospitalsByDistrict = async (
           timing: h.operating_hours,
           isOpen: true,
           lastUpdated: 'এইমাত্র যাচাইকৃত',
-          stocks: (h as any).blood_inventory?.reduce(
-            (acc: any, item: any) => {
-              acc[item.blood_group] = {
-                count: item.units_available,
-                status: item.status === 'available' ? 'adequate' : item.status === 'low' ? 'limited' : 'empty',
-              };
-              return acc;
-            },
-            {} as any
-          ) || {},
+          stocks: mapInventoryToStocks((h as any).blood_inventory),
         }));
       }
 
@@ -218,16 +244,7 @@ export const fetchHospitalsByDistrict = async (
           timing: h.operating_hours,
           isOpen: true,
           lastUpdated: 'লাইভ ক্লাউড ডেটাবেস',
-          stocks: (h as any).blood_inventory?.reduce(
-            (acc: any, item: any) => {
-              acc[item.blood_group] = {
-                count: item.units_available,
-                status: item.status === 'available' ? 'adequate' : item.status === 'low' ? 'limited' : 'empty',
-              };
-              return acc;
-            },
-            {} as any
-          ) || {},
+          stocks: mapInventoryToStocks((h as any).blood_inventory),
         }));
       }
     } catch {
