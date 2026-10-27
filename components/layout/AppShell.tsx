@@ -23,7 +23,6 @@ import { ReportModal } from '@/components/report/ReportModal';
 import { PushNotificationBanner } from '@/components/notifications/PushNotificationBanner';
 import { CreateCampModal } from '@/components/camps/CreateCampModal';
 import { VerificationExplainerSheet } from '@/components/verification/VerificationExplainerSheet';
-import { LiveDatabaseViewer } from '@/components/database/LiveDatabaseViewer';
 import { QuickSearchModal } from '@/components/search/QuickSearchModal';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 
@@ -154,7 +153,6 @@ export const AppShell: React.FC = () => {
   const [hospitals, setHospitals] = useState<HospitalBloodBank[]>(initialHospitalsAndBanks);
   const [ambulances, setAmbulances] = useState<AmbulanceService[]>(initialAmbulances);
   const [notifications, setNotifications] = useState(initialNotifications);
-  const [isDbExplorerOpen, setIsDbExplorerOpen] = useState(false);
 
   // Sync live Supabase Auth session on app launch & register Service Worker
   React.useEffect(() => {
@@ -684,17 +682,11 @@ export const AppShell: React.FC = () => {
   ];
 
   const isLiveSupabase = isSupabaseConfigured();
-  const baseTextMultiplier =
-    userProfile.textSize === '125%'
-      ? 1.125
-      : userProfile.textSize === '150%'
-      ? 1.25
-      : 1.0;
 
   return (
     <div
       style={{
-        fontSize: `calc(${baseTextMultiplier}rem * var(--large-screen-scale, 1))`,
+        fontSize: `calc(1rem * var(--large-screen-scale, 1))`,
       }}
       className="min-h-screen bg-[#F7F7F9] flex flex-col text-[#1B1B1F] selection:bg-[#FDECEF] selection:text-[#C41E3A] pb-32 md:pb-8"
     >
@@ -717,7 +709,6 @@ export const AppShell: React.FC = () => {
           }}
           onRequestBloodClick={() => setActiveTab('request_form')}
           onOpenHospitalDirectory={() => setIsHospitalDirectoryOpen(true)}
-          onOpenDbExplorer={() => setIsDbExplorerOpen(true)}
         />
       )}
 
@@ -752,7 +743,6 @@ export const AppShell: React.FC = () => {
                 userProfile={userProfile}
                 onBack={() => setIsSettingsOpen(false)}
                 onUpdateProfile={(updates) => updateAuthenticatedUser(updates)}
-                onOpenDbExplorer={() => setIsDbExplorerOpen(true)}
                 onLogout={() => {
                   setIsSettingsOpen(false);
                   handleLogout();
@@ -1229,12 +1219,6 @@ export const AppShell: React.FC = () => {
         onOpenHospitalDirectory={() => setIsHospitalDirectoryOpen(true)}
         onRequestBlood={() => setActiveTab('request_form')}
         onOpenAmbulance={() => setIsAmbulanceDirectoryOpen(true)}
-      />
-
-      {/* Live Supabase Database Tables Viewer */}
-      <LiveDatabaseViewer
-        isOpen={isDbExplorerOpen}
-        onClose={() => setIsDbExplorerOpen(false)}
       />
 
       {/* Browser Web Push Notification Permission Banner */}

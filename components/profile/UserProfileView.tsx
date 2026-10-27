@@ -138,7 +138,6 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [showShareModal, setShowShareModal] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
   const [showAddDonationModal, setShowAddDonationModal] = useState(false);
-  const [showAuditModal, setShowAuditModal] = useState(false);
   const [showEligibilityModal, setShowEligibilityModal] = useState(false);
   const [selectedCertificate, setSelectedCertificate] = useState<DonationRecord | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -1097,18 +1096,10 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                   setEditLocation(activeProfile.location || userProfile.location || '');
                   setShowEditProfileModal(true);
                 }}
-                className="flex-1 py-2 px-3 rounded-xl bg-[#FAF9FB] hover:bg-[#F0EDF2] text-[#1B1B1F] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#E4E6EB]"
+                className="w-full py-2.5 px-3 rounded-xl bg-[#FAF9FB] hover:bg-[#F0EDF2] text-[#1B1B1F] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#E4E6EB]"
               >
                 <Edit3 className="w-3.5 h-3.5 text-[#C41E3A]" />
                 <span>{language === 'bn' ? 'প্রোফাইল সম্পাদনা' : 'Edit Profile'}</span>
-              </button>
-
-              <button
-                onClick={() => setShowAuditModal(true)}
-                className="py-2 px-3 rounded-xl bg-[#FAF9FB] hover:bg-[#F0EDF2] text-[#0D58C9] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-[#E4E6EB]"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>{language === 'bn' ? 'কে দেখেছে?' : 'Audit Log'}</span>
               </button>
             </div>
           </div>
@@ -1447,24 +1438,6 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                   />
                 </button>
               </div>
-
-              <button
-                onClick={() => setShowAuditModal(true)}
-                className="py-2.5 flex items-center justify-between text-left hover:bg-[#F7F7F9] rounded-lg px-1 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Eye className="w-4 h-4 text-[#0D58C9]" />
-                  <div>
-                    <p className="text-xs font-bold text-[#1B1B1F]">
-                      {language === 'bn' ? 'আমার তথ্য কে দেখেছে? (অডিট লগ)' : 'Who Viewed My Profile?'}
-                    </p>
-                    <p className="text-[11px] text-[#5B5F6B]">
-                      {language === 'bn' ? 'হাসপাতাল ও সমন্বয়ক অ্যাক্সেস হিস্ট্রি' : 'Transparency & access log'}
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-[#5B5F6B]" />
-              </button>
             </div>
           </div>
         </div>
@@ -2460,79 +2433,6 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL 7: AUDIT LOG (WHO VIEWED MY PROFILE) ================= */}
-      {showAuditModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl space-y-4 animate-in slide-in-from-bottom-5">
-            <div className="flex items-center justify-between pb-2 border-b border-[#E4E6EB]">
-              <div className="flex items-center gap-2">
-                <Eye className="w-5 h-5 text-[#0D58C9]" />
-                <h3 className="font-extrabold text-[16px] text-[#1B1B1F]">
-                  {language === 'bn' ? 'আমার তথ্য কে দেখেছে? (অডিট লগ)' : 'Access Transparency Log'}
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowAuditModal(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-[#5B5F6B] hover:bg-[#F7F7F9]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-[#5B5F6B] leading-relaxed">
-              {language === 'bn'
-                ? 'আপনার গোপনীয়তা আমাদের সর্বোচ্চ অগ্রাধিকার। শুধুমাত্র ভেরিফায়েড রোগী ও সমন্বয়কারী আপনার প্রোফাইল অ্যাক্সেস করতে পেরেছেন:'
-                : 'Strict privacy: Only verified emergency coordinators and authorized hospital staff have viewed your contact details:'}
-            </p>
-
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-              {[
-                {
-                  id: 1,
-                  org:
-                    language === 'bn'
-                      ? 'শহীদ জিয়াউর রহমান মেডিকেল কলেজ হাসপাতাল'
-                      : 'SZMCH Medical College Hospital',
-                  reason: language === 'bn' ? 'জরুরি রক্তের আবেদন ভেরিফিকেশন' : 'Emergency Blood Request Verification',
-                  time: language === 'bn' ? 'আজ, দুপুর ১২:৩০' : 'Today, 12:30 PM',
-                },
-                {
-                  id: 2,
-                  org: language === 'bn' ? 'বগুড়া সদর ব্লাড ব্যাংক সমন্বয়ক' : 'Bogura Blood Bank Coordinator',
-                  reason: language === 'bn' ? 'নিয়মিত ডোনার রেডিনেস চেক' : 'Routine Readiness Audit',
-                  time: language === 'bn' ? 'গতকাল, বিকেল ৪:১৫' : 'Yesterday, 04:15 PM',
-                },
-                {
-                  id: 3,
-                  org:
-                    language === 'bn'
-                      ? 'মোহাম্মদ আলী হাসপাতাল জরুরি বিভাগ'
-                      : 'Mohammad Ali Hospital Emergency',
-                  reason: language === 'bn' ? 'থ্যালাসেমিয়া শিশুর রক্তের অনুরোধ' : 'Thalassemia Emergency Match',
-                  time: language === 'bn' ? '৩ দিন আগে' : '3 days ago',
-                },
-              ].map((log) => (
-                <div key={log.id} className="p-3 rounded-2xl bg-[#F7F7F9] border border-[#E4E6EB]/60 text-xs">
-                  <div className="flex items-center justify-between font-bold text-[#1B1B1F]">
-                    <span>{log.org}</span>
-                    <span className="text-[10px] text-[#0D58C9] bg-blue-50 px-2 py-0.5 rounded-full">✓ ভেরিফায়েড</span>
-                  </div>
-                  <p className="text-[11px] text-[#5B5F6B] mt-0.5">{log.reason}</p>
-                  <p className="text-[10px] text-[#8C8F9A] mt-1">{log.time}</p>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setShowAuditModal(false)}
-              className="w-full py-2.5 rounded-xl bg-[#F0EDF2] text-[#1B1B1F] font-bold text-xs cursor-pointer"
-            >
-              {language === 'bn' ? 'বন্ধ করুন' : 'Close'}
-            </button>
           </div>
         </div>
       )}

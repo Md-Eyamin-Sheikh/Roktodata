@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MapPin, ChevronDown, Bell, User, Droplet, Plus, Building2, Database } from 'lucide-react';
+import { MapPin, ChevronDown, Bell, User, Droplet, Plus, Building2 } from 'lucide-react';
 import { NavTab } from './BottomNav';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { DistrictSelectorModal } from '@/components/location/DistrictSelectorModal';
@@ -20,7 +20,6 @@ interface HeaderProps {
   onTabChange?: (tab: NavTab) => void;
   onRequestBloodClick?: () => void;
   onOpenHospitalDirectory?: () => void;
-  onOpenDbExplorer?: () => void;
   donorBloodGroup?: string;
 }
 
@@ -38,7 +37,6 @@ export const Header: React.FC<HeaderProps> = ({
   onTabChange,
   onRequestBloodClick,
   onOpenHospitalDirectory,
-  onOpenDbExplorer,
   donorBloodGroup = '',
 }) => {
   const { language, setLanguage, toggleLanguage, t } = useLanguage();

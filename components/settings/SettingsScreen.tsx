@@ -8,7 +8,6 @@ import {
   Moon,
   Info,
   ShieldCheck,
-  Eye,
   PhoneCall,
   Lock,
   Languages,
@@ -26,8 +25,6 @@ import {
   Phone,
   ShieldAlert,
   CheckCircle2,
-  Database,
-  Type
 } from 'lucide-react';
 import { UserProfile } from '@/lib/types';
 import { toBengaliDigits } from '@/lib/bengali-utils';
@@ -40,7 +37,6 @@ interface SettingsScreenProps {
   onBack: () => void;
   onUpdateProfile: (updates: Partial<UserProfile>) => void;
   onLogout: () => void;
-  onOpenDbExplorer?: () => void;
 }
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
@@ -48,7 +44,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onBack,
   onUpdateProfile,
   onLogout,
-  onOpenDbExplorer,
 }) => {
   const { showToast } = useToast();
   const { language, setLanguage: setGlobalLanguage } = useLanguage();
@@ -59,9 +54,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [phoneVisibility, setPhoneVisibility] = useState<'verified_family' | 'all_registered'>(
     userProfile.phoneVisibility || 'verified_family'
   );
-  const [reducedMotion, setReducedMotion] = useState<boolean>(userProfile.reducedMotion || false);
   const [quietHours, setQuietHours] = useState<boolean>(userProfile.quietHoursEnabled ?? true);
-  const [textSize, setTextSize] = useState<'100%' | '125%' | '150%'>(userProfile.textSize || '100%');
 
   // Pause duration state
   const [pauseDays, setPauseDays] = useState<number | null>(null);
@@ -70,7 +63,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   // Modals state
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [showAuditModal, setShowAuditModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -122,8 +114,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       // Section 2: Privacy & Transparency
       secPrivacy: 'গোপনীয়তা ও স্বচ্ছতা',
       secPrivacyDesc: 'আপনার ব্যক্তিগত নম্বর ও ডাটা অ্যাক্সেসের পূর্ণ নিরাপত্তা নিয়ন্ত্রণ',
-      auditTitle: 'আমার তথ্য কে দেখেছে?',
-      auditDesc: 'ডাটা অ্যাক্সেস অডিট লগ ও সাম্প্রতিক যাচাইকৃত অনুরোধসমূহ',
       phoneVisTitle: 'মোবাইল নম্বর দৃশ্যমানতা',
       phoneVisVerified: 'শুধুমাত্র অনুমোদিত রোগীর স্বজন (প্রস্তাবিত)',
       phoneVisVerifiedDesc: 'হাসপাতালের প্রেসক্রিপশন ও পরিচয় যাচাইয়ের পর শুধুমাত্র রোগীর স্বজন দেখতে পাবেন।',
@@ -145,15 +135,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       reportBtn: 'অভিযোগ ফর্ম',
 
       // Section 4: Display & Language
-      secPref: 'ভাষা ও ডিসপ্লে',
+      secPref: 'ভাষা নির্বাচন (Language Preference)',
       langTitle: 'ভাষা পরিবর্তন (Language)',
-      fontSizeTitle: 'ফন্টের আকার ও স্কেলিং (Text Size)',
-      fontSizeDesc: 'টেক্সট ও বাটনগুলো সহজে পড়ার জন্য আপনার উপযোগী আকার বেছে নিন',
-      fontSize100: 'ছোট (১০০%)',
-      fontSize125: 'স্বাভাবিক (১২৫%)',
-      fontSize150: 'বড় (১৫০%)',
-      motionTitle: 'হালকা অ্যানিমেশন (Reduced Motion)',
-      motionDesc: 'সব ডিভাইসে মসৃণ গতি ও ব্যাটারি সাশ্রয়ী অভিজ্ঞতা',
 
       // Section 5: Account
       logout: 'লগআউট করুন',
@@ -206,8 +189,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       // Section 2: Privacy & Transparency
       secPrivacy: 'Privacy & Transparency',
       secPrivacyDesc: 'Full security control over your phone number and profile access',
-      auditTitle: 'Who Viewed My Profile?',
-      auditDesc: 'Data access transparency log & verified medical requests',
       phoneVisTitle: 'Phone Number Visibility',
       phoneVisVerified: 'Verified Patient Relatives Only (Recommended)',
       phoneVisVerifiedDesc: 'Visible only to verified patient relatives after hospital prescription check.',
@@ -229,15 +210,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       reportBtn: 'Report Issue',
 
       // Section 4: Display & Language
-      secPref: 'Language & Display',
+      secPref: 'Language Preference',
       langTitle: 'Language (ভাষা)',
-      fontSizeTitle: 'Text Size Scaling',
-      fontSizeDesc: 'Adjust comfortable typography scale across all screens',
-      fontSize100: 'Normal (100%)',
-      fontSize125: 'Medium (125%)',
-      fontSize150: 'Large (150%)',
-      motionTitle: 'Reduced Motion',
-      motionDesc: 'Smoother performance and lower battery consumption on all devices',
 
       // Section 5: Account
       logout: 'Log Out',
@@ -261,19 +235,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     onUpdateProfile({ language: newLang });
     updateAuthenticatedUser({ language: newLang });
     showToast(newLang === 'en' ? 'Language switched to English' : 'ভাষা পরিবর্তিত হয়েছে: বাংলা', 'success');
-  };
-
-  // 1b. Font Size Scaling
-  const handleSelectTextSize = (size: '100%' | '125%' | '150%') => {
-    setTextSize(size);
-    onUpdateProfile({ textSize: size });
-    updateAuthenticatedUser({ textSize: size });
-    showToast(
-      language === 'bn'
-        ? `ফন্টের আকার ${size === '100%' ? 'ছোট (১০০%)' : size === '125%' ? 'স্বাভাবিক (১২৫%)' : 'বড় (১৫০%)'} নির্ধারণ করা হয়েছে।`
-        : `Font size updated to ${size}.`,
-      'success'
-    );
   };
 
   // 2. Master Availability Toggle
@@ -347,19 +308,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         ? 'ফোন নম্বর দৃশ্যমানতা নীতি সফলভাবে হালনাগাদ হয়েছে।'
         : 'Phone visibility policy updated.',
       'success'
-    );
-  };
-
-  // 7. Reduced Motion
-  const handleToggleReducedMotion = () => {
-    const next = !reducedMotion;
-    setReducedMotion(next);
-    onUpdateProfile({ reducedMotion: next });
-    showToast(
-      next
-        ? language === 'bn' ? 'সহজ ও হালকা মোশন সক্রিয়।' : 'Reduced motion enabled.'
-        : language === 'bn' ? 'স্বাভাবিক মোশন সক্রিয়।' : 'Full motion enabled.',
-      'info'
     );
   };
 
@@ -674,27 +622,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </div>
           </div>
 
-          {/* Audit Log Trigger */}
-          <button
-            onClick={() => setShowAuditModal(true)}
-            className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF9FB] hover:bg-[#F0EDF2] border border-[#E4E6EB]/70 transition-all cursor-pointer text-left"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white border border-[#E4E6EB] flex items-center justify-center text-[#0D58C9] shadow-2xs">
-                <Eye className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="font-extrabold text-xs sm:text-sm text-[#1B1B1F]">
-                  {cur.auditTitle}
-                </h4>
-                <p className="text-[11px] text-[#5B5F6B] mt-0.5">
-                  {cur.auditDesc}
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-[#8C8F9A]" />
-          </button>
-
           {/* Phone Visibility Options */}
           <div className="space-y-2.5 pt-1">
             <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F] block">
@@ -881,101 +808,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </button>
             </div>
           </div>
-
-          {/* Font Size Scaling */}
-          <div className="p-3.5 rounded-2xl bg-[#FAF9FB] border border-[#E4E6EB]/70 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Type className="w-4 h-4 text-[#0D58C9]" />
-                <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F]">
-                  {cur.fontSizeTitle}
-                </span>
-              </div>
-              <span className="text-xs font-black text-[#0D58C9] bg-[#E8F0FE] px-2.5 py-0.5 rounded-full">
-                {textSize}
-              </span>
-            </div>
-
-            <p className="text-[11px] text-[#5B5F6B]">
-              {cur.fontSizeDesc}
-            </p>
-
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { size: '100%' as const, label: cur.fontSize100 },
-                { size: '125%' as const, label: cur.fontSize125 },
-                { size: '150%' as const, label: cur.fontSize150 },
-              ].map((item) => (
-                <button
-                  key={item.size}
-                  type="button"
-                  onClick={() => handleSelectTextSize(item.size)}
-                  className={`py-2.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer border text-center ${
-                    textSize === item.size
-                      ? 'bg-[#0D58C9] text-white border-[#0D58C9] shadow-xs'
-                      : 'bg-white border-[#E4E6EB] text-[#1B1B1F] hover:bg-[#F7F7F9]'
-                  }`}
-                >
-                  <span>{item.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Reduced Motion Switch */}
-          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF9FB] border border-[#E4E6EB]/70">
-            <div>
-              <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F] block">
-                {cur.motionTitle}
-              </span>
-              <p className="text-[11px] text-[#5B5F6B] mt-0.5">
-                {cur.motionDesc}
-              </p>
-            </div>
-            <button
-              onClick={handleToggleReducedMotion}
-              role="switch"
-              aria-checked={reducedMotion}
-              className={`w-12 h-7 rounded-full p-0.5 flex items-center transition-colors cursor-pointer shrink-0 ${
-                reducedMotion ? 'bg-[#00744B]' : 'bg-[#E4E1E7]'
-              }`}
-            >
-              <span
-                className={`w-6 h-6 rounded-full bg-white shadow-xs transform transition-transform ${
-                  reducedMotion ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
         </div>
-
-        {/* ================= CLOUD DATABASE EXPLORER ================= */}
-        {onOpenDbExplorer && (
-          <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-[#E4E6EB]/80 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-[#E8F5E9] text-[#00744B] flex items-center justify-center font-bold">
-                  <Database className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-[15px] sm:text-[16px] text-[#1B1B1F] leading-tight">
-                    ক্লাউড ডেটাবেস টেবিল এক্সপ্লোরার
-                  </h3>
-                  <p className="text-[11px] text-[#5B5F6B] mt-0.5">
-                    সুপাবেস ক্লাউডের সবগুলো টেবিলের ডেটা (১৫+ রেকর্ড) লাইভ ব্রাউজ করুন
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={onOpenDbExplorer}
-                className="px-3.5 py-2 rounded-xl bg-[#00744B] hover:bg-[#005938] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1 shrink-0"
-              >
-                <span>টেবিল দেখুন</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* ================= 5. ACCOUNT ACTIONS ================= */}
         <div className="space-y-3 pt-2">
@@ -1156,72 +989,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
       )}
 
-      {/* ================= MODAL 3: AUDIT LOG MODAL ================= */}
-      {showAuditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="w-full max-w-md bg-white rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E4E6EB]">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-[#0D58C9]" />
-                <h3 className="font-extrabold text-sm sm:text-base text-[#1B1B1F]">
-                  {cur.auditTitle}
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowAuditModal(false)}
-                className="w-8 h-8 rounded-full bg-[#F7F7F9] text-[#5B5F6B] flex items-center justify-center hover:bg-[#E4E6EB] cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-[#5B5F6B]">
-              {language === 'bn'
-                ? 'আপনার তথ্যের শতভাগ নিরাপত্তা নিশ্চিতকরণে প্রতিটি অ্যাক্সেস অডিট লগে রেকর্ড করা হয়।'
-                : 'Every data access is cryptographically audited to ensure complete patient & donor privacy.'}
-            </p>
-
-            <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
-              {[
-                {
-                  hospital: language === 'bn' ? 'শহীদ জিয়াউর রহমান মেডিকেল কলেজ (জরুরি ওটি)' : 'SZMCH (Emergency OT)',
-                  time: language === 'bn' ? 'আজ দুপুর ১:১৫ • প্রেসক্রিপশন ভেরিফাইড' : 'Today 1:15 PM • Prescription Verified',
-                  type: 'B+ Whole Blood',
-                },
-                {
-                  hospital: language === 'bn' ? 'মোহাম্মদ আলী হাসপাতাল ব্লাড উইং' : 'Mohammad Ali Hospital Blood Wing',
-                  time: language === 'bn' ? '১০ মে ২০২৬ • আপনার সম্মতিক্রমে' : '10 May 2026 • With Your Consent',
-                  type: 'B+ Platelets',
-                },
-                {
-                  hospital: language === 'bn' ? 'বগুড়া রেড ক্রিসেন্ট ব্লাড ব্যাংক' : 'Red Crescent Blood Bank Bogura',
-                  time: language === 'bn' ? '২ এপ্রিল ২০২৬ • ডোনার ক্যাম্প রেকর্ড' : '02 April 2026 • Donor Camp Record',
-                  type: 'Annual Health Check',
-                },
-              ].map((rec, i) => (
-                <div key={i} className="p-3 bg-[#FAF9FB] rounded-2xl border border-[#E4E6EB]/80 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-xs text-[#1B1B1F]">{rec.hospital}</span>
-                    <span className="text-[10px] bg-[#E8F5E9] text-[#005938] font-bold px-2 py-0.5 rounded-full">
-                      ভেরিফাইড
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-[#5B5F6B]">{rec.time}</p>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setShowAuditModal(false)}
-              className="w-full h-11 rounded-xl bg-[#C41E3A] text-white font-bold text-xs shadow-xs cursor-pointer"
-            >
-              {language === 'bn' ? 'ঠিক আছে' : 'Close'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL 4: GRIEVANCE & REPORT MODAL ================= */}
+      {/* ================= MODAL 3: GRIEVANCE & REPORT MODAL ================= */}
       {showReportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
           <div className="w-full max-w-md bg-white rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
