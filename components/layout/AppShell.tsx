@@ -696,7 +696,7 @@ export const AppShell: React.FC = () => {
       style={{
         fontSize: `calc(${baseTextMultiplier}rem * var(--large-screen-scale, 1))`,
       }}
-      className="min-h-screen bg-[#F7F7F9] flex flex-col text-[#1B1B1F] selection:bg-[#FDECEF] selection:text-[#C41E3A] pb-20 md:pb-0"
+      className="min-h-screen bg-[#F7F7F9] flex flex-col text-[#1B1B1F] selection:bg-[#FDECEF] selection:text-[#C41E3A] pb-32 md:pb-8"
     >
       {/* Global Responsive Top Header */}
       {!isSubPageOpen && activeTab !== 'request_form' && (

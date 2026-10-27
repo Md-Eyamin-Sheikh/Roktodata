@@ -22,6 +22,8 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   ArrowUpDown,
   Building2,
   Sparkles,
@@ -166,6 +168,16 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
     'O-': { total: 0, available: 0 },
     'AB-': { total: 0, available: 0 },
   });
+
+  const [isStatsExpanded, setIsStatsExpanded] = useState<boolean>(false);
+
+  // Synchronize with external district changes (e.g. Header dropdown selection)
+  useEffect(() => {
+    if (initialDistrictProp && initialDistrictProp !== selectedDistrict) {
+      setSelectedDistrict(initialDistrictProp);
+      setCurrentPage(1);
+    }
+  }, [initialDistrictProp]);
 
   // Load Bookmarks on Mount
   useEffect(() => {
@@ -396,77 +408,92 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
   const totalRestingCount = Object.values(groupStats).reduce((acc, g) => acc + (g.total - g.available), 0);
 
   return (
-    <div className="flex flex-col w-full pb-24">
+    <div className="flex flex-col w-full pb-36 sm:pb-32">
       {/* ================= TOP STICKY SEARCH & NAVIGATION BAR ================= */}
-      <div className="px-3 sm:px-4 pt-3 pb-2.5 flex flex-col gap-2.5 bg-white border-b border-[#E4E6EB]/60 sticky top-14 md:top-16 z-20 shadow-2xs">
+      <div className="px-3 sm:px-4 pt-2.5 pb-2 flex flex-col gap-2 bg-white/98 backdrop-blur-md border-b border-[#E4E6EB]/70 sticky top-14 md:top-16 z-20 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
         
-        {/* Search Input Bar with Clear & Voice Search Action */}
-        <div className="relative w-full flex items-center">
-          <Search className="w-5 h-5 text-[#5B5F6B] absolute left-3.5 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder={
-              language === 'bn'
-                ? 'নাম, রক্তের গ্রুপ, এলাকা, থানা বা হাসপাতাল দিয়ে খুঁজুন...'
-                : 'Search by name, blood group, area, or hospital...'
-            }
-            className="w-full h-12 pl-11 pr-20 bg-[#F7F7F9] text-[#1B1B1F] placeholder:text-[#5B5F6B] rounded-2xl text-xs sm:text-sm focus:outline-hidden focus:bg-white focus:ring-2 focus:ring-[#C41E3A]/30 focus:border-[#C41E3A] transition-all border border-transparent"
-          />
+        {/* Row 1: Search Bar with Integrated Clear, Voice & Filter CTA */}
+        <div className="flex items-center gap-2 w-full">
+          <div className="relative flex-1 flex items-center">
+            <Search className="w-4.5 h-4.5 text-[#5B5F6B] absolute left-3.5 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder={t.donors.searchPlaceholder}
+              className="w-full h-11 pl-10 pr-18 bg-[#F7F7F9] text-[#1B1B1F] placeholder:text-[#8E929E] rounded-2xl text-xs sm:text-sm focus:outline-hidden focus:bg-white focus:ring-2 focus:ring-[#C41E3A]/25 focus:border-[#C41E3A] transition-all border border-[#E4E6EB]/80"
+            />
 
-          <div className="absolute right-2.5 flex items-center gap-1">
-            {searchQuery && (
+            <div className="absolute right-2 flex items-center gap-1">
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setCurrentPage(1);
+                  }}
+                  className="w-6.5 h-6.5 flex items-center justify-center text-[#5B5F6B] hover:text-[#1B1B1F] rounded-full hover:bg-[#E4E6EB] transition-all cursor-pointer"
+                  title={language === 'bn' ? 'মুছে ফেলুন' : 'Clear'}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+
               <button
                 onClick={() => {
-                  setSearchQuery('');
-                  setCurrentPage(1);
+                  const speech = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+                  if (!speech) {
+                    alert(
+                      language === 'bn'
+                        ? 'আপনার ব্রাউজারে ভয়েস সার্চ সমর্থিত নয়।'
+                        : 'Voice search is not supported in this browser.'
+                    );
+                    return;
+                  }
+                  const recognition = new speech();
+                  recognition.lang = language === 'bn' ? 'bn-BD' : 'en-US';
+                  recognition.onresult = (event: any) => {
+                    const text = event.results[0][0].transcript;
+                    setSearchQuery(text);
+                    setCurrentPage(1);
+                  };
+                  recognition.start();
                 }}
-                className="w-7 h-7 flex items-center justify-center text-[#5B5F6B] hover:text-[#1B1B1F] rounded-full hover:bg-[#E4E6EB] transition-all cursor-pointer"
-                title={language === 'bn' ? 'মুছে ফেলুন' : 'Clear'}
+                aria-label={language === 'bn' ? 'ভয়েস সার্চ' : 'Voice Search'}
+                className="w-7.5 h-7.5 flex items-center justify-center text-[#5B5F6B] hover:text-[#C41E3A] rounded-full hover:bg-[#FDECEF] active:scale-95 transition-all cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <Mic className="w-4 h-4" />
               </button>
-            )}
-
-            <button
-              onClick={() => {
-                const speech = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-                if (!speech) {
-                  alert(
-                    language === 'bn'
-                      ? 'আপনার ব্রাউজারে ভয়েস সার্চ সমর্থিত নয়।'
-                      : 'Voice search is not supported in this browser.'
-                  );
-                  return;
-                }
-                const recognition = new speech();
-                recognition.lang = language === 'bn' ? 'bn-BD' : 'en-US';
-                recognition.onresult = (event: any) => {
-                  const text = event.results[0][0].transcript;
-                  setSearchQuery(text);
-                  setCurrentPage(1);
-                };
-                recognition.start();
-              }}
-              aria-label={language === 'bn' ? 'ভয়েস সার্চ' : 'Voice Search'}
-              className="w-8 h-8 flex items-center justify-center text-[#5B5F6B] hover:text-[#C41E3A] rounded-full hover:bg-[#FDECEF] active:scale-95 transition-all cursor-pointer"
-            >
-              <Mic className="w-4 h-4" />
-            </button>
+            </div>
           </div>
+
+          {/* Filter Modal Trigger Button */}
+          <button
+            onClick={() => setIsFilterOpen(true)}
+            aria-label={t.donors.filterBtn}
+            className={`h-11 px-3 rounded-2xl flex items-center justify-center gap-1.5 text-xs font-bold border transition-all cursor-pointer active:scale-95 shrink-0 ${
+              (availableOnly || verifiedOnly || selectedGroup !== 'all' || maxDistance < 50 || sortBy !== 'distance')
+                ? 'bg-[#FDECEF] border-[#C41E3A] text-[#C41E3A] ring-1 ring-[#C41E3A]/40'
+                : 'bg-[#F7F7F9] hover:bg-[#F0EDF2] border-[#E4E6EB] text-[#1B1B1F]'
+            }`}
+          >
+            <SlidersHorizontal className="w-4 h-4 text-[#C41E3A]" />
+            <span className="hidden xs:inline">{t.donors.filterBtn}</span>
+            {(availableOnly || verifiedOnly || selectedGroup !== 'all' || maxDistance < 50 || sortBy !== 'distance') && (
+              <span className="w-2 h-2 rounded-full bg-[#C41E3A] animate-pulse" />
+            )}
+          </button>
         </div>
 
-        {/* View Switcher, GPS Quick Trigger & Filter Trigger */}
-        <div className="flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap">
+        {/* Row 2: Clean Utility Controls Bar (List/Map, District, Saved, GPS, Sort) */}
+        <div className="flex items-center justify-between gap-1.5 overflow-x-auto no-scrollbar py-0.5">
           {/* List vs Map Switcher */}
-          <div className="flex items-center p-1 bg-[#F0EDF2] rounded-full h-10 w-32 sm:w-36">
+          <div className="flex items-center p-0.5 bg-[#F0EDF2] rounded-full h-8 shrink-0">
             <button
               onClick={() => setViewMode('list')}
-              className={`flex-1 h-8 rounded-full text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+              className={`h-7 px-2.5 rounded-full text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
                 viewMode === 'list'
                   ? 'bg-white text-[#C41E3A] shadow-xs'
                   : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
@@ -477,7 +504,7 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
             </button>
             <button
               onClick={() => setViewMode('map')}
-              className={`flex-1 h-8 rounded-full text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+              className={`h-7 px-2.5 rounded-full text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
                 viewMode === 'map'
                   ? 'bg-white text-[#C41E3A] shadow-xs'
                   : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
@@ -488,112 +515,91 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
             </button>
           </div>
 
-          {/* District Location Selector Pill */}
-          <button
-            onClick={() => setIsDistrictModalOpen(true)}
-            className="h-10 px-3 bg-[#F7F7F9] hover:bg-[#F0EDF2] text-[#1B1B1F] rounded-full flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer border border-[#E4E6EB]/80 max-w-[160px] sm:max-w-[200px]"
-            title={language === 'bn' ? 'জেলা পরিবর্তন করুন' : 'Change District'}
-          >
-            <MapPin className="w-3.5 h-3.5 text-[#C41E3A] shrink-0" />
-            <span className="text-xs font-bold truncate">
-              {selectedDistrict === 'all'
-                ? language === 'bn'
-                  ? 'সারা দেশ (৬৪ জেলা)'
-                  : 'All Districts'
-                : selectedDistrict}
-            </span>
-          </button>
-
-          {/* Bookmarked / "আমার ডোনার" Tab */}
-          <button
-            onClick={() => {
-              setActiveTab(activeTab === 'all' ? 'saved' : 'all');
-              setCurrentPage(1);
-            }}
-            className={`h-10 px-3 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === 'saved'
-                ? 'bg-[#FDECEF] text-[#C41E3A] ring-1 ring-[#C41E3A]'
-                : 'bg-[#F7F7F9] text-[#5B5F6B] hover:bg-[#F0EDF2]'
-            }`}
-          >
-            <Heart className={`w-3.5 h-3.5 ${activeTab === 'saved' ? 'fill-current text-[#C41E3A]' : ''}`} />
-            <span>{t.donors.tabMyDonors}</span>
-            {bookmarkedIds.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-[#C41E3A] text-white text-[10px] font-black">
-                {formatDigits(bookmarkedIds.length)}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* District Location Selector Pill */}
+            <button
+              onClick={() => setIsDistrictModalOpen(true)}
+              className="h-8 px-2.5 bg-[#F7F7F9] hover:bg-[#F0EDF2] text-[#1B1B1F] rounded-full flex items-center gap-1 active:scale-95 transition-all cursor-pointer border border-[#E4E6EB]/80 max-w-[130px] sm:max-w-[180px] shrink-0"
+              title={language === 'bn' ? 'জেলা পরিবর্তন করুন' : 'Change District'}
+            >
+              <MapPin className="w-3 h-3 text-[#C41E3A] shrink-0" />
+              <span className="text-xs font-bold truncate">
+                {selectedDistrict === 'all'
+                  ? language === 'bn'
+                    ? 'সারা দেশ'
+                    : 'All'
+                  : selectedDistrict}
               </span>
-            )}
-          </button>
+            </button>
 
-          {/* Filter Modal Trigger */}
-          <button
-            onClick={() => setIsFilterOpen(true)}
-            className="h-10 px-3 bg-[#F7F7F9] hover:bg-[#F0EDF2] text-[#1B1B1F] rounded-full flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer border border-[#E4E6EB]/80"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-[#C41E3A]" />
-            <span className="text-xs font-bold">{t.donors.filterBtn}</span>
-            {(availableOnly || verifiedOnly || selectedGroup !== 'all' || maxDistance < 50) && (
-              <span className="w-2 h-2 rounded-full bg-[#C41E3A]" />
-            )}
-          </button>
-        </div>
-
-        {/* GPS Quick Action Pill Bar */}
-        <div className="flex items-center justify-between gap-2 pt-0.5 text-xs text-[#5B5F6B]">
-          <button
-            onClick={handleGpsDetect}
-            disabled={isGpsLoading}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
-              userCoords
-                ? 'bg-[#E8F5E9] text-[#005938] border border-[#A5D6A7]'
-                : 'bg-[#F7F7F9] hover:bg-[#F0EDF2] text-[#1B1B1F] border border-[#E4E6EB]'
-            }`}
-          >
-            {isGpsLoading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C41E3A]" />
-            ) : (
-              <Navigation className={`w-3.5 h-3.5 ${userCoords ? 'text-[#00744B] fill-current' : 'text-[#C41E3A]'}`} />
-            )}
-            <span>
-              {userCoords
-                ? language === 'bn'
-                  ? 'জিপিএস সক্রিয় (নিকটতম আগে)'
-                  : 'GPS Active (Closest First)'
-                : language === 'bn'
-                ? 'জিপিএস অবস্থান দিয়ে খুঁজুন'
-                : 'Locate with GPS'}
-            </span>
-          </button>
-
-          {/* Sort By Dropdown */}
-          <div className="flex items-center gap-1.5">
-            <ArrowUpDown className="w-3.5 h-3.5 text-[#5B5F6B]" />
-            <select
-              value={sortBy}
-              onChange={(e) => {
-                setSortBy(e.target.value as any);
+            {/* Bookmarked / Saved Pill */}
+            <button
+              onClick={() => {
+                setActiveTab(activeTab === 'all' ? 'saved' : 'all');
                 setCurrentPage(1);
               }}
-              className="bg-[#F7F7F9] text-xs font-bold text-[#1B1B1F] rounded-lg px-2 py-1 outline-hidden border border-[#E4E6EB] cursor-pointer"
+              className={`h-8 px-2.5 rounded-full text-xs font-bold flex items-center gap-1 transition-all cursor-pointer border shrink-0 ${
+                activeTab === 'saved'
+                  ? 'bg-[#FDECEF] border-[#C41E3A] text-[#C41E3A]'
+                  : 'bg-[#F7F7F9] border-[#E4E6EB]/80 text-[#5B5F6B] hover:bg-[#F0EDF2]'
+              }`}
             >
-              <option value="distance">{language === 'bn' ? 'দূরত্ব অনুযায়ী (নিকটতম)' : 'Nearest Distance'}</option>
-              <option value="donations">{language === 'bn' ? 'সর্বাধিক রক্তদান' : 'Most Donations'}</option>
-              <option value="fastest">{language === 'bn' ? 'দ্রুততম সাড়া' : 'Fastest Responder'}</option>
-              <option value="recent">{language === 'bn' ? 'নতুন তালিকাভুক্ত' : 'Recently Joined'}</option>
-            </select>
+              <Heart className={`w-3.5 h-3.5 ${activeTab === 'saved' ? 'fill-current text-[#C41E3A]' : ''}`} />
+              <span className="hidden sm:inline">{t.donors.tabMyDonors}</span>
+              {bookmarkedIds.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-[#C41E3A] text-white text-[10px] font-black">
+                  {formatDigits(bookmarkedIds.length)}
+                </span>
+              )}
+            </button>
+
+            {/* GPS Quick Action Pill */}
+            <button
+              onClick={handleGpsDetect}
+              disabled={isGpsLoading}
+              className={`h-8 px-2.5 rounded-full text-xs font-bold flex items-center gap-1 transition-all cursor-pointer border active:scale-95 shrink-0 ${
+                userCoords
+                  ? 'bg-[#E8F5E9] text-[#005938] border-[#A5D6A7]'
+                  : 'bg-[#F7F7F9] hover:bg-[#F0EDF2] text-[#1B1B1F] border-[#E4E6EB]/80'
+              }`}
+            >
+              {isGpsLoading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C41E3A]" />
+              ) : (
+                <Navigation className={`w-3.5 h-3.5 ${userCoords ? 'text-[#00744B] fill-current' : 'text-[#C41E3A]'}`} />
+              )}
+              <span>{userCoords ? (language === 'bn' ? 'জিপিএস সক্রিয়' : 'GPS Active') : (language === 'bn' ? 'জিপিএস' : 'GPS')}</span>
+            </button>
+
+            {/* Sort Selector */}
+            <div className="flex items-center shrink-0">
+              <select
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value as any);
+                  setCurrentPage(1);
+                }}
+                className="h-8 bg-[#F7F7F9] text-xs font-bold text-[#1B1B1F] rounded-full px-2 border border-[#E4E6EB]/80 outline-hidden cursor-pointer"
+              >
+                <option value="distance">{language === 'bn' ? 'নিকটতম' : 'Nearest'}</option>
+                <option value="donations">{language === 'bn' ? 'সর্বাধিক দান' : 'Most'}</option>
+                <option value="fastest">{language === 'bn' ? 'দ্রুত সাড়া' : 'Fast'}</option>
+                <option value="recent">{language === 'bn' ? 'নতুন' : 'Newest'}</option>
+              </select>
+            </div>
           </div>
         </div>
 
         {/* GPS Alert feedback if message set */}
         {gpsMessage && (
           <div className="p-2 rounded-xl bg-[#FAF9FB] border border-[#E4E6EB] flex items-center justify-between text-xs text-[#5B5F6B] animate-in fade-in">
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#00744B]" />
-              <span>{gpsMessage}</span>
+            <div className="flex items-center gap-1.5 min-w-0 truncate">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00744B] shrink-0" />
+              <span className="truncate">{gpsMessage}</span>
             </div>
             <button
               onClick={() => setGpsMessage('')}
-              className="w-5 h-5 rounded-full hover:bg-[#E4E6EB] flex items-center justify-center text-gray-400 hover:text-black cursor-pointer"
+              className="w-5 h-5 rounded-full hover:bg-[#E4E6EB] flex items-center justify-center text-gray-400 hover:text-black cursor-pointer shrink-0 ml-1"
             >
               <X className="w-3 h-3" />
             </button>
@@ -602,17 +608,17 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
       </div>
 
       {/* ================= QUICK HORIZONTAL FILTER CHIPS ================= */}
-      <div className="w-full overflow-x-auto py-2.5 px-3 sm:px-4 bg-white border-b border-[#E4E6EB]/50 flex items-center gap-2 no-scrollbar">
+      <div className="w-full overflow-x-auto py-2 px-3 sm:px-4 bg-white border-b border-[#E4E6EB]/50 flex items-center gap-1.5 no-scrollbar">
         {/* All Blood Groups Chip */}
         <button
           onClick={() => {
             setSelectedGroup('all');
             setCurrentPage(1);
           }}
-          className={`shrink-0 h-8 px-3 rounded-full text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+          className={`shrink-0 h-8 px-3 rounded-full text-xs font-bold flex items-center gap-1 transition-all cursor-pointer active:scale-95 ${
             selectedGroup === 'all'
               ? 'bg-[#C41E3A] text-white shadow-xs'
-              : 'bg-[#F7F7F9] text-[#1B1B1F] hover:bg-[#F0EDF2]'
+              : 'bg-[#F7F7F9] text-[#1B1B1F] hover:bg-[#F0EDF2] border border-[#E4E6EB]/60'
           }`}
         >
           <span>{language === 'bn' ? 'সব গ্রুপ' : 'All Groups'}</span>
@@ -628,14 +634,14 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
                 setSelectedGroup(isSelected ? 'all' : grp);
                 setCurrentPage(1);
               }}
-              className={`shrink-0 h-8 px-3 rounded-full text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
+              className={`shrink-0 h-8 px-3 rounded-full text-xs font-bold flex items-center gap-1 transition-all cursor-pointer active:scale-95 ${
                 isSelected
-                  ? 'bg-[#FDECEF] text-[#C41E3A] ring-1 ring-[#C41E3A] shadow-xs'
-                  : 'bg-[#F7F7F9] text-[#1B1B1F] hover:bg-[#F0EDF2]'
+                  ? 'bg-[#FDECEF] text-[#C41E3A] ring-1.5 ring-[#C41E3A] shadow-xs'
+                  : 'bg-[#F7F7F9] text-[#1B1B1F] hover:bg-[#F0EDF2] border border-[#E4E6EB]/60'
               }`}
             >
               <span>{grp}</span>
-              {isSelected && <Check className="w-3.5 h-3.5" />}
+              {isSelected && <Check className="w-3.5 h-3.5 text-[#C41E3A]" />}
             </button>
           );
         })}
@@ -646,10 +652,10 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
             setAvailableOnly((prev) => !prev);
             setCurrentPage(1);
           }}
-          className={`shrink-0 h-8 px-3 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+          className={`shrink-0 h-8 px-3 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
             availableOnly
-              ? 'bg-[#E8F5E9] text-[#005938] ring-1 ring-[#00744B]'
-              : 'bg-[#F7F7F9] text-[#5B5F6B] hover:bg-[#F0EDF2]'
+              ? 'bg-[#E8F5E9] text-[#005938] ring-1.5 ring-[#00744B]'
+              : 'bg-[#F7F7F9] text-[#5B5F6B] hover:bg-[#F0EDF2] border border-[#E4E6EB]/60'
           }`}
         >
           <span className="w-2 h-2 rounded-full bg-[#00744B] animate-pulse" />
@@ -662,10 +668,10 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
             setVerifiedOnly((prev) => !prev);
             setCurrentPage(1);
           }}
-          className={`shrink-0 h-8 px-3 rounded-full text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+          className={`shrink-0 h-8 px-3 rounded-full text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer active:scale-95 ${
             verifiedOnly
-              ? 'bg-[#D9E2FF] text-[#001946] ring-1 ring-[#0D58C9]'
-              : 'bg-[#F7F7F9] text-[#5B5F6B] hover:bg-[#F0EDF2]'
+              ? 'bg-[#D9E2FF] text-[#001946] ring-1.5 ring-[#0D58C9]'
+              : 'bg-[#F7F7F9] text-[#5B5F6B] hover:bg-[#F0EDF2] border border-[#E4E6EB]/60'
           }`}
         >
           <UserCheck className="w-3.5 h-3.5 text-[#0D58C9]" />
@@ -673,77 +679,86 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
         </button>
       </div>
 
-      {/* ================= INTERACTIVE DONOR ANALYTICS & GROUP DISTRIBUTION CHART ================= */}
-      <div className="mx-3 sm:mx-4 my-2.5 p-3.5 bg-white rounded-2xl border border-[#E4E6EB]/80 shadow-2xs space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#FDECEF] text-[#C41E3A] flex items-center justify-center font-bold">
+      {/* ================= INTERACTIVE DONOR ANALYTICS ACCORDION ================= */}
+      <div className="mx-3 sm:mx-4 my-2 p-3 bg-white rounded-2xl border border-[#E4E6EB]/80 shadow-2xs transition-all">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-[#FDECEF] text-[#C41E3A] flex items-center justify-center font-bold shrink-0">
               <Droplet className="w-4 h-4 fill-current" />
             </div>
-            <div>
-              <h4 className="text-xs sm:text-sm font-extrabold text-[#1B1B1F] leading-tight">
+            <div className="min-w-0">
+              <h4 className="text-xs sm:text-sm font-extrabold text-[#1B1B1F] truncate leading-tight">
                 {t.donors.chartTitle}
               </h4>
-              <p className="text-[10px] text-[#5B5F6B]">
-                {t.donors.chartSub}
-              </p>
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold mt-0.5">
+                <span className="text-[#0B7A50] bg-[#E8F5E9] px-1.5 py-0.2 rounded-md">
+                  {formatDigits(totalAvailableReadyCount)} {t.donors.readyLabel}
+                </span>
+                <span className="text-[#5B5F6B] bg-[#F0EDF2] px-1.5 py-0.2 rounded-md">
+                  {formatDigits(totalRestingCount)} {t.donors.restingLabel}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] font-bold">
-            <span className="text-[#0B7A50] bg-[#E8F5E9] px-2 py-0.5 rounded-md">
-              {formatDigits(totalAvailableReadyCount)} {language === 'bn' ? 'জন প্রস্তুত' : 'Ready'}
-            </span>
-            <span className="text-[#5B5F6B] bg-[#F0EDF2] px-2 py-0.5 rounded-md">
-              {formatDigits(totalRestingCount)} {language === 'bn' ? 'জন বিশ্রামে' : 'Resting'}
-            </span>
-          </div>
+          <button
+            onClick={() => setIsStatsExpanded((prev) => !prev)}
+            className="px-2.5 py-1 rounded-full bg-[#F7F7F9] hover:bg-[#F0EDF2] text-[#C41E3A] text-xs font-bold flex items-center gap-1 shrink-0 transition-all cursor-pointer border border-[#E4E6EB]/70"
+          >
+            <span>{isStatsExpanded ? t.donors.chartToggleHide : t.donors.chartToggleShow}</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isStatsExpanded ? 'rotate-180' : ''}`} />
+          </button>
         </div>
 
-        {/* Interactive Group Distribution Bar Chart */}
-        <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5 pt-1">
-          {(['A+', 'B+', 'O+', 'AB+', 'A-', 'B-', 'O-', 'AB-'] as BloodGroup[]).map((grp) => {
-            const count = groupStats[grp]?.total || 0;
-            const availableCount = groupStats[grp]?.available || 0;
-            const isSelected = selectedGroup === grp;
-            const heightPercent = Math.min(100, Math.max(25, count * 16));
+        {/* Expandable Chart Grid */}
+        {isStatsExpanded && (
+          <div className="pt-3 mt-2 border-t border-[#F0EDF2] animate-in fade-in slide-in-from-top-2 duration-200">
+            <p className="text-[10px] text-[#5B5F6B] mb-2">{t.donors.chartSub}</p>
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+              {(['A+', 'B+', 'O+', 'AB+', 'A-', 'B-', 'O-', 'AB-'] as BloodGroup[]).map((grp) => {
+                const count = groupStats[grp]?.total || 0;
+                const availableCount = groupStats[grp]?.available || 0;
+                const isSelected = selectedGroup === grp;
+                const heightPercent = Math.min(100, Math.max(25, count * 16));
 
-            return (
-              <button
-                key={grp}
-                onClick={() => {
-                  setSelectedGroup(selectedGroup === grp ? 'all' : grp);
-                  setCurrentPage(1);
-                }}
-                className={`flex flex-col items-center p-2 rounded-xl border transition-all cursor-pointer ${
-                  isSelected
-                    ? 'bg-[#FDECEF] border-[#C41E3A] ring-1 ring-[#C41E3A] shadow-xs scale-102'
-                    : 'bg-[#FAF9FB] border-[#E4E6EB]/70 hover:bg-white'
-                }`}
-              >
-                <div className="w-full flex flex-col items-center justify-end h-14 pb-1">
-                  <span className="text-[10px] font-black text-[#1B1B1F] mb-0.5">
-                    {formatDigits(count)}
-                  </span>
-                  <div
-                    style={{ height: `${heightPercent}%` }}
-                    className={`w-full max-w-[18px] rounded-t-md transition-all ${
+                return (
+                  <button
+                    key={grp}
+                    onClick={() => {
+                      setSelectedGroup(selectedGroup === grp ? 'all' : grp);
+                      setCurrentPage(1);
+                    }}
+                    className={`flex flex-col items-center p-2 rounded-xl border transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-[#C41E3A]'
-                        : count > 0
-                        ? 'bg-gradient-to-t from-[#5B5F6B] to-[#8C8F9A]'
-                        : 'bg-[#E4E6EB]'
+                        ? 'bg-[#FDECEF] border-[#C41E3A] ring-1 ring-[#C41E3A] shadow-xs scale-102'
+                        : 'bg-[#FAF9FB] border-[#E4E6EB]/70 hover:bg-white'
                     }`}
-                  />
-                </div>
-                <span className="text-[11px] font-extrabold text-[#1B1B1F] mt-1">{grp}</span>
-                <span className="text-[9px] text-[#0B7A50] font-semibold">
-                  {formatDigits(availableCount)} {language === 'bn' ? 'সক্রিয়' : 'active'}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                  >
+                    <div className="w-full flex flex-col items-center justify-end h-12 pb-1">
+                      <span className="text-[10px] font-black text-[#1B1B1F] mb-0.5">
+                        {formatDigits(count)}
+                      </span>
+                      <div
+                        style={{ height: `${heightPercent}%` }}
+                        className={`w-full max-w-[18px] rounded-t-md transition-all ${
+                          isSelected
+                            ? 'bg-[#C41E3A]'
+                            : count > 0
+                            ? 'bg-gradient-to-t from-[#5B5F6B] to-[#8C8F9A]'
+                            : 'bg-[#E4E6EB]'
+                        }`}
+                      />
+                    </div>
+                    <span className="text-[11px] font-extrabold text-[#1B1B1F] mt-1">{grp}</span>
+                    <span className="text-[9px] text-[#0B7A50] font-semibold">
+                      {formatDigits(availableCount)} {language === 'bn' ? 'সক্রিয়' : 'active'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ================= RESULTS SUMMARY & BREADCRUMB BAR ================= */}
@@ -955,41 +970,41 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
                   )}
 
                   {/* Donor Card */}
-                  <div className="bg-white rounded-2xl p-4 shadow-xs border border-[#E4E6EB]/70 flex flex-col justify-between gap-3 transition-all hover:shadow-sm hover:border-[#D5D8E0]">
+                  <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-[#E4E6EB]/80 flex flex-col justify-between gap-3.5 transition-all hover:shadow-md hover:border-[#D5D8E0]">
                     {/* Top Row: Avatar, Name, Location & Blood Group Badge */}
                     <div className="flex items-start justify-between gap-2.5">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="relative shrink-0">
-                          <div className="w-13 h-13 rounded-2xl bg-[#FDECEF] flex items-center justify-center text-[#9E0027] text-lg font-black shadow-2xs">
+                          <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-[#FDECEF] to-[#FFF0F2] flex items-center justify-center text-[#9E0027] text-xl font-black shadow-2xs border border-[#FFCDD2]/60">
                             {donor.avatarText || donor.name.charAt(0)}
                           </div>
                           {donor.isAvailableToday && (
                             <span
-                              className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-[#00744B] ring-2 ring-white"
+                              className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#00744B] ring-2 ring-white shadow-xs"
                               title={t.donors.availableTodayOnly}
                             />
                           )}
                         </div>
 
                         <div className="flex flex-col min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <h2 className="font-bold text-[15px] text-[#1B1B1F] truncate">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <h2 className="font-extrabold text-[15px] sm:text-base text-[#1B1B1F] truncate leading-tight">
                               {donor.name}
                             </h2>
                             {donor.isVerified && (
                               <span
-                                className="w-4 h-4 rounded-full bg-[#0D58C9] text-white flex items-center justify-center text-[10px] font-bold shrink-0"
-                                title={language === 'bn' ? 'যাচাইকৃত রক্তদাতা' : 'Verified Donor'}
+                                className="w-4.5 h-4.5 rounded-full bg-[#0D58C9] text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-2xs"
+                                title={t.donors.verifiedBadge}
                               >
                                 ✓
                               </span>
                             )}
                           </div>
 
-                          <div className="flex items-center gap-1 text-xs text-[#5B5F6B] mt-0.5 truncate">
+                          <div className="flex items-center gap-1 text-xs text-[#5B5F6B] mt-1 truncate">
                             <MapPin className="w-3.5 h-3.5 text-[#C41E3A] shrink-0" />
                             <span className="truncate">
-                              {language === 'bn' ? 'প্রায়' : 'Approx.'} {formatDigits(donor.distanceKm)}{' '}
+                              {language === 'bn' ? 'প্রায়' : 'Approx.'} {formatDigits(donor.distanceKm)}{' '}
                               {language === 'bn' ? 'কিমি' : 'km'} • {donor.location}
                             </span>
                           </div>
@@ -997,30 +1012,30 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
                       </div>
 
                       {/* Blood Group Badge */}
-                      <div className="shrink-0 w-13 h-13 rounded-2xl bg-[#FDECEF] flex flex-col items-center justify-center shadow-xs border border-[#FFCDD2]">
-                        <span className="text-[20px] text-[#C41E3A] font-black leading-none">
+                      <div className="shrink-0 w-13.5 h-13.5 rounded-2xl bg-gradient-to-br from-[#9E0027] to-[#C41E3A] text-white flex flex-col items-center justify-center shadow-xs border-2 border-white">
+                        <span className="text-[21px] font-black leading-none drop-shadow-2xs">
                           {donor.bloodGroup}
                         </span>
-                        <span className="text-[9px] text-[#9E0027] font-bold uppercase mt-0.5">
-                          {language === 'bn' ? 'রক্তগ্রুপ' : 'GROUP'}
+                        <span className="text-[8.5px] font-bold uppercase tracking-wider text-white/90 mt-0.5">
+                          {t.donors.bloodGroupBadge}
                         </span>
                       </div>
                     </div>
 
                     {/* Status & Credibility Chips */}
-                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                       {donor.isAvailableToday ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E8F5E9] text-[#005938] text-xs font-bold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#00744B]" />
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E8F5E9] text-[#005938] text-xs font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#00744B] animate-pulse" />
                           <span>{t.donors.availableTodayOnly}</span>
                         </div>
                       ) : (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F0EDF2] text-[#5B5F6B] text-xs font-medium">
-                          <span>{language === 'bn' ? 'সাময়িক বিশ্রামে' : 'Resting'}</span>
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F0EDF2] text-[#5B5F6B] text-xs font-medium">
+                          <span>{t.donors.restingBadge}</span>
                         </div>
                       )}
 
-                      <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#F7F7F9] text-[#5B5F6B] text-xs font-medium">
+                      <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#F7F7F9] text-[#5B5F6B] text-xs font-medium border border-[#E4E6EB]/50">
                         <Clock className="w-3 h-3 text-gray-400" />
                         <span>
                           {language === 'bn' ? 'শেষ রক্তদান:' : 'Last donation:'} {donor.lastDonationDate}
@@ -1028,35 +1043,33 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
                       </div>
 
                       {donor.totalDonations > 0 && (
-                        <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#F7F7F9] text-[#5B5F6B] text-xs font-semibold">
-                          <Droplet className="w-3 h-3 text-[#C41E3A]" />
+                        <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FDECEF]/60 text-[#C41E3A] text-xs font-bold border border-[#FFCDD2]/50">
+                          <Droplet className="w-3 h-3 text-[#C41E3A] fill-current" />
                           <span>
-                            {formatDigits(donor.totalDonations)} {language === 'bn' ? 'বার রক্তদান' : 'donations'}
+                            {language === 'bn'
+                              ? `${formatDigits(donor.totalDonations)} বার রক্তদান`
+                              : `${donor.totalDonations} ${donor.totalDonations === 1 ? 'donation' : 'donations'}`}
                           </span>
                         </div>
                       )}
                     </div>
 
                     {/* Phone Privacy Status Row */}
-                    <div className="flex items-center justify-between py-1.5 px-2.5 rounded-xl bg-[#F7F7F9] text-xs border border-[#E4E6EB]/50">
-                      <div className="flex items-center gap-1.5 text-[#5B5F6B]">
-                        <Shield className="w-3.5 h-3.5 text-[#00744B]" />
-                        <span className="font-mono font-bold text-[#1B1B1F]">
+                    <div className="flex items-center justify-between py-2 px-3 rounded-2xl bg-[#F7F7F9] text-xs border border-[#E4E6EB]/60">
+                      <div className="flex items-center gap-2 text-[#5B5F6B]">
+                        <Shield className="w-3.5 h-3.5 text-[#00744B] shrink-0" />
+                        <span className="font-mono font-bold text-[#1B1B1F] tracking-wide">
                           {donor.phoneMasked || '০১৭১২-***৬৭৮'}
                         </span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-[#E8F5E9] text-[#005938] font-bold">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#E8F5E9] text-[#005938] font-black">
                           {donor.privacyHidePhone
-                            ? language === 'bn'
-                              ? 'গোপনীয়'
-                              : 'Private'
-                            : language === 'bn'
-                            ? 'সুরক্ষিত'
-                            : 'Protected'}
+                            ? t.donors.privatePhone
+                            : t.donors.protectedPhone}
                         </span>
                       </div>
 
                       {donor.responseTimeMinutes && (
-                        <span className="text-[11px] text-[#5B5F6B] font-medium truncate">
+                        <span className="text-[11px] text-[#5B5F6B] font-semibold truncate ml-1">
                           ⚡ {donor.responseTimeMinutes}
                         </span>
                       )}
@@ -1067,7 +1080,7 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
                       {/* Send Direct Request Button */}
                       <button
                         onClick={() => onSendDirectRequest(donor)}
-                        className="flex-1 h-11 bg-[#FDECEF] hover:bg-[#FFDAD9] text-[#C41E3A] active:bg-[#C41E3A] active:text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 active:scale-98 transition-all cursor-pointer"
+                        className="flex-1 h-12 bg-gradient-to-r from-[#9E0027] to-[#C41E3A] hover:from-[#80001F] hover:to-[#B01A33] active:from-[#70001B] active:to-[#9E0027] text-white rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.98] transition-all cursor-pointer"
                       >
                         <Send className="w-4 h-4" />
                         <span>{t.donors.btnRequestDirect}</span>
@@ -1076,25 +1089,25 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
                       {/* Authorized Contact & Phone Modal Trigger */}
                       <button
                         onClick={() => setSelectedContactDonor(donor)}
-                        aria-label={language === 'bn' ? 'অনুমোদিত যোগাযোগ ও কল' : 'Authorized Contact and Call'}
-                        className="w-11 h-11 rounded-xl bg-[#E8F5E9] hover:bg-[#C8E6C9] text-[#005938] flex items-center justify-center active:scale-95 transition-all shadow-xs cursor-pointer"
-                        title={language === 'bn' ? 'যোগাযোগ করুন' : 'Contact Donor'}
+                        aria-label={t.donors.contactAndCall}
+                        className="w-12 h-12 rounded-2xl bg-[#E8F5E9] hover:bg-[#C8E6C9] active:bg-[#A5D6A7] text-[#005938] flex items-center justify-center active:scale-95 transition-all shadow-xs cursor-pointer shrink-0 border border-[#A5D6A7]/40"
+                        title={t.donors.contactAndCall}
                       >
-                        <Phone className="w-4 h-4" />
+                        <Phone className="w-4.5 h-4.5" />
                       </button>
 
                       {/* Bookmark Button */}
                       <button
                         onClick={() => handleToggleBookmark(donor.id)}
-                        aria-label={language === 'bn' ? 'সংরক্ষণ করুন' : 'Bookmark'}
-                        className={`w-11 h-11 rounded-xl flex items-center justify-center active:scale-95 transition-all shadow-xs cursor-pointer ${
+                        aria-label={t.donors.saveBookmark}
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center active:scale-95 transition-all shadow-xs cursor-pointer shrink-0 border ${
                           bookmarkedIds.includes(donor.id)
-                            ? 'bg-[#FDECEF] text-[#C41E3A] ring-1 ring-[#FFCDD2]'
-                            : 'bg-[#F7F7F9] hover:bg-[#F0EDF2] text-[#5B5F6B]'
+                            ? 'bg-[#FDECEF] border-[#FFCDD2] text-[#C41E3A]'
+                            : 'bg-[#F7F7F9] hover:bg-[#F0EDF2] border-[#E4E6EB] text-[#5B5F6B]'
                         }`}
                       >
                         <Heart
-                          className={`w-4 h-4 ${
+                          className={`w-4.5 h-4.5 ${
                             bookmarkedIds.includes(donor.id) ? 'fill-current text-[#C41E3A]' : ''
                           }`}
                         />

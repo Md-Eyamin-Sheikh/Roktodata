@@ -41,7 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDbExplorer,
   donorBloodGroup = '',
 }) => {
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage, toggleLanguage, t } = useLanguage();
   const [isLocationOpen, setIsLocationOpen] = useState(false);
 
   return (
@@ -137,18 +137,6 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="hidden 2xl:inline">{t.nav.hospitals}</span>
                 </button>
               )}
-
-              {/* App Info / পরিচয়: strictly on 2xl only */}
-              <button
-                onClick={() => {
-                  if (onTabChange) onTabChange('home');
-                  const el = document.getElementById('app-info-section');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="hidden 2xl:flex px-2.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap text-[#5B5F6B] hover:text-[#1B1B1F] hover:bg-[#F7F7F9] transition-all cursor-pointer"
-              >
-                {t.nav.appInfo}
-              </button>
             </nav>
           )}
 
@@ -166,31 +154,17 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* Language Switcher Pill (BN / EN) - Hidden on Mobile (< md), Visible on Tablet & Desktop */}
-            <div className="hidden md:flex items-center p-0.5 bg-[#F0EDF2] rounded-full border border-[#E4E6EB]/80 text-[11px] font-bold shadow-2xs shrink-0">
-              <button
-                onClick={() => setLanguage('bn')}
-                aria-label="বাংলা নির্বাচন করুন"
-                className={`px-2 py-0.5 rounded-full transition-all cursor-pointer ${
-                  language === 'bn'
-                    ? 'bg-white text-[#C41E3A] shadow-xs font-black'
-                    : 'text-[#6B7280] hover:text-[#1B1B1F]'
-                }`}
-              >
-                বাং
-              </button>
-              <button
-                onClick={() => setLanguage('en')}
-                aria-label="Select English"
-                className={`px-2 py-0.5 rounded-full transition-all cursor-pointer ${
-                  language === 'en'
-                    ? 'bg-white text-[#C41E3A] shadow-xs font-black'
-                    : 'text-[#6B7280] hover:text-[#1B1B1F]'
-                }`}
-              >
-                EN
-              </button>
-            </div>
+            {/* Language Switcher Pill - Universal on Mobile & Desktop */}
+            <button
+              onClick={toggleLanguage}
+              aria-label={language === 'bn' ? 'Switch to English' : 'বাংলা ভাষায় পরিবর্তন করুন'}
+              className="h-8 px-2.5 rounded-full bg-[#F0EDF2] hover:bg-[#E4E6EB] text-[11px] font-black text-[#1B1B1F] flex items-center justify-center transition-all cursor-pointer border border-[#E4E6EB]/80 active:scale-95 shrink-0 shadow-2xs"
+              title={language === 'bn' ? 'Switch to English' : 'বাংলা ভাষায় পরিবর্তন করুন'}
+            >
+              <span className={language === 'bn' ? 'text-[#C41E3A]' : 'text-[#8E929E]'}>বাং</span>
+              <span className="text-[#C4C7D0] mx-0.5 text-[10px]">/</span>
+              <span className={language === 'en' ? 'text-[#C41E3A]' : 'text-[#8E929E]'}>EN</span>
+            </button>
 
 
             {/* Notification Bell */}
