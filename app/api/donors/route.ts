@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { initialDonors } from '@/lib/data';
+import { maskPhoneNumber } from '@/lib/bengali-utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -39,7 +40,10 @@ export async function GET(req: NextRequest) {
             totalDonations: dp.total_donations || 1,
             lastDonationDate: dp.last_donation_date || '৩ মাস আগে',
             responseTimeMinutes: dp.is_fast_responder ? 'সাধারণত ১০ মিনিটের মধ্যে' : '১৫-২০ মিনিট',
-            phone: p.phone_number,
+            // Server-side Phone Masking (Zero-Trust Privacy)
+            phone: maskPhoneNumber(p.phone_number),
+            phoneMasked: maskPhoneNumber(p.phone_number),
+            isPhoneRevealed: false,
             isBookmarked: false,
           };
         });
@@ -66,8 +70,13 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Fallback to enriched local donors
-    let donors = initialDonors;
+    // Fallback to enriched local donors with server-side phone masking
+    let donors = initialDonors.map((d) => ({
+      ...d,
+      phone: maskPhoneNumber(d.phone),
+      phoneMasked: maskPhoneNumber(d.phone),
+      isPhoneRevealed: false,
+    }));
     if (bloodGroup && bloodGroup !== 'all') {
       donors = donors.filter((d) => d.bloodGroup === bloodGroup);
     }

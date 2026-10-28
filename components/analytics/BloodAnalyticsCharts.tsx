@@ -510,7 +510,7 @@ export const BloodAnalyticsCharts: React.FC<BloodAnalyticsChartsProps> = ({
           <div className="w-full bg-[#FAF9FB] rounded-2xl p-4 sm:p-5 border border-[#E4E6EB]/80">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#5B5F6B] mb-3">
               <span className="font-bold text-[#1B1B1F] text-sm">
-                {language === 'bn' ? 'মাসিক রক্তদান ও হিমোগ্লোবিন কার্ভ (Hb Wave)' : 'Monthly Donations & Hemoglobin Wave'}
+                {language === 'bn' ? 'রক্তদান টাইমলাইন ও আনুমানিক রিকভারি মডেল (Physiological Recovery Curve)' : 'Monthly Donations & Physiological Recovery Curve'}
               </span>
               <div className="flex items-center gap-4 text-xs">
                 <span className="flex items-center gap-1.5 font-medium">
@@ -589,13 +589,24 @@ export const BloodAnalyticsCharts: React.FC<BloodAnalyticsChartsProps> = ({
                 <Info className="w-3.5 h-3.5 text-[#0D58C9] shrink-0" />
                 <span>
                   {language === 'bn'
-                    ? 'প্রতি ৩ মাস পরপর যেকোনো প্রাপ্তবয়স্ক সুস্থ নারী-পুরুষ ১ ব্যাগ রক্ত নিরাপদে দান করতে পারেন।'
-                    : 'Healthy adults can safely donate 1 blood bag every 3 months.'}
+                    ? 'DGHS নির্দেশিকা: পুরুষ প্রতি ৩ মাস (৯০ দিন) এবং নারী প্রতি ৪ মাস (১২০ দিন) পরপর নিরাপদে রক্ত দান করতে পারেন।'
+                    : 'DGHS Guideline: Men can donate every 3 months (90 days) and women every 4 months (120 days).'}
                 </span>
               </span>
               <span className="text-[#0D58C9] font-bold">
                 {language === 'bn' ? '👆 নির্দিষ্ট মাসের বারে ক্লিক করে তথ্য দেখুন' : '👆 Click any bar for details'}
               </span>
+            </div>
+
+            {/* Scientific disclaimer regarding Hb estimation */}
+            <div className="mt-3 p-3 bg-white rounded-xl border border-[#E4E6EB] text-[11px] text-[#5B5F6B] leading-relaxed flex items-start gap-2">
+              <span className="text-[#C41E3A] font-bold text-xs">ℹ️</span>
+              <div>
+                <strong>শারীরবৃত্তীয় রিকভারি নোট (Physiological Estimation):</strong>{' '}
+                {language === 'bn'
+                  ? 'এই কার্ভটি রক্তদানের পর মানবদেহের স্বাভাবিক লোহিত রক্তকণিকা ও হিমোগ্লোবিন পুনর্গঠনের ফিজিওলজিক্যাল অনুমানের ভিত্তিতে প্রদর্শিত। এটি কোনো ল্যাবরেটরি টেস্ট রিপোর্ট নয়। রক্তদানের আগে স্বাস্থ্যকর্মী কর্তৃক সরাসরি হিমোগ্লোবিন (Hb) পরিমাপ করা বাধ্যতামূলক।'
+                  : 'This curve is a physiological recovery projection showing estimated RBC and hemoglobin regeneration. It is not a clinical laboratory report. On-site Hb screening before donation is mandatory.'}
+              </div>
             </div>
           </div>
         </div>

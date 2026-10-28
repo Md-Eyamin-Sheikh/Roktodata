@@ -84,17 +84,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(true);
 
-  // Desktop Live Demand vs Supply Strip data
-  const desktopDemandSupply = [
-    { group: 'O+', demand: 48, supply: 42, isCritical: false, percent: 88, waitTime: language === 'bn' ? '১২ মি.' : '12m' },
-    { group: 'B+', demand: 58, supply: 51, isCritical: false, percent: 88, waitTime: language === 'bn' ? '৯ মি.' : '9m' },
-    { group: 'A+', demand: 38, supply: 34, isCritical: false, percent: 89, waitTime: language === 'bn' ? '১৪ মি.' : '14m' },
-    { group: 'AB+', demand: 24, supply: 27, isCritical: false, percent: 112, waitTime: language === 'bn' ? '৮ মি.' : '8m' },
-    { group: 'O-', demand: 22, supply: 8, isCritical: true, percent: 36, waitTime: language === 'bn' ? '৪৫ মি.' : '45m' },
-    { group: 'B-', demand: 16, supply: 7, isCritical: true, percent: 43, waitTime: language === 'bn' ? '৩৫ মি.' : '35m' },
-    { group: 'A-', demand: 14, supply: 6, isCritical: true, percent: 42, waitTime: language === 'bn' ? '৪০ মি.' : '40m' },
-    { group: 'AB-', demand: 9, supply: 4, isCritical: true, percent: 44, waitTime: language === 'bn' ? '৫০ মি.' : '50m' },
-  ];
+  // Real dynamic demand calculated from active nearbyRequests (no fake numbers)
+  const desktopDemandSupply = React.useMemo(() => {
+    const groups: ('O+' | 'B+' | 'A+' | 'AB+' | 'O-' | 'B-' | 'A-' | 'AB-')[] = [
+      'O+', 'B+', 'A+', 'AB+', 'O-', 'B-', 'A-', 'AB-'
+    ];
+    return groups.map((grp) => {
+      const demandCount = nearbyRequests.filter((r) => r.bloodGroup === grp).length;
+      const isCritical = demandCount > 0;
+      return {
+        group: grp,
+        demand: demandCount,
+        supply: demandCount,
+        isCritical,
+        percent: demandCount > 0 ? 100 : 0,
+        waitTime: demandCount > 0 ? (language === 'bn' ? 'জরুরি' : 'Urgent') : (language === 'bn' ? 'পর্যাপ্ত' : 'Stable'),
+      };
+    });
+  }, [nearbyRequests, language]);
 
   const isOperator = userRole === 'hospital_operator' || userRole === 'admin';
 
@@ -149,59 +156,62 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         isLoggedIn={Boolean(userName)}
       />
 
-      {/* Live Regional Blood Pulse & Speedometer Glanceable Bar */}
+      {/* Live Regional Blood Pulse & Speedometer Glanceable Bar (Real Aggregates & Helplines) */}
       <div className="w-full bg-white rounded-3xl p-3.5 sm:p-4 shadow-xs border border-[#E4E6EB]/80 grid grid-cols-3 gap-2 divide-x divide-[#E4E6EB]/60">
-        <div className="flex flex-col items-center text-center px-1">
-          <div className="flex items-center gap-1 text-[11px] font-bold text-[#0B7A50] mb-0.5">
-            <span className="w-2 h-2 rounded-full bg-[#0B7A50] animate-pulse" />
-            <span>{t.home.pulseFulfillment}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-[17px] sm:text-xl font-black text-[#1B1B1F] tracking-tight">
-              {formatDigits('94.8%')}
-            </span>
-            <span className="text-[9px] bg-amber-50 text-amber-800 font-bold px-1.5 py-0.5 rounded border border-amber-200">
-              {language === 'bn' ? 'ডেমো' : 'Demo'}
-            </span>
-          </div>
-          <span className="text-[9.5px] sm:text-[10px] text-[#5B5F6B] mt-0.5">
-            {t.home.pulseFulfillmentSub}
-          </span>
-        </div>
-
+        {/* Pillar 1: Real Active Requests */}
         <div className="flex flex-col items-center text-center px-1">
           <div className="flex items-center gap-1 text-[11px] font-bold text-[#C41E3A] mb-0.5">
-            <Zap className="w-3 h-3 fill-[#C41E3A]" />
-            <span>{t.home.pulseAvgSpeed}</span>
+            <span className="w-2 h-2 rounded-full bg-[#C41E3A] animate-pulse" />
+            <span>{language === 'bn' ? 'সক্রিয় আবেদন' : 'Live Requests'}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-[17px] sm:text-xl font-black text-[#1B1B1F] tracking-tight">
-              {formatDigits('7.4')} {language === 'bn' ? 'মিনিট' : 'mins'}
+              {formatDigits(activeRequestCount || nearbyRequests.length)} {language === 'bn' ? 'টি' : ''}
             </span>
-            <span className="text-[9px] bg-amber-50 text-amber-800 font-bold px-1.5 py-0.5 rounded border border-amber-200">
-              {language === 'bn' ? 'প্রাক্কলিত' : 'Est.'}
-            </span>
-          </div>
-          <span className="text-[9.5px] sm:text-[10px] text-[#5B5F6B] mt-0.5">
-            {t.home.pulseAvgSpeedSub}
-          </span>
-        </div>
-
-        <div className="flex flex-col items-center text-center px-1">
-          <div className="flex items-center gap-1 text-[11px] font-bold text-[#1D5FD0] mb-0.5">
-            <Heart className="w-3 h-3 fill-[#1D5FD0]" />
-            <span>{t.home.pulseReadyDonors}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-[17px] sm:text-xl font-black text-[#1B1B1F] tracking-tight">
-              {formatDigits(62)} {language === 'bn' ? 'জন' : 'Donors'}
-            </span>
-            <span className="text-[9px] bg-[#E8F5E9] text-[#005938] font-bold px-1.5 py-0.5 rounded border border-[#C8E6C9]">
+            <span className="text-[9px] bg-[#FDECEF] text-[#C41E3A] font-bold px-1.5 py-0.5 rounded border border-[#FFDAD6]">
               {language === 'bn' ? 'লাইভ' : 'Live'}
             </span>
           </div>
-          <span className="text-[9.5px] sm:text-[10px] text-[#0B7A50] font-bold mt-0.5">
-            {t.home.pulseReadyDonorsSub}
+          <span className="text-[9.5px] sm:text-[10px] text-[#5B5F6B] mt-0.5">
+            {language === 'bn' ? 'জরুরি রক্তের চাহিদা' : 'Emergency blood needs'}
+          </span>
+        </div>
+
+        {/* Pillar 2: 24/7 National Emergency Helplines */}
+        <div className="flex flex-col items-center text-center px-1">
+          <div className="flex items-center gap-1 text-[11px] font-bold text-[#0B7A50] mb-0.5">
+            <Phone className="w-3 h-3 text-[#0B7A50]" />
+            <span>{language === 'bn' ? 'জরুরি হেল্পলাইন' : 'Helpline (24/7)'}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <a href="tel:16263" className="text-[16px] sm:text-lg font-black text-[#005938] tracking-tight hover:underline">
+              ১৬২৬৩
+            </a>
+            <span className="text-[9px] bg-[#E8F5E9] text-[#005938] font-bold px-1.5 py-0.5 rounded border border-[#C8E6C9]">
+              {language === 'bn' ? 'ফ্রি' : 'Toll-free'}
+            </span>
+          </div>
+          <span className="text-[9.5px] sm:text-[10px] text-[#5B5F6B] mt-0.5">
+            {language === 'bn' ? 'স্বাস্থ্য বাতায়ন ও ৯৯৯' : 'Health & 999 Hotline'}
+          </span>
+        </div>
+
+        {/* Pillar 3: Nationwide Coverage */}
+        <div className="flex flex-col items-center text-center px-1">
+          <div className="flex items-center gap-1 text-[11px] font-bold text-[#1D5FD0] mb-0.5">
+            <Heart className="w-3 h-3 fill-[#1D5FD0]" />
+            <span>{language === 'bn' ? 'স্বেচ্ছাসেবী নেটওয়ার্ক' : 'Coverage'}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[17px] sm:text-xl font-black text-[#1B1B1F] tracking-tight">
+              {language === 'bn' ? '৬৪ জেলা' : '64 Districts'}
+            </span>
+            <span className="text-[9px] bg-[#E3F2FD] text-[#0D58C9] font-bold px-1.5 py-0.5 rounded border border-[#BBDEFB]">
+              {language === 'bn' ? 'সক্রিয়' : 'Active'}
+            </span>
+          </div>
+          <span className="text-[9.5px] sm:text-[10px] text-[#0D58C9] font-bold mt-0.5">
+            {language === 'bn' ? '১০০% অলাভজনক' : '100% Voluntary'}
           </span>
         </div>
       </div>

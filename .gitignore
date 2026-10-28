@@ -16,6 +16,7 @@
 
 # 🏗️ Next.js Production & Build Outputs (বিল্ডের ফলে তৈরি ক্যাশ ও ফাইল)
 /.next/
+/.next-build/
 /out/
 /build
 /dist

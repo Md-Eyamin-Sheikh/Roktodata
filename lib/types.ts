@@ -170,7 +170,7 @@ export interface AmbulanceService {
 export interface HealthEducationArticle {
   id: string;
   title: string;
-  category: 'eligibility' | 'before_after' | 'myths';
+  category: 'eligibility' | 'before_after' | 'myths' | 'recovery';
   summary: string;
   details: string[];
 }
@@ -213,6 +213,8 @@ export interface FraudReportPayload {
   proofImageUrl?: string;
 }
 
+export type ReportStatus = 'pending' | 'reviewing' | 'investigating' | 'resolved' | 'dismissed';
+
 export interface FraudReportItem {
   id: string;
   reporterId?: string | null;
@@ -220,11 +222,12 @@ export interface FraudReportItem {
   reportedName?: string;
   targetUserId?: string | null;
   targetName?: string;
+  targetPhone?: string;
   requestId?: string | null;
   reason: string;
   description?: string;
   details?: string;
-  status: 'pending' | 'reviewing' | 'investigating' | 'resolved' | 'dismissed';
+  status: ReportStatus;
   proofFileName?: string;
   proofFileUrl?: string;
   proofImageUrl?: string;
@@ -279,6 +282,7 @@ export interface DonationRecord {
 }
 
 export interface UserProfile {
+  id?: string;
   name: string;
   email?: string;
   bloodGroup: BloodGroup;

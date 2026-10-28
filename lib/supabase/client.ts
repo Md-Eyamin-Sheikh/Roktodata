@@ -1,4 +1,5 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from './types';
 
 export const formatSupabaseUrl = (url?: string): string => {
@@ -27,11 +28,8 @@ export const getSupabaseClient = (): SupabaseClient<Database> | null => {
   }
 
   if (!supabaseInstance) {
-    supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-      },
+    // createBrowserClient from @supabase/ssr automatically manages session cookies for SSR compatibility
+    supabaseInstance = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
       realtime: {
         params: {
           eventsPerSecond: 10,

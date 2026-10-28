@@ -76,15 +76,19 @@ export const SafeChatModal: React.FC<SafeChatModalProps> = ({
       }
     });
 
-    // 2. Realtime listener
-    const unsubscribe = subscribeToChatMessages(requestId, (newMsg) => {
-      if (isMounted) {
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === newMsg.id)) return prev;
-          return [...prev, newMsg];
-        });
-      }
-    });
+    // 2. Realtime listener with strict participant authorization
+    const unsubscribe = subscribeToChatMessages(
+      requestId,
+      (newMsg) => {
+        if (isMounted) {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+        }
+      },
+      currentUserId
+    );
 
     return () => {
       isMounted = false;
@@ -231,12 +235,12 @@ export const SafeChatModal: React.FC<SafeChatModalProps> = ({
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-[#0D58C9] shrink-0" />
             <span className="leading-tight">
-              <strong>নিরাপদ মানবিক চ্যাট:</strong> রক্তের বিনিময়ে কোনো অর্থ লেনদেন নিষিদ্ধ।
+              <strong>সুরক্ষিত চ্যাট (TLS ও RLS নিয়ন্ত্রিত):</strong> রক্তের বিনিময়ে কোনো অর্থ লেনদেন নিষিদ্ধ।
             </span>
           </div>
           <div className="hidden sm:flex items-center gap-1 text-[10px] text-[#0D58C9] font-medium shrink-0">
             <Lock className="w-3 h-3" />
-            <span>সদস্যপদ যাচাইকৃত</span>
+            <span>প্রাইভেট চ্যানেল</span>
           </div>
         </div>
 

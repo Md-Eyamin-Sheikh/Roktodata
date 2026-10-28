@@ -462,6 +462,7 @@ export const loginWithEmail = async (
           textSize: '100%',
           reducedMotion: false,
           isProfileComplete: isComplete,
+          role: profileData?.role || 'donor',
           badges: Array.isArray(donorProfile.badges)
             ? donorProfile.badges.map((b: string, i: number) => ({
                 id: `B-${i}`,
@@ -883,6 +884,7 @@ export const syncSupabaseAuthSession = async (): Promise<UserProfile | null> => 
       textSize: '100%',
       reducedMotion: false,
       isProfileComplete: isComplete,
+      role: profileData?.role || 'donor',
       badges: [{ id: 'B-NEW', title: 'যাচাইকৃত সদস্য', subtitle: 'মানবিক পরিবারের অংশীদার' }],
       donationHistory: [],
     };
@@ -1001,6 +1003,12 @@ export const updateAuthenticatedUser = async (
   const current = getAuthenticatedUser();
   if (!current) return null;
 
+  // Security Hardening: Privilege Escalation Prevention
+  // Role and verification status can ONLY be updated by administrators or server RPC
+  delete updates.role;
+  delete (updates as any).is_verified;
+  delete (updates as any).isVerified;
+
   // If phone number is being updated, verify it is not already taken by another user
   if (updates.phone) {
     const norm = normalizePhoneNumber(updates.phone);
@@ -1085,6 +1093,27 @@ export const logoutRealUser = async (): Promise<void> => {
     } catch {
       // Ignored
     }
+  }
+};
+
+/**
+ * Returns the cryptographically authenticated user's authoritative role directly from the database.
+ * Never relies on client-tamperable state.
+ */
+export const getAuthoritativeUserRole = async (): Promise<'donor' | 'recipient' | 'hospital_operator' | 'admin'> => {
+  const supabase = getSupabaseClient();
+  if (!supabase) return 'donor';
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return 'donor';
+    const { data } = await (supabase as any)
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+    return data?.role || 'donor';
+  } catch {
+    return 'donor';
   }
 };
 

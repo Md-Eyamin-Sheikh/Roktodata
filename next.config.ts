@@ -2,7 +2,7 @@ import type {NextConfig} from 'next';
 import path from 'path';
 
 const nextConfig: NextConfig = {
-  outputFileTracingRoot: path.join(__dirname),
+  outputFileTracingRoot: path.resolve(__dirname),
   reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,
@@ -34,7 +34,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  output: 'standalone',
+  // output: 'standalone',
   transpilePackages: ['motion'],
   async headers() {
     return [

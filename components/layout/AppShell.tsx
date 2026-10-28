@@ -25,6 +25,7 @@ import { CreateCampModal } from '@/components/camps/CreateCampModal';
 import { VerificationExplainerSheet } from '@/components/verification/VerificationExplainerSheet';
 import { QuickSearchModal } from '@/components/search/QuickSearchModal';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
+import { isDemoModePermitted } from '@/lib/services/offlineCache';
 
 import {
   initialEmergencyRequests,
@@ -90,17 +91,58 @@ import {
 } from '@/lib/services/authService';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
-export const AppShell: React.FC = () => {
+interface AppShellProps {
+  initialTab?: NavTab;
+  initialOpenHospitals?: boolean;
+}
+
+export const AppShell: React.FC<AppShellProps> = ({
+  initialTab = 'home',
+  initialOpenHospitals = false,
+}) => {
   const { language, t, formatDigits } = useLanguage();
 
-  // Navigation State
-  const [activeTab, setActiveTab] = useState<NavTab>('home');
+  // Navigation State with URL parameter synchronization & back-button support
+  const [activeTab, setActiveTabState] = useState<NavTab>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab') as NavTab;
+      if (tabParam && ['home', 'requests', 'donors', 'profile'].includes(tabParam)) {
+        return tabParam;
+      }
+    }
+    return initialTab;
+  });
+
+  const setActiveTab = (tab: NavTab) => {
+    setActiveTabState(tab);
+    if (typeof window !== 'undefined') {
+      const url = tab === 'home' ? '/' : `/?tab=${tab}`;
+      window.history.pushState({ tab }, '', url);
+    }
+  };
+
+  // Popstate listener for browser forward/back buttons
+  React.useEffect(() => {
+    const handlePop = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab') as NavTab;
+      if (tabParam && ['home', 'requests', 'donors', 'profile'].includes(tabParam)) {
+        setActiveTabState(tabParam);
+      } else {
+        setActiveTabState('home');
+      }
+    };
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
+  }, []);
+
   const [currentDistrict, setCurrentDistrict] = useState('বগুড়া সদর');
 
   // Sub-screens & Modals
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isHospitalDirectoryOpen, setIsHospitalDirectoryOpen] = useState(false);
+  const [isHospitalDirectoryOpen, setIsHospitalDirectoryOpen] = useState(initialOpenHospitals);
   const [isAmbulanceDirectoryOpen, setIsAmbulanceDirectoryOpen] = useState(false);
   const [isHealthEducationOpen, setIsHealthEducationOpen] = useState(false);
   const [isHospitalDashboardOpen, setIsHospitalDashboardOpen] = useState(false);
@@ -147,12 +189,32 @@ export const AppShell: React.FC = () => {
 
   const userProfile: UserProfileType = cachedUser || initialUserProfile;
   const isLoggedIn = Boolean(cachedUser && cachedUser.name && cachedUser.phone);
-  const [nearbyRequests, setNearbyRequests] = useState<EmergencyRequest[]>(initialEmergencyRequests);
-  const [camps, setCamps] = useState<DonationCamp[]>(initialDonationCamps);
-  const [donors, setDonors] = useState<Donor[]>(initialDonors);
-  const [hospitals, setHospitals] = useState<HospitalBloodBank[]>(initialHospitalsAndBanks);
-  const [ambulances, setAmbulances] = useState<AmbulanceService[]>(initialAmbulances);
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const isDemo = isDemoModePermitted();
+
+  const [nearbyRequests, setNearbyRequests] = useState<EmergencyRequest[]>(isDemo ? initialEmergencyRequests : []);
+  const [myRequest, setMyRequest] = useState<EmergencyRequest | null>(null);
+  const [respondingDonors, setRespondingDonors] = useState<RespondingDonor[]>([]);
+  const [camps, setCamps] = useState<DonationCamp[]>(isDemo ? initialDonationCamps : []);
+  const [donors, setDonors] = useState<Donor[]>(isDemo ? initialDonors : []);
+  const [hospitals, setHospitals] = useState<HospitalBloodBank[]>(isDemo ? initialHospitalsAndBanks : []);
+  const [ambulances, setAmbulances] = useState<AmbulanceService[]>(isDemo ? initialAmbulances : []);
+  const [notifications, setNotifications] = useState(isDemo ? initialNotifications : []);
+  const [isOffline, setIsOffline] = useState(false);
+
+  // Monitor network online/offline status
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsOffline(!navigator.onLine);
+      const handleOnline = () => setIsOffline(false);
+      const handleOffline = () => setIsOffline(true);
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }
+  }, []);
 
   // Sync live Supabase Auth session on app launch & register Service Worker
   React.useEffect(() => {
@@ -180,12 +242,12 @@ export const AppShell: React.FC = () => {
           fetchNotifications(),
         ]);
         if (isMounted) {
-          if (loadedReqs && loadedReqs.length > 0) setNearbyRequests(loadedReqs);
-          if (loadedCamps && loadedCamps.length > 0) setCamps(loadedCamps);
-          if (loadedDonors && loadedDonors.length > 0) setDonors(loadedDonors);
-          if (loadedHospitals && loadedHospitals.length > 0) setHospitals(loadedHospitals);
-          if (loadedAmbulances && loadedAmbulances.length > 0) setAmbulances(loadedAmbulances);
-          if (loadedNotifs && loadedNotifs.length > 0) setNotifications(loadedNotifs);
+          setNearbyRequests(loadedReqs || []);
+          setCamps(loadedCamps || []);
+          setDonors(loadedDonors || []);
+          setHospitals(loadedHospitals || []);
+          setAmbulances(loadedAmbulances || []);
+          setNotifications(loadedNotifs || []);
         }
       } catch (err) {
         console.error('Error syncing district data:', err);
@@ -308,9 +370,6 @@ export const AppShell: React.FC = () => {
     };
   }, [currentDistrict]);
 
-  // My Active Request State (restores persisted request across browser reload)
-  const [myRequest, setMyRequest] = useState<EmergencyRequest | null>(null);
-
   // Restore active emergency request from localStorage on page load / refresh
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -327,9 +386,6 @@ export const AppShell: React.FC = () => {
       }
     }
   }, []);
-
-  // Responding Donors for active request (populated in real-time when donors respond)
-  const [respondingDonors, setRespondingDonors] = useState<RespondingDonor[]>([]);
 
   // Fetch real-time donor responses when user has an active emergency request
   React.useEffect(() => {
@@ -690,6 +746,26 @@ export const AppShell: React.FC = () => {
       }}
       className="min-h-screen bg-[#F7F7F9] flex flex-col text-[#1B1B1F] selection:bg-[#FDECEF] selection:text-[#C41E3A] pb-32 md:pb-8"
     >
+      {/* Offline Mode Banner with Direct Emergency Helplines */}
+      {isOffline && (
+        <div className="w-full bg-[#FFF8E1] border-b border-[#FFE082] px-3 py-2 text-xs text-[#7A4F01] flex items-center justify-between sticky top-0 z-50 shadow-2xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-[#F59E0B] animate-ping shrink-0" />
+            <span className="font-semibold text-[11px] sm:text-xs truncate">
+              অফলাইন মোড — পূর্বে সংরক্ষিত ক্যাশ ডেটা দেখানো হচ্ছে। জরুরি সহায়তায় কল করুন:
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+            <a href="tel:16263" className="px-2.5 py-1 rounded-lg bg-[#00744B] text-white font-bold text-[11px] hover:bg-[#005938] transition-colors">
+              ১৬২৬৩
+            </a>
+            <a href="tel:999" className="px-2.5 py-1 rounded-lg bg-[#C41E3A] text-white font-bold text-[11px] hover:bg-[#A3182F] transition-colors">
+              ৯৯৯
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Global Responsive Top Header */}
       {!isSubPageOpen && activeTab !== 'request_form' && (
         <Header
@@ -860,6 +936,7 @@ export const AppShell: React.FC = () => {
                 onDistrictChange={setCurrentDistrict}
                 onRequestBloodClick={() => setActiveTab('request_form')}
                 onSendDirectRequest={handleSendDirectRequest}
+                onOpenAuth={() => handleOpenAuth('login')}
                 currentUserId={userProfile.donorId || (cachedUser as any)?.id}
               />
             ) : activeTab === 'profile' ? (

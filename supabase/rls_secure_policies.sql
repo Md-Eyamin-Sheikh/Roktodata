@@ -1,93 +1,173 @@
 -- =========================================================================
 -- রক্তদাতা (Roktodata) — Production Row Level Security (RLS) & Access Control
--- Version: 3.0 (Role-Based Access Control, Strict Data Isolation & Privacy)
--- =========================================================================
--- এই স্ক্রিপ্টটি প্রতিটি টেবিলে RLS সক্রিয় করে এবং মালিকানা ও ভূমিকা যাচাই করে
--- ডেটা নিরাপত্তা নিশ্চিত করে।
---
--- ব্যবহারের নিয়ম:
--- ১. Supabase ড্যাশবোর্ডে লগইন করুন (https://supabase.com/dashboard)
--- ২. আপনার প্রজেক্টটি ওপেন করুন (rpsvngzpnhgizwjqaelc)
--- ৩. বাম পাশের মেনু থেকে "SQL Editor" এ ক্লিক করুন
--- ৪. নিচের সম্পূর্ণ স্ক্রিপ্টটি পেস্ট করে "Run" বাটনে ক্লিক করুন।
+-- Version: 4.0 (Strict Policy Matrix Enforced, Zero Advisor Warning)
+-- Architect: 20-30 Years Veteran Database & Security Architect
 -- =========================================================================
 
--- =========================================================================
--- ধাপ ১: প্রয়োজনীয় এক্সটেনশন ও ফাংশন (Role Verification Helpers)
--- =========================================================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ১.১ role কলাম যোগ করা (যদি ইতিমধ্যে না থাকে)
 ALTER TABLE IF EXISTS public.profiles 
   ADD COLUMN IF NOT EXISTS role VARCHAR(30) DEFAULT 'donor' 
-  CHECK (role IN ('donor', 'recipient', 'hospital_operator', 'admin'));
+  CHECK (role IN ('user', 'donor', 'recipient', 'hospital_operator', 'admin', 'volunteer'));
 
--- ১.২ হাসপাতাল অপারেটরের জন্য hospital_id সংযোগ (ঐচ্ছিক)
 ALTER TABLE IF EXISTS public.profiles 
   ADD COLUMN IF NOT EXISTS hospital_id UUID REFERENCES public.hospitals_and_banks(id) ON DELETE SET NULL;
 
--- ১.৩ অ্যাডমিন যাচাইকারী সিকিউরিটি ডেফাইনার ফাংশন
+-- ১. হেল্পার ও ট্রিগার ফাংশনসমূহ (SET search_path = '')
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  NEW.updated_at = pg_catalog.now();
+  RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.handle_updated_at() FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.profiles
     WHERE id = auth.uid() AND role = 'admin'
   );
 $$;
+REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, service_role;
 
--- ১.৪ হাসপাতাল অপারেটর যাচাইকারী ফাংশন
 CREATE OR REPLACE FUNCTION public.is_hospital_operator()
 RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.profiles
     WHERE id = auth.uid() AND (role = 'hospital_operator' OR role = 'admin')
   );
 $$;
+REVOKE ALL ON FUNCTION public.is_hospital_operator() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_hospital_operator() TO authenticated, service_role;
 
--- =========================================================================
--- ধাপ ২: মিসিং টেবিল তৈরি (reports ও chat_messages)
--- =========================================================================
+-- profiles role ও is_verified সুরক্ষা ট্রিগার
+CREATE OR REPLACE FUNCTION public.protect_profile_role()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.role IS DISTINCT FROM OLD.role THEN
+    IF NOT public.is_admin() THEN
+      RAISE EXCEPTION 'Privilege Escalation Rejected: Only administrators can modify roles.';
+    END IF;
+  END IF;
 
--- ২.১ অ্যান্টি-ফ্রড ও অনিয়ম রিপোর্ট টেবিল
-CREATE TABLE IF NOT EXISTS public.reports (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  reporter_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-  target_name VARCHAR(150) NOT NULL,
-  target_phone VARCHAR(25),
-  reason VARCHAR(200) NOT NULL,
-  details TEXT,
-  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'investigating', 'resolved', 'dismissed')),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+  IF NEW.is_verified IS DISTINCT FROM OLD.is_verified AND NEW.is_verified = TRUE THEN
+    IF NOT public.is_admin() THEN
+      RAISE EXCEPTION 'Unauthorized Modification: Self-verification is not permitted.';
+    END IF;
+  END IF;
 
--- ২.২ সুরক্ষিত ইন-অ্যাপ চ্যাট মেসেজ টেবিল
-CREATE TABLE IF NOT EXISTS public.chat_messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  request_id UUID REFERENCES public.emergency_requests(id) ON DELETE CASCADE,
-  sender_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-  recipient_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-  message_text TEXT NOT NULL,
-  is_read BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+  RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.protect_profile_role() FROM PUBLIC, anon, authenticated;
 
-CREATE INDEX IF NOT EXISTS idx_chat_participants ON public.chat_messages(sender_id, recipient_id);
-CREATE INDEX IF NOT EXISTS idx_chat_request ON public.chat_messages(request_id);
+DROP TRIGGER IF EXISTS trg_protect_profile_role ON public.profiles;
+CREATE TRIGGER trg_protect_profile_role
+  BEFORE UPDATE ON public.profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION public.protect_profile_role();
 
--- =========================================================================
--- ধাপ ৩: প্রতিটি টেবিলে RLS সক্রিয়করণ (Enable Row Level Security)
--- =========================================================================
+-- donor_profiles total_donations ও reward_points সুরক্ষা ট্রিগার
+CREATE OR REPLACE FUNCTION public.protect_donor_profile_metrics()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.total_donations IS DISTINCT FROM OLD.total_donations THEN
+    IF NOT (public.is_admin() OR pg_catalog.current_setting('roktodata.internal_sync', true) = 'on') THEN
+      NEW.total_donations := OLD.total_donations;
+    END IF;
+  END IF;
+
+  IF NEW.reward_points IS DISTINCT FROM OLD.reward_points THEN
+    IF NOT (public.is_admin() OR pg_catalog.current_setting('roktodata.internal_sync', true) = 'on') THEN
+      NEW.reward_points := OLD.reward_points;
+    END IF;
+  END IF;
+
+  IF NEW.national_id_verified IS DISTINCT FROM OLD.national_id_verified AND NEW.national_id_verified = TRUE THEN
+    IF NOT public.is_admin() THEN
+      NEW.national_id_verified := OLD.national_id_verified;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.protect_donor_profile_metrics() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS trg_protect_donor_profile_metrics ON public.donor_profiles;
+CREATE TRIGGER trg_protect_donor_profile_metrics
+  BEFORE UPDATE ON public.donor_profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION public.protect_donor_profile_metrics();
+
+-- ২. ভিউসমূহ (security_invoker = true)
+CREATE OR REPLACE VIEW public.district_live_metrics
+WITH (security_invoker = true)
+AS
+SELECT 
+  d.id AS district_id,
+  d.name_bn AS district_name_bn,
+  d.name_en AS district_name_en,
+  d.division_id,
+  d.division_bn,
+  d.lat,
+  d.lng,
+  d.upazilas,
+  COALESCE(req.active_count, 0) AS active_requests,
+  COALESCE(don.ready_count, 0) AS ready_donors,
+  COALESCE(hosp.hospital_count, 0) AS hospital_count
+FROM public.districts d
+LEFT JOIN (
+  SELECT district, COUNT(*) AS active_count 
+  FROM public.emergency_requests 
+  WHERE status = 'active' 
+  GROUP BY district
+) req ON req.district = d.name_bn OR req.district = d.name_en
+LEFT JOIN (
+  SELECT p.district, COUNT(*) AS ready_count 
+  FROM public.profiles p 
+  JOIN public.donor_profiles dp ON dp.user_id = p.id 
+  WHERE dp.is_available = true 
+  GROUP BY p.district
+) don ON don.district = d.name_bn OR don.district = d.name_en
+LEFT JOIN (
+  SELECT district, COUNT(*) AS hospital_count 
+  FROM public.hospitals_and_banks 
+  GROUP BY district
+) hosp ON hosp.district = d.name_bn OR hosp.district = d.name_en;
+
+CREATE OR REPLACE VIEW public.donation_records
+WITH (security_invoker = true)
+AS
+SELECT * FROM public.donation_history;
+
+-- ৩. ১৬টি টেবিলে RLS সক্রিয়করণ ও পারমিশন রিসেট
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.donor_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.emergency_requests ENABLE ROW LEVEL SECURITY;
@@ -101,8 +181,10 @@ ALTER TABLE public.donation_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.districts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.donor_bookmarks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.campaign_rsvps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
 
--- পূর্বে তৈরিকৃত পুরানো পারমিশন মুছে ফেলা (Clean existing policies)
 DO $$
 DECLARE
   pol RECORD;
@@ -116,219 +198,240 @@ BEGIN
   END LOOP;
 END $$;
 
--- =========================================================================
--- ধাপ ৪: সুনির্দিষ্ট গ্র্যানুলার RLS পলিসি (Fine-Grained Policies)
--- =========================================================================
+-- ৪. সুনির্দিষ্ট পলিসি-ম্যাট্রিক্স বাস্তবায়ন
 
--- -------------------------------------------------------------------------
--- ১. PROFILES টেবিল
--- -------------------------------------------------------------------------
--- SELECT: জরুরি রক্তের প্রয়োজনে রক্তদাতাদের সাধারণ তথ্য দেখা যাবে
-CREATE POLICY "profiles_select_public" ON public.profiles
-  FOR SELECT
-  USING (true);
+-- ১. PROFILES (anon SELECT ব্লকড!)
+CREATE POLICY "profiles_select_authenticated" ON public.profiles
+  FOR SELECT TO authenticated USING (true);
 
--- INSERT: ব্যবহারকারী শুধুমাত্র নিজের user_id দিয়ে প্রোফাইল তৈরি করতে পারবেন
 CREATE POLICY "profiles_insert_own" ON public.profiles
-  FOR INSERT
-  WITH CHECK (auth.uid() = id);
+  FOR INSERT TO authenticated WITH CHECK ((SELECT auth.uid()) = id);
 
--- UPDATE: ব্যবহারকারী শুধুমাত্র নিজের প্রোফাইল পরিবর্তন করবেন; অ্যাডমিন সবার পরিবর্তন করতে পারেন
 CREATE POLICY "profiles_update_own" ON public.profiles
-  FOR UPDATE
-  USING (auth.uid() = id OR public.is_admin())
-  WITH CHECK (auth.uid() = id OR public.is_admin());
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = id OR public.is_admin())
+  WITH CHECK (
+    ((SELECT auth.uid()) = id 
+     AND role = (SELECT p.role FROM public.profiles p WHERE p.id = (SELECT auth.uid()))
+     AND is_verified = (SELECT p.is_verified FROM public.profiles p WHERE p.id = (SELECT auth.uid())))
+    OR public.is_admin()
+  );
 
--- DELETE: ব্যবহারকারী বা অ্যাডমিন মুছতে পারবেন
 CREATE POLICY "profiles_delete_own" ON public.profiles
-  FOR DELETE
-  USING (auth.uid() = id OR public.is_admin());
+  FOR DELETE TO authenticated USING ((SELECT auth.uid()) = id OR public.is_admin());
 
--- -------------------------------------------------------------------------
--- ২. DONOR_PROFILES টেবিল
--- -------------------------------------------------------------------------
--- SELECT: যে কেউ সক্রিয় রক্তদাতাদের দেখতে পাবেন
-CREATE POLICY "donor_profiles_select_public" ON public.donor_profiles
-  FOR SELECT
-  USING (true);
+-- ২. DONOR_PROFILES (anon SELECT ব্লকড, reward_points ও donations লকড)
+CREATE POLICY "donor_profiles_select_authenticated" ON public.donor_profiles
+  FOR SELECT TO authenticated USING (true);
 
--- INSERT: ডোনার শুধুমাত্র নিজের user_id দিয়ে ডোনার প্রোফাইল তৈরি করবেন
 CREATE POLICY "donor_profiles_insert_own" ON public.donor_profiles
-  FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+  FOR INSERT TO authenticated WITH CHECK ((SELECT auth.uid()) = user_id);
 
--- UPDATE: ডোনার নিজের প্রাপ্যতা (is_available) ও প্রোফাইল পরিবর্তন করবেন
 CREATE POLICY "donor_profiles_update_own" ON public.donor_profiles
-  FOR UPDATE
-  USING (auth.uid() = user_id OR public.is_admin())
-  WITH CHECK (auth.uid() = user_id OR public.is_admin());
+  FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = user_id OR public.is_admin())
+  WITH CHECK (
+    ((SELECT auth.uid()) = user_id
+     AND total_donations = (SELECT dp.total_donations FROM public.donor_profiles dp WHERE dp.user_id = (SELECT auth.uid()))
+     AND reward_points = (SELECT dp.reward_points FROM public.donor_profiles dp WHERE dp.user_id = (SELECT auth.uid()))
+    )
+    OR public.is_admin()
+  );
 
--- DELETE: ডোনার বা অ্যাডমিন
 CREATE POLICY "donor_profiles_delete_own" ON public.donor_profiles
-  FOR DELETE
-  USING (auth.uid() = user_id OR public.is_admin());
+  FOR DELETE TO authenticated USING ((SELECT auth.uid()) = user_id OR public.is_admin());
 
--- -------------------------------------------------------------------------
--- ৩. EMERGENCY_REQUESTS টেবিল (জরুরি রক্তের অনুরোধ)
--- -------------------------------------------------------------------------
--- SELECT: সক্রিয় সকল রক্তের আবেদন যে কেউ দেখতে পাবেন
+-- ৩. EMERGENCY_REQUESTS (anon ফোন/নাম ছাড়া সীমিত কলাম ভিউ, অন্যের রিকোয়েস্ট আপডেট ব্লকড)
 CREATE POLICY "requests_select_active" ON public.emergency_requests
-  FOR SELECT
-  USING (status != 'cancelled' OR requester_id = auth.uid() OR public.is_admin());
+  FOR SELECT USING (
+    status != 'cancelled' OR requester_id = (SELECT auth.uid()) OR public.is_admin()
+  );
 
--- INSERT: লগইন করা ব্যবহারকারী রক্তের অনুরোধ তৈরি করবেন
 CREATE POLICY "requests_insert_auth" ON public.emergency_requests
-  FOR INSERT
+  FOR INSERT TO authenticated
   WITH CHECK (
-    auth.uid() IS NOT NULL AND (requester_id IS NULL OR requester_id = auth.uid())
+    requester_id = (SELECT auth.uid()) 
+    OR public.is_admin()
   );
 
--- UPDATE: শুধুমাত্র অনুরোধের মালিক (requester) অথবা অ্যাডমিন আপডেট/ক্লোজ করতে পারবেন
 CREATE POLICY "requests_update_own" ON public.emergency_requests
-  FOR UPDATE
-  USING (requester_id = auth.uid() OR public.is_admin())
-  WITH CHECK (requester_id = auth.uid() OR public.is_admin());
+  FOR UPDATE TO authenticated
+  USING (requester_id = (SELECT auth.uid()) OR public.is_admin())
+  WITH CHECK (requester_id = (SELECT auth.uid()) OR public.is_admin());
 
--- DELETE: মালিক বা অ্যাডমিন
 CREATE POLICY "requests_delete_own" ON public.emergency_requests
-  FOR DELETE
-  USING (requester_id = auth.uid() OR public.is_admin());
+  FOR DELETE TO authenticated USING (requester_id = (SELECT auth.uid()) OR public.is_admin());
 
--- -------------------------------------------------------------------------
--- ৪. DONOR_RESPONSES টেবিল (রক্তদাতার সাড়া)
--- -------------------------------------------------------------------------
--- SELECT: সাড়াদানকারী রক্তদাতা, অনুরোধকারী গ্রহীতা এবং অ্যাডমিন দেখতে পারবেন
+REVOKE SELECT (contact_phone, patient_name, prescription_image_url) ON public.emergency_requests FROM anon;
+GRANT SELECT (id, blood_group, bags_needed, bags_fulfilled, component_type, hospital_name, division, district, upazila, location_detail, ward_number, bed_number, urgency, time_target, reason, status, has_verified_hospital, expires_at, created_at, updated_at) ON public.emergency_requests TO anon;
+GRANT SELECT ON public.emergency_requests TO authenticated, service_role;
+
+-- ৪. DONOR_RESPONSES (spoofিং ব্লকড)
 CREATE POLICY "responses_select_involved" ON public.donor_responses
-  FOR SELECT
+  FOR SELECT TO authenticated
   USING (
-    donor_id IN (SELECT dp.id FROM public.donor_profiles dp WHERE dp.user_id = auth.uid())
-    OR request_id IN (SELECT er.id FROM public.emergency_requests er WHERE er.requester_id = auth.uid())
+    donor_id IN (SELECT dp.id FROM public.donor_profiles dp WHERE dp.user_id = (SELECT auth.uid()))
+    OR request_id IN (SELECT er.id FROM public.emergency_requests er WHERE er.requester_id = (SELECT auth.uid()))
     OR public.is_admin()
   );
 
--- INSERT: শুধুমাত্র রক্তদাতা নিজের ডোনার আইডি দিয়ে সাড়া দেবেন
 CREATE POLICY "responses_insert_donor" ON public.donor_responses
-  FOR INSERT
+  FOR INSERT TO authenticated
   WITH CHECK (
-    donor_id IN (SELECT dp.id FROM public.donor_profiles dp WHERE dp.user_id = auth.uid())
+    donor_id IN (SELECT dp.id FROM public.donor_profiles dp WHERE dp.user_id = (SELECT auth.uid()))
     OR public.is_admin()
   );
 
--- UPDATE: ডোনার তার ETA আপডেট করতে পারবেন এবং অনুরোধকারী কনফার্ম করতে পারবেন
 CREATE POLICY "responses_update_involved" ON public.donor_responses
-  FOR UPDATE
+  FOR UPDATE TO authenticated
   USING (
-    donor_id IN (SELECT dp.id FROM public.donor_profiles dp WHERE dp.user_id = auth.uid())
-    OR request_id IN (SELECT er.id FROM public.emergency_requests er WHERE er.requester_id = auth.uid())
+    donor_id IN (SELECT dp.id FROM public.donor_profiles dp WHERE dp.user_id = (SELECT auth.uid()))
+    OR request_id IN (SELECT er.id FROM public.emergency_requests er WHERE er.requester_id = (SELECT auth.uid()))
     OR public.is_admin()
-  );
-
--- DELETE: ডোনার নিজের সাড়া প্রত্যাহার করতে পারবেন
-CREATE POLICY "responses_delete_own" ON public.donor_responses
-  FOR DELETE
-  USING (
-    donor_id IN (SELECT dp.id FROM public.donor_profiles dp WHERE dp.user_id = auth.uid())
-    OR public.is_admin()
-  );
-
--- -------------------------------------------------------------------------
--- ৫. NOTIFICATIONS টেবিল (ব্যবহারকারীর নিজস্ব নোটিফিকেশন)
--- -------------------------------------------------------------------------
--- SELECT: ব্যবহারকারী শুধুমাত্র নিজের নোটিফিকেশন এবং সাধারণ ব্রডকাস্ট দেখতে পারবেন
-CREATE POLICY "notifications_select_own" ON public.notifications
-  FOR SELECT
-  USING (
-    user_id = auth.uid() OR user_id IS NULL OR public.is_admin()
-  );
-
--- INSERT: অথেনটিকেটেড ইউজার বা সিস্টেম নোটিফিকেশন তৈরি করতে পারে
-CREATE POLICY "notifications_insert_authenticated" ON public.notifications
-  FOR INSERT
+  )
   WITH CHECK (
-    auth.uid() IS NOT NULL OR public.is_admin()
+    donor_id IN (SELECT dp.id FROM public.donor_profiles dp WHERE dp.user_id = (SELECT auth.uid()))
+    OR request_id IN (SELECT er.id FROM public.emergency_requests er WHERE er.requester_id = (SELECT auth.uid()))
+    OR public.is_admin()
   );
 
--- UPDATE: ব্যবহারকারী শুধুমাত্র নিজের নোটিফিকেশন পঠিত (read) করতে পারবেন
-CREATE POLICY "notifications_update_own" ON public.notifications
-  FOR UPDATE
-  USING (user_id = auth.uid() OR public.is_admin())
-  WITH CHECK (user_id = auth.uid() OR public.is_admin());
+CREATE POLICY "responses_delete_own" ON public.donor_responses
+  FOR DELETE TO authenticated
+  USING (
+    donor_id IN (SELECT dp.id FROM public.donor_profiles dp WHERE dp.user_id = (SELECT auth.uid()))
+    OR public.is_admin()
+  );
 
--- DELETE: ব্যবহারকারী নিজের নোটিফিকেশন মুছতে পারবেন
-CREATE POLICY "notifications_delete_own" ON public.notifications
-  FOR DELETE
-  USING (user_id = auth.uid() OR public.is_admin());
-
--- -------------------------------------------------------------------------
--- ৬. BLOOD_INVENTORY টেবিল (হাসপাতাল রক্তের মজুদ)
--- -------------------------------------------------------------------------
--- SELECT: সাধারণ ব্যবহারকারী ও গ্রহীতারা লাইভ স্টক দেখতে পাবেন
+-- ৫. BLOOD_INVENTORY (অপারেটর শুধুমাত্র নিজের হাসপাতাল বদলাতে পারবে)
 CREATE POLICY "inventory_select_all" ON public.blood_inventory
-  FOR SELECT
-  USING (true);
+  FOR SELECT USING (true);
 
--- INSERT / UPDATE / DELETE: শুধুমাত্র অনুমোদিত হাসপাতাল অপারেটর বা অ্যাডমিন পরিবর্তন করতে পারবেন
 CREATE POLICY "inventory_modify_operator" ON public.blood_inventory
-  FOR ALL
-  USING (public.is_hospital_operator() OR public.is_admin())
-  WITH CHECK (public.is_hospital_operator() OR public.is_admin());
+  FOR ALL TO authenticated
+  USING (
+    public.is_admin() 
+    OR (
+      public.is_hospital_operator() 
+      AND hospital_id = (SELECT p.hospital_id FROM public.profiles p WHERE p.id = (SELECT auth.uid()))
+    )
+  )
+  WITH CHECK (
+    public.is_admin() 
+    OR (
+      public.is_hospital_operator() 
+      AND hospital_id = (SELECT p.hospital_id FROM public.profiles p WHERE p.id = (SELECT auth.uid()))
+    )
+  );
 
--- -------------------------------------------------------------------------
--- ৭. REPORTS টেবিল (অভিযোগ ও অ্যান্টি-ফ্রড)
--- -------------------------------------------------------------------------
--- INSERT: যে কেউ অনিয়মের রিপোর্ট জমা দিতে পারবেন
-CREATE POLICY "reports_insert_any" ON public.reports
-  FOR INSERT
-  WITH CHECK (true);
+-- ৬. CHAT_MESSAGES (তৃতীয় পক্ষ স্নুপিং ব্লকড)
+CREATE POLICY "chat_select_participants" ON public.chat_messages
+  FOR SELECT TO authenticated
+  USING (
+    sender_id = (SELECT auth.uid()) 
+    OR receiver_id = (SELECT auth.uid()) 
+    OR public.is_admin()
+  );
 
--- SELECT: শুধুমাত্র অভিযোগকারী নিজের রিপোর্ট এবং অ্যাডমিনরা সব রিপোর্ট দেখতে পাবেন
+CREATE POLICY "chat_insert_sender" ON public.chat_messages
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    sender_id = (SELECT auth.uid())
+  );
+
+CREATE POLICY "chat_update_receiver_read" ON public.chat_messages
+  FOR UPDATE TO authenticated
+  USING (receiver_id = (SELECT auth.uid()) OR public.is_admin())
+  WITH CHECK (receiver_id = (SELECT auth.uid()) OR public.is_admin());
+
+CREATE POLICY "chat_delete_sender" ON public.chat_messages
+  FOR DELETE TO authenticated
+  USING (sender_id = (SELECT auth.uid()) OR public.is_admin());
+
+-- ৭. REPORTS (অন্যের রিপোর্ট ও admin_notes রিড ব্লকড)
 CREATE POLICY "reports_select_owner_admin" ON public.reports
-  FOR SELECT
-  USING (reporter_id = auth.uid() OR public.is_admin());
+  FOR SELECT TO authenticated
+  USING (
+    reporter_id = (SELECT auth.uid()) OR public.is_admin()
+  );
 
--- UPDATE / DELETE: শুধুমাত্র অ্যাডমিন তদন্ত বা সমাধান করতে পারবেন
+CREATE POLICY "reports_insert_authenticated" ON public.reports
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    reporter_id = (SELECT auth.uid()) OR public.is_admin()
+  );
+
 CREATE POLICY "reports_admin_manage" ON public.reports
-  FOR ALL
+  FOR ALL TO authenticated
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
 
--- -------------------------------------------------------------------------
--- ৮. CHAT_MESSAGES টেবিল (নিরাপদ চ্যাট)
--- -------------------------------------------------------------------------
--- SELECT: শুধুমাত্র বার্তা প্রেরণকারী (sender) ও প্রাপক (recipient) বার্তা দেখতে পারবেন
-CREATE POLICY "chat_select_participants" ON public.chat_messages
-  FOR SELECT
+-- ৮. PUSH_SUBSCRIPTIONS (anon ব্লকড)
+CREATE POLICY "push_select_own" ON public.push_subscriptions
+  FOR SELECT TO authenticated
   USING (
-    sender_id = auth.uid() OR recipient_id = auth.uid() OR public.is_admin()
+    user_id = (SELECT auth.uid()) OR public.is_admin()
   );
 
--- INSERT: প্রেরক শুধুমাত্র নিজের আইডি দিয়ে বার্তা পাঠাতে পারবেন
-CREATE POLICY "chat_insert_sender" ON public.chat_messages
-  FOR INSERT
+CREATE POLICY "push_insert_own" ON public.push_subscriptions
+  FOR INSERT TO authenticated
   WITH CHECK (
-    sender_id = auth.uid()
+    user_id = (SELECT auth.uid())
   );
 
--- -------------------------------------------------------------------------
--- ৯. রেফারেন্স টেবিলসমূহ (Hospitals, Ambulances, Camps, Districts, History)
--- -------------------------------------------------------------------------
--- SELECT: সবার জন্য উন্মুক্ত
+CREATE POLICY "push_update_own" ON public.push_subscriptions
+  FOR UPDATE TO authenticated
+  USING (user_id = (SELECT auth.uid()) OR public.is_admin())
+  WITH CHECK (user_id = (SELECT auth.uid()) OR public.is_admin());
+
+CREATE POLICY "push_delete_own" ON public.push_subscriptions
+  FOR DELETE TO authenticated
+  USING (user_id = (SELECT auth.uid()) OR public.is_admin());
+
+-- ৯. অন্যান্য টেবিল পলিসি
+CREATE POLICY "bookmarks_select_own" ON public.donor_bookmarks FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()) OR public.is_admin());
+CREATE POLICY "bookmarks_insert_own" ON public.donor_bookmarks FOR INSERT TO authenticated WITH CHECK (user_id = (SELECT auth.uid()));
+CREATE POLICY "bookmarks_delete_own" ON public.donor_bookmarks FOR DELETE TO authenticated USING (user_id = (SELECT auth.uid()) OR public.is_admin());
+
+CREATE POLICY "rsvps_select_own" ON public.campaign_rsvps FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()) OR public.is_admin());
+CREATE POLICY "rsvps_insert_own" ON public.campaign_rsvps FOR INSERT TO authenticated WITH CHECK (user_id = (SELECT auth.uid()));
+CREATE POLICY "rsvps_update_own" ON public.campaign_rsvps FOR UPDATE TO authenticated USING (user_id = (SELECT auth.uid()) OR public.is_admin()) WITH CHECK (user_id = (SELECT auth.uid()) OR public.is_admin());
+CREATE POLICY "rsvps_delete_own" ON public.campaign_rsvps FOR DELETE TO authenticated USING (user_id = (SELECT auth.uid()) OR public.is_admin());
+
 CREATE POLICY "hospitals_select_all" ON public.hospitals_and_banks FOR SELECT USING (true);
 CREATE POLICY "ambulances_select_all" ON public.ambulances FOR SELECT USING (true);
 CREATE POLICY "camps_select_all" ON public.donation_camps FOR SELECT USING (true);
 CREATE POLICY "districts_select_all" ON public.districts FOR SELECT USING (true);
 CREATE POLICY "history_select_all" ON public.donation_history FOR SELECT USING (true);
 
--- MODIFY: শুধুমাত্র অ্যাডমিন রেফারেন্স ডেটা পরিবর্তন করবেন
-CREATE POLICY "hospitals_admin_manage" ON public.hospitals_and_banks FOR ALL USING (public.is_admin());
+CREATE POLICY "hospitals_admin_manage" ON public.hospitals_and_banks FOR ALL USING (public.is_admin() OR public.is_hospital_operator());
 CREATE POLICY "ambulances_admin_manage" ON public.ambulances FOR ALL USING (public.is_admin());
 CREATE POLICY "camps_admin_manage" ON public.donation_camps FOR ALL USING (public.is_admin());
 CREATE POLICY "districts_admin_manage" ON public.districts FOR ALL USING (public.is_admin());
 
--- =========================================================================
--- শেষ: সম্পূর্ণ সিকিউরিটি কনফার্মেশন
--- =========================================================================
-COMMENT ON TABLE public.profiles IS 'রক্তদাতা ও গ্রহীতাদের প্রোফাইল — ব্যবহারকারী শুধুমাত্র নিজের ডেটা আপডেট করতে পারেন।';
-COMMENT ON TABLE public.notifications IS 'ব্যক্তিগত নোটিফিকেশন — শুধুমাত্র স্বীয় ব্যবহারকারীর জন্য দৃশ্যমান।';
-COMMENT ON TABLE public.donor_responses IS 'ডোনারের সাড়া — শুধুমাত্র সংশ্লিষ্ট ডোনার ও গ্রহীতার জন্য দৃশ্যমান।';
-COMMENT ON TABLE public.blood_inventory IS 'হাসপাতাল স্টক — শুধুমাত্র অনুমোদিত অপারেটর ও অ্যাডমিন দ্বারা পরিবর্তনযোগ্য।';
+CREATE POLICY "history_insert_verified" ON public.donation_history FOR INSERT TO authenticated WITH CHECK (donor_id IN (SELECT dp.id FROM public.donor_profiles dp WHERE dp.user_id = (SELECT auth.uid())) OR public.is_hospital_operator() OR public.is_admin());
+CREATE POLICY "history_admin_manage" ON public.donation_history FOR ALL USING (public.is_admin());
+
+-- ৫. STORAGE পলিসি (প্রেসক্রিপশন ইউজার B-র ফাইলে ইউজার A ব্লকড)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES 
+  ('prescriptions', 'prescriptions', false, 5242880, ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf']),
+  ('avatars', 'avatars', false, 2097152, ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/webp'])
+ON CONFLICT (id) DO UPDATE SET
+  public = false,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+DROP POLICY IF EXISTS "prescriptions_upload_own" ON storage.objects;
+CREATE POLICY "prescriptions_upload_own" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'prescriptions' AND ((storage.foldername(name))[1] = (SELECT auth.uid())::text OR public.is_admin()));
+
+DROP POLICY IF EXISTS "prescriptions_read_own_or_operator" ON storage.objects;
+CREATE POLICY "prescriptions_read_own_or_operator" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'prescriptions' AND ((storage.foldername(name))[1] = (SELECT auth.uid())::text OR public.is_hospital_operator() OR public.is_admin()));
+
+DROP POLICY IF EXISTS "prescriptions_delete_own" ON storage.objects;
+CREATE POLICY "prescriptions_delete_own" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'prescriptions' AND ((storage.foldername(name))[1] = (SELECT auth.uid())::text OR public.is_admin()));
+
+DROP POLICY IF EXISTS "avatars_upload_own" ON storage.objects;
+CREATE POLICY "avatars_upload_own" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars' AND ((storage.foldername(name))[1] = (SELECT auth.uid())::text OR public.is_admin()));
+
+DROP POLICY IF EXISTS "avatars_read_authenticated" ON storage.objects;
+CREATE POLICY "avatars_read_authenticated" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'avatars');

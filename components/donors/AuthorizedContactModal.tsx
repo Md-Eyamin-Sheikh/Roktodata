@@ -18,12 +18,15 @@ import {
 import { Donor } from '@/lib/types';
 import { formatBengaliPhone, toBengaliDigits } from '@/lib/bengali-utils';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { revealDonorContact } from '@/lib/services/bloodService';
 
 interface AuthorizedContactModalProps {
   donor: Donor | null;
   isOpen: boolean;
   onClose: () => void;
   onSendDirectRequest: (donor: Donor) => void;
+  onOpenAuth?: () => void;
+  activeRequestId?: string;
 }
 
 export const AuthorizedContactModal: React.FC<AuthorizedContactModalProps> = ({
@@ -31,16 +34,26 @@ export const AuthorizedContactModal: React.FC<AuthorizedContactModalProps> = ({
   isOpen,
   onClose,
   onSendDirectRequest,
+  onOpenAuth,
+  activeRequestId,
 }) => {
   const { language, formatDigits } = useLanguage();
   const [hasConsented, setHasConsented] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [unlockedPhone, setUnlockedPhone] = useState<string | null>(null);
+  const [isUnlocking, setIsUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
+  const [needsAuth, setNeedsAuth] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // Reset state when modal closes
   const handleClose = () => {
     setHasConsented(false);
     setIsUnlocked(false);
+    setUnlockedPhone(null);
+    setUnlockError(null);
+    setNeedsAuth(false);
+    setIsUnlocking(false);
     setCopied(false);
     onClose();
   };
@@ -48,13 +61,39 @@ export const AuthorizedContactModal: React.FC<AuthorizedContactModalProps> = ({
   if (!isOpen || !donor) return null;
 
   const handleCopyPhone = () => {
-    navigator.clipboard.writeText(donor.phone);
+    const phoneToCopy = unlockedPhone || donor.phone;
+    navigator.clipboard.writeText(phoneToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const cleanPhone = donor.phone.replace(/\D/g, '');
+  const handleUnlock = async () => {
+    if (!donor) return;
+    setIsUnlocking(true);
+    setUnlockError(null);
+    setNeedsAuth(false);
+
+    try {
+      const res = await revealDonorContact(donor.id, activeRequestId);
+      setIsUnlocking(false);
+
+      if (res.success && res.phone) {
+        setUnlockedPhone(res.phone);
+        setIsUnlocked(true);
+      } else {
+        setUnlockError(res.error || 'যোগাযোগ নম্বর প্রকাশ করা সম্ভব হয়নি।');
+        if (res.requireAuth) {
+          setNeedsAuth(true);
+        }
+      }
+    } catch (err: any) {
+      setIsUnlocking(false);
+      setUnlockError(err?.message || 'সার্ভার যোগাযোগে ত্রুটি দেখা দিয়েছে।');
+    }
+  };
+
   const isHiddenByDonor = Boolean(donor.privacyHidePhone);
+  const activePhone = unlockedPhone || donor.phone;
 
   return (
     <div
@@ -202,14 +241,34 @@ export const AuthorizedContactModal: React.FC<AuthorizedContactModalProps> = ({
                     </span>
                   </label>
 
+                  {unlockError && (
+                    <div className="p-3 rounded-2xl bg-[#FFF0F2] border border-[#FFCDD2] text-xs text-[#9E0027] space-y-2 animate-in fade-in">
+                      <p className="leading-relaxed">{unlockError}</p>
+                      {needsAuth && onOpenAuth && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleClose();
+                            onOpenAuth();
+                          }}
+                          className="w-full py-2 bg-[#C41E3A] hover:bg-[#A3182F] text-white rounded-xl font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                        >
+                          {language === 'bn' ? 'লগইন বা নিবন্ধন করুন' : 'Login / Register Now'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   <button
-                    onClick={() => setIsUnlocked(true)}
-                    disabled={!hasConsented}
+                    onClick={handleUnlock}
+                    disabled={!hasConsented || isUnlocking}
                     className="w-full h-12 rounded-2xl bg-[#00744B] hover:bg-[#005938] disabled:bg-[#D5D8E0] disabled:text-[#8E929E] text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-98"
                   >
                     <Unlock className="w-4 h-4" />
                     <span>
-                      {language === 'bn' ? 'ফোন নম্বর আনলক করুন' : 'Unlock Contact Information'}
+                      {isUnlocking
+                        ? (language === 'bn' ? 'যাচাই করা হচ্ছে...' : 'Verifying Authorization...')
+                        : (language === 'bn' ? 'ফোন নম্বর আনলক করুন' : 'Unlock Contact Information')}
                     </span>
                   </button>
                 </div>
@@ -228,7 +287,7 @@ export const AuthorizedContactModal: React.FC<AuthorizedContactModalProps> = ({
 
                   <div className="p-3 bg-white rounded-xl border border-[#C8E6C9] flex items-center justify-between gap-2 shadow-2xs">
                     <span className="font-mono font-black text-lg text-[#1B1B1F] tracking-wide">
-                      {formatBengaliPhone(donor.phone)}
+                      {formatBengaliPhone(activePhone)}
                     </span>
                     <button
                       onClick={handleCopyPhone}
@@ -251,7 +310,7 @@ export const AuthorizedContactModal: React.FC<AuthorizedContactModalProps> = ({
                   {/* Action Buttons Grid */}
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     <a
-                      href={`tel:${donor.phone}`}
+                      href={`tel:${activePhone}`}
                       className="h-11 rounded-xl bg-[#00744B] hover:bg-[#005938] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98 transition-all"
                     >
                       <Phone className="w-4 h-4" />

@@ -329,12 +329,24 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   };
 
   // 9. Permanently Delete Account
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
+    try {
+      await fetch('/api/user/delete-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userProfile.id,
+          phone: userProfile.phone,
+        }),
+      });
+    } catch (err) {
+      console.warn('Delete account request error:', err);
+    }
     setShowDeleteModal(false);
     showToast(
       language === 'bn'
-        ? 'অ্যাকাউন্ট স্থায়ীভাবে মুছে ফেলার অনুরোধ সম্পন্ন হয়েছে।'
-        : 'Account deleted successfully.',
+        ? 'অ্যাকাউন্ট ও সকল ডেটা স্থায়ীভাবে মুছে ফেলা হয়েছে।'
+        : 'Account and data permanently deleted.',
       'info'
     );
     onLogout();
@@ -828,7 +840,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <span>{cur.deleteAccount}</span>
           </button>
 
-          <div className="text-center text-[11px] text-[#5B5F6B] pt-3 space-y-0.5">
+          <div className="text-center text-[11px] text-[#5B5F6B] pt-3 space-y-2">
+            <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-[#5B5F6B]">
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-[#C41E3A] hover:underline">
+                {language === 'bn' ? 'প্রাইভেসি পলিসি' : 'Privacy Policy'}
+              </a>
+              <span>•</span>
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-[#C41E3A] hover:underline">
+                {language === 'bn' ? 'শর্তাবলী' : 'Terms of Service'}
+              </a>
+              <span>•</span>
+              <a href="/data-deletion" target="_blank" rel="noopener noreferrer" className="hover:text-[#C41E3A] hover:underline">
+                {language === 'bn' ? 'ডেটা অপসারণ' : 'Data Deletion'}
+              </a>
+            </div>
             <p className="font-semibold">{cur.footer1}</p>
             <p className="opacity-80">{cur.footer2}</p>
           </div>

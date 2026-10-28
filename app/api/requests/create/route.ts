@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { BloodGroup, ComponentType, EmergencyRequest, RequestStatus, UrgencyLevel } from '@/lib/types';
 import { isValidBdPhoneNumber, normalizePhoneNumber } from '@/lib/services/authService';
+import {
+  checkRateLimit,
+  detectDuplicateRequest,
+  recordNewRequest,
+  isPhoneBanned,
+} from '@/lib/services/abuseService';
 
 // In-memory idempotency cache for duplicate request prevention
 interface CachedSubmission {
@@ -112,6 +118,50 @@ export async function POST(req: NextRequest) {
     }
 
     const normalizedPhone = normalizePhoneNumber(contactPhone);
+
+    // 2.1 Abuse & Ban Check
+    if (await isPhoneBanned(normalizedPhone)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'এই মোবাইল নম্বরটি নীতি লঙ্ঘনের কারণে স্থগিত করা হয়েছে। বিস্তারিত জানতে অ্যাডমিন সাপোর্টে যোগাযোগ করুন।',
+          code: 'PHONE_BANNED',
+        },
+        { status: 403 }
+      );
+    }
+
+    // 2.2 Rate Limit Check (Max 3 requests in 10 minutes per phone)
+    const rateCheck = await checkRateLimit(normalizedPhone, 'request_create', 3, 10 * 60 * 1000);
+    if (!rateCheck.isAllowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: rateCheck.reason,
+          code: rateCheck.code,
+        },
+        { status: 429 }
+      );
+    }
+
+    // 2.3 Duplicate Request Detection (Same phone or patient within 2 hours)
+    const duplicateCheck = await detectDuplicateRequest({
+      phone: normalizedPhone,
+      patientName,
+      hospitalName,
+      bloodGroup,
+    });
+    if (!duplicateCheck.isAllowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: duplicateCheck.reason,
+          code: duplicateCheck.code,
+        },
+        { status: 409 }
+      );
+    }
+
     const wardBedFormatted = [
       wardNumber ? `ওয়ার্ড: ${wardNumber}` : '',
       bedNumber ? `বেড: ${bedNumber}` : '',
@@ -214,6 +264,15 @@ export async function POST(req: NextRequest) {
         timestamp: Date.now(),
       });
     }
+
+    // Record in abuse duplicate prevention cache
+    recordNewRequest({
+      id: newRequest.id,
+      phone: normalizedPhone,
+      patientName: newRequest.patientName || '',
+      hospitalName: newRequest.hospitalName,
+      bloodGroup: newRequest.bloodGroup,
+    });
 
     return NextResponse.json(
       {

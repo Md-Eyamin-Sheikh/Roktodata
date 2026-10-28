@@ -1,0 +1,13 @@
+name: Supabase Database Keep-Alive
+on:
+  schedule:
+    - cron: '0 6 * * *' # Every day at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  ping-database:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Keep-Alive Endpoint
+        run: |
+          curl -f -s https://roktodata.vercel.app/api/database/status || echo "Ping completed"

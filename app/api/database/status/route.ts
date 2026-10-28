@@ -1,135 +1,73 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function GET(req: NextRequest) {
-  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const url = rawUrl.trim().replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || '';
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || '';
+  const startTime = Date.now();
+  const supabase = getSupabaseServerClient();
 
-  if (!url || !anonKey) {
+  if (!supabase) {
     return NextResponse.json({
-      success: false,
-      isConfigured: false,
-      message: 'সুপারবেস এনভায়রনমেন্ট কনফিগারেশন পাওয়া যায়নি।',
+      status: 'unconfigured',
+      connected: false,
+      message: 'Supabase এনভায়রনমেন্ট ভেরিয়েবল সেট করা নেই। অ্যাপটি ইন-মেমোরি মোডে চলছে।',
+      latencyMs: 0,
+      timestamp: new Date().toISOString(),
+      freeTierAdvisory: {
+        isFreeTier: true,
+        pauseRisk: 'High if inactive for 7 days',
+        recommendation: 'Use GitHub Actions keep-alive ping or upgrade to Pro tier for 24/7 SLA.',
+      },
     });
   }
 
-  // Use anonKey by default for safe status check; elevate to serviceKey ONLY if authorized
-  const adminKey = req.headers.get('x-admin-key');
-  const expectedKey = process.env.ADMIN_DEV_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const isAuthorized = Boolean(
-    adminKey && (
-      (expectedKey && adminKey === expectedKey) ||
-      adminKey === 'roktodata-admin-2026'
-    )
-  );
-
-  const clientKey = isAuthorized && serviceKey ? serviceKey : anonKey;
-  const client = createClient(url, clientKey);
-
-  // 1. Check Tables and Row Counts
-  const tables = [
-    'profiles',
-    'donor_profiles',
-    'emergency_requests',
-    'donor_responses',
-    'hospitals_and_banks',
-    'ambulances',
-    'donation_camps',
-    'blood_inventory',
-    'donation_history',
-    'notifications',
-    'chat_messages',
-    'reports',
-    'donor_bookmarks',
-    'campaign_rsvps',
-    'push_subscriptions',
-    'districts',
-  ];
-
-  const tableStatus: Record<string, { exists: boolean; count: number; error?: string }> = {};
-
-  for (const table of tables) {
-    try {
-      const { count, error } = await client
-        .from(table)
-        .select('*', { count: 'exact', head: true });
-
-      if (error) {
-        tableStatus[table] = { exists: false, count: 0, error: error.message };
-      } else {
-        tableStatus[table] = { exists: true, count: count || 0 };
-      }
-    } catch (err: any) {
-      tableStatus[table] = { exists: false, count: 0, error: err.message };
-    }
-  }
-
-  // 2. Test Live Write (INSERT & DELETE probe)
-  let writeStatus = {
-    canWrite: false,
-    details: '',
-    errorCode: '',
-  };
-
-  const testProbeId = `test-${Date.now()}`;
   try {
-    const probe = {
-      blood_group: 'O+',
-      bags_needed: 1,
-      hospital_name: 'ভেরিফিকেশন টেস্ট',
-      district: 'ঢাকা',
-      urgency: 'now',
-      patient_name: 'সিস্টেম ডায়াগনস্টিক টেস্ট',
-      contact_phone: '01700000000',
-      reason: testProbeId,
-      status: 'active',
-    };
+    // Keep-alive query: selects single row to keep PostgreSQL engine warm
+    const { data, error } = await (supabase as any)
+      .from('districts')
+      .select('id')
+      .limit(1);
 
-    const { data, error } = await client
-      .from('emergency_requests')
-      .insert(probe)
-      .select('id, patient_name');
+    const latencyMs = Date.now() - startTime;
 
     if (error) {
-      writeStatus = {
-        canWrite: false,
-        details: error.message,
-        errorCode: error.code || 'UNKNOWN',
-      };
-    } else if (data && data.length > 0) {
-      writeStatus = {
-        canWrite: true,
-        details: 'ডেটাবেসে সফলভাবে ডেটা রাইট ও রিড সম্পন্ন হয়েছে!',
-        errorCode: 'NONE',
-      };
-      // Clean up test probe
-      await client.from('emergency_requests').delete().eq('id', data[0].id);
-    } else {
-      writeStatus = {
-        canWrite: false,
-        details: 'রেকর্ড সংরক্ষিত হয়েছে কিন্তু রেসপন্স রিটার্ন হয়নি।',
-        errorCode: 'NO_DATA',
-      };
+      return NextResponse.json(
+        {
+          status: 'error',
+          connected: false,
+          error: error.message,
+          latencyMs,
+          timestamp: new Date().toISOString(),
+        },
+        { status: 500 }
+      );
     }
+
+    return NextResponse.json({
+      status: 'healthy',
+      connected: true,
+      latencyMs,
+      timestamp: new Date().toISOString(),
+      database: 'PostgreSQL (Supabase Live)',
+      freeTierStatus: {
+        keepAliveActive: true,
+        lastKeepAlive: new Date().toISOString(),
+        recommendations: [
+          'জীবনরক্ষাকারী জরুরি সেবার জন্য Supabase Pro ($25/mo) প্ল্যান সক্রিয় করার পরামর্শ দেওয়া হচ্ছে।',
+          'নিয়মিত অফ-সাইট ডেটাবেস ব্যাকআপ ব্যাকগ্রাউন্ড স্ক্রিপ্ট চালানো নিশ্চিত করুন।',
+          'রিয়েলটাইম সংযোগ সীমা (২০০ টি ডিভাইস) অতিক্রম প্রতিরোধে ডিস্ট্রিক্ট লেভেল চ্যানেল সাবস্ক্রিপশন ব্যবহার করুন।',
+        ],
+      },
+    });
   } catch (err: any) {
-    writeStatus = {
-      canWrite: false,
-      details: err.message || 'অজানা ত্রুটি',
-      errorCode: 'EXCEPTION',
-    };
+    return NextResponse.json(
+      {
+        status: 'exception',
+        connected: false,
+        error: err?.message || 'Database ping exception',
+        latencyMs: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 }
+    );
   }
-
-  const allTablesExist = Object.values(tableStatus).every((t) => t.exists);
-
-  return NextResponse.json({
-    success: true,
-    supabaseUrl: url,
-    connected: true,
-    allTablesExist,
-    tableStatus,
-    writeStatus,
-    timestamp: new Date().toISOString(),
-  });
 }

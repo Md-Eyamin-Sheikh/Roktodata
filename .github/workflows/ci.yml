@@ -1,0 +1,88 @@
+name: Roktodata CI / Security & Quality Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    name: 🛡️ Secret Scan (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks Secret Detection
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true # Notifies without blocking if historical rotation is pending
+
+  static-analysis-and-build:
+    name: 🔍 Static Analysis, Security & Production Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: 1️⃣ TypeScript Strict Typecheck (No Emit)
+        run: npx tsc --noEmit
+
+      - name: 2️⃣ ESLint (Strict + Security Plugin)
+        run: npm run lint
+
+      - name: 3️⃣ Production Vulnerability Audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: 4️⃣ Production Next.js Build
+        env:
+          NEXT_PUBLIC_APP_URL: "https://roktodata.org"
+          NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_dummy_ci_token_for_build"
+        run: npm run build
+
+      - name: 5️⃣ Client Bundle Secret Leak Check
+        run: |
+          echo "Scanning .next/static for private keys..."
+          if grep -rE "service_role|VAPID_PRIVATE" .next/static; then
+            echo "❌ CRITICAL SECURITY ALERT: Server private secrets leaked into client bundle!"
+            exit 1
+          else
+            echo "✅ SUCCESS: .next/static is completely clean of private server secrets."
+          fi
+
+  automated-security-tests:
+    name: 🧪 Automated Workflow & Security Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Automated Workflow & Security Tests
+        run: npm test

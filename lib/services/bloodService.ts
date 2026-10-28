@@ -1,3 +1,5 @@
+'use client';
+
 import { getSupabaseClient } from '@/lib/supabase/client';
 import {
   EmergencyRequest,
@@ -33,6 +35,11 @@ import {
   broadcastRealtimeEvent,
   subscribeToLiveEvents,
 } from '@/lib/services/realtimeService';
+import {
+  saveToOfflineCache,
+  getFromOfflineCache,
+  isDemoModePermitted,
+} from '@/lib/services/offlineCache';
 
 /**
  * Normalizes district names by stripping words like 'সদর' or trimming whitespace
@@ -42,25 +49,37 @@ export const normalizeDistrict = (district: string): string => {
 };
 
 /**
- * Fetch emergency blood requests filtered by district
+ * Fetch emergency blood requests filtered by district.
+ * In a life-or-death app, dummy data in production is strictly prevented.
+ * 1. Queries live Supabase emergency_requests.
+ * 2. If online: caches real data with timestamp in localStorage.
+ * 3. If offline/error: returns previously cached REAL data with "সর্বশেষ আপডেট: X" label.
+ * 4. If no real data exists: returns empty array [] (never fake patients).
+ * 5. Mock seed data is ONLY allowed in explicitly enabled Demo Mode.
  */
 export const fetchRequestsByDistrict = async (
   district: string
 ): Promise<EmergencyRequest[]> => {
-  const supabase = getSupabaseClient();
   const cleanDistrict = normalizeDistrict(district);
+  const cacheKey = `roktodata_cache_requests_${cleanDistrict || 'all'}`;
+  const supabase = getSupabaseClient();
 
   if (supabase) {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('emergency_requests')
         .select('*')
-        .ilike('district', `%${cleanDistrict}%`)
         .in('status', ['open', 'active', 'partially_fulfilled'])
         .order('created_at', { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        return (data as any[]).map((r: any) => ({
+      if (cleanDistrict) {
+        query = query.ilike('district', `%${cleanDistrict}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (!error && data) {
+        const liveRequests: EmergencyRequest[] = (data as any[]).map((r: any) => ({
           id: r.id,
           bloodGroup: r.blood_group as BloodGroup,
           bagsNeeded: r.bags_needed,
@@ -89,58 +108,35 @@ export const fetchRequestsByDistrict = async (
           createdAt: 'এইমাত্র',
           timeTarget: r.time_target || 'জরুরি',
         }));
-      }
 
-      // If specific district has no requests yet, load live active requests from Supabase
-      const { data: allLiveReqs } = await supabase
-        .from('emergency_requests')
-        .select('*')
-        .in('status', ['open', 'active', 'partially_fulfilled'])
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (allLiveReqs && allLiveReqs.length > 0) {
-        return (allLiveReqs as any[]).map((r: any) => ({
-          id: r.id,
-          bloodGroup: r.blood_group as BloodGroup,
-          bagsNeeded: r.bags_needed,
-          bagsFulfilled: r.bags_fulfilled || 0,
-          hospitalName: r.hospital_name,
-          location: r.district,
-          division: r.division,
-          district: r.district,
-          distanceKm: 2.5,
-          urgency: r.urgency as any,
-          urgencyLabel: r.urgency === 'now' ? 'এখনই লাগবে' : 'আজকের মধ্যে',
-          patientName: r.patient_name || 'জরুরি রোগী',
-          patientRelation: r.patient_relation || 'আত্মীয়',
-          patientType: r.reason || 'জরুরি রোগী',
-          reason: r.reason || 'জরুরি চিকিৎসা',
-          wardNumber: r.ward_number || '',
-          bedNumber: r.bed_number || '',
-          wardBed: `ওয়ার্ড ${r.ward_number || '১'}, বেড ${r.bed_number || '১'}`,
-          contactNumber: r.contact_phone,
-          prescriptionImageUrl: r.prescription_image_url || undefined,
-          hasVerifiedHospital: r.has_verified_hospital,
-          hasPrescriptionSlip: Boolean(r.prescription_image_url),
-          isCaseVerified: true,
-          status: r.status as RequestStatus,
-          trackingStep: r.tracking_step as any,
-          createdAt: 'এইমাত্র',
-          timeTarget: r.time_target || 'জরুরি',
-        }));
+        // Cache real data
+        saveToOfflineCache(cacheKey, liveRequests, cleanDistrict);
+        return liveRequests;
       }
-    } catch {
-      // Fall through to local dataset
+    } catch (e: any) {
+      console.warn('Supabase fetchRequestsByDistrict network notice:', e?.message);
     }
   }
 
-  // Filter local data matching district
-  const matched = initialEmergencyRequests.filter((r) =>
-    r.location.includes(cleanDistrict) || cleanDistrict.includes(r.location)
-  );
+  // If offline or network error, attempt to load previously cached REAL data
+  const cached = getFromOfflineCache<EmergencyRequest[]>(cacheKey);
+  if (cached && Array.isArray(cached.data)) {
+    return cached.data.map((req) => ({
+      ...req,
+      createdAt: `ক্যাশ করা (${cached.formattedAge})`,
+    }));
+  }
 
-  return matched.length > 0 ? matched : initialEmergencyRequests;
+  // Development/Demo mode only: if explicitly permitted
+  if (isDemoModePermitted()) {
+    const matched = initialEmergencyRequests.filter((r) =>
+      r.location.includes(cleanDistrict) || cleanDistrict.includes(r.location)
+    );
+    return matched.length > 0 ? matched : initialEmergencyRequests;
+  }
+
+  // Production: Return honest empty state — NEVER show fake donors or fake patients
+  return [];
 };
 
 export interface FetchDonorsOptions {
@@ -345,7 +341,8 @@ export const fetchDonorsDirectory = async (
               ? 'সাধারণত ৫-১০ মিনিটে সাড়া দেন'
               : '১৫-২০ মিনিটে সাড়া দেন',
             isVerified: Boolean(p.is_verified),
-            phone: p.phone_number,
+            // Server-side Phone Masking (Zero-Trust Privacy)
+            phone: maskPhoneNumber(p.phone_number),
             phoneMasked: maskPhoneNumber(p.phone_number),
             privacyHidePhone: isPrivacyPhone,
             isFastResponder: Boolean(donorProfile.is_fast_responder),
@@ -360,13 +357,34 @@ export const fetchDonorsDirectory = async (
     }
   }
 
-  // If Supabase didn't yield records, fallback to rich offline initialDonors dataset
-  if (donorPool.length === 0) {
-    donorPool = initialDonors.map((d) => ({
-      ...d,
-      isBookmarked: bookmarkedIds.includes(d.id) || d.isBookmarked,
-      phoneMasked: d.phoneMasked || maskPhoneNumber(d.phone),
-    }));
+  const donorsCacheKey = `roktodata_cache_donors_${cleanDistrict || 'all'}`;
+
+  // If live data was fetched, persist into offline cache
+  if (donorPool.length > 0) {
+    saveToOfflineCache(donorsCacheKey, donorPool, cleanDistrict);
+  } else {
+    // If Supabase was unreachable, check for cached real donors
+    const cachedDonors = getFromOfflineCache<Donor[]>(donorsCacheKey);
+    if (cachedDonors && Array.isArray(cachedDonors.data) && cachedDonors.data.length > 0) {
+      donorPool = cachedDonors.data.map((d) => ({
+        ...d,
+        phone: maskPhoneNumber(d.phone),
+        isBookmarked: bookmarkedIds.includes(d.id) || d.isBookmarked,
+        phoneMasked: d.phoneMasked || maskPhoneNumber(d.phone),
+        lastDonationDate: `${d.lastDonationDate || ''} (পূর্বে সংরক্ষিত: ${cachedDonors.formattedAge})`,
+      }));
+    } else if (isDemoModePermitted()) {
+      // Demo mode only for local development
+      donorPool = initialDonors.map((d) => ({
+        ...d,
+        phone: maskPhoneNumber(d.phone),
+        isBookmarked: bookmarkedIds.includes(d.id) || d.isBookmarked,
+        phoneMasked: d.phoneMasked || maskPhoneNumber(d.phone),
+      }));
+    } else {
+      // In production with 0 records: return empty array honestly (never fake donors in emergencies)
+      donorPool = [];
+    }
   }
 
   // Determine origin coordinates for distance calculation
@@ -632,13 +650,26 @@ export const fetchHospitalsDirectory = async (
     }
   }
 
-  // Fallback to rich initial dataset if Supabase returned nothing
-  if (list.length === 0) {
-    list = initialHospitalsAndBanks.map((h) => ({
-      ...h,
-      district: h.location.includes('বগুড়া') ? 'বগুড়া' : 'ঢাকা',
-      isVerified: true,
-    }));
+  const hospitalsCacheKey = `roktodata_cache_hospitals_${cleanDistrict || 'all'}`;
+
+  if (list.length > 0) {
+    saveToOfflineCache(hospitalsCacheKey, list, cleanDistrict);
+  } else {
+    const cachedHospitals = getFromOfflineCache<HospitalBloodBank[]>(hospitalsCacheKey);
+    if (cachedHospitals && Array.isArray(cachedHospitals.data) && cachedHospitals.data.length > 0) {
+      list = cachedHospitals.data.map((h) => ({
+        ...h,
+        lastUpdated: `পূর্বে সংরক্ষিত (${cachedHospitals.formattedAge})`,
+      }));
+    } else if (isDemoModePermitted()) {
+      list = initialHospitalsAndBanks.map((h) => ({
+        ...h,
+        district: h.location.includes('বগুড়া') ? 'বগুড়া' : 'ঢাকা',
+        isVerified: true,
+      }));
+    } else {
+      list = [];
+    }
   }
 
   // Apply in-memory search and blood group filter
@@ -1015,13 +1046,23 @@ export const fetchAmbulancesDirectory = async (
     }
   }
 
-  // Fallback dataset
-  if (list.length === 0) {
-    list = initialAmbulances.map((a) => ({
-      ...a,
-      district: a.location.includes('বগুড়া') ? 'বগুড়া' : 'ঢাকা',
-      isVerified: true,
-    }));
+  const ambCacheKey = `roktodata_cache_ambulances_${cleanDistrict || 'all'}`;
+
+  if (list.length > 0) {
+    saveToOfflineCache(ambCacheKey, list, cleanDistrict);
+  } else {
+    const cachedAmbulances = getFromOfflineCache<AmbulanceService[]>(ambCacheKey);
+    if (cachedAmbulances && Array.isArray(cachedAmbulances.data) && cachedAmbulances.data.length > 0) {
+      list = cachedAmbulances.data;
+    } else if (isDemoModePermitted()) {
+      list = initialAmbulances.map((a) => ({
+        ...a,
+        district: a.location.includes('বগুড়া') ? 'বগুড়া' : 'ঢাকা',
+        isVerified: true,
+      }));
+    } else {
+      list = [];
+    }
   }
 
   // Apply in-memory filters
@@ -1651,37 +1692,55 @@ export const sendChatMessage = async (
 };
 
 /**
- * Realtime subscription for incoming chat messages in a request conversation
+ * Realtime subscription for incoming chat messages in a request conversation.
+ * Scoped by request_id and restricted to conversation participants.
  */
 export const subscribeToChatMessages = (
   requestId: string,
-  onNewMessage: (msg: SafeChatMessage) => void
+  onNewMessage: (msg: SafeChatMessage) => void,
+  currentUserId?: string
 ) => {
   const supabase = getSupabaseClient();
   if (!supabase) return () => {};
 
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId);
+  const filterString = isUuid ? `request_id=eq.${requestId}` : undefined;
+
   const channel = (supabase as any)
-    .channel(`chat-${requestId}`)
+    .channel(`chat_${requestId}`)
     .on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
         table: 'chat_messages',
+        filter: filterString,
       },
       (payload: any) => {
         const m = payload.new;
-        if (m && (m.request_id === requestId || !m.request_id)) {
-          onNewMessage({
-            id: m.id,
-            requestId: m.request_id,
-            senderId: m.sender_id,
-            receiverId: m.receiver_id,
-            message: m.message,
-            isRead: m.is_read,
-            createdAt: m.created_at,
-          });
+        if (!m) return;
+
+        // Verify request scope
+        if (m.request_id && m.request_id !== requestId) return;
+
+        // Strict participant isolation: only deliver if user is sender or receiver
+        if (
+          currentUserId &&
+          m.sender_id !== currentUserId &&
+          m.receiver_id !== currentUserId
+        ) {
+          return;
         }
+
+        onNewMessage({
+          id: m.id,
+          requestId: m.request_id,
+          senderId: m.sender_id,
+          receiverId: m.receiver_id,
+          message: m.message,
+          isRead: m.is_read,
+          createdAt: m.created_at,
+        });
       }
     )
     .subscribe();
@@ -2942,4 +3001,42 @@ export const subscribeToNotifications = (
   return () => {
     supabase.removeChannel(channel);
   };
+};
+
+/**
+ * Requests authorized unmasking of a donor's contact phone number.
+ * Enforces server-side authentication, emergency match verification, and audit logging.
+ */
+export const revealDonorContact = async (
+  donorId: string,
+  requestId?: string
+): Promise<{ success: boolean; phone?: string; error?: string; requireAuth?: boolean }> => {
+  try {
+    const res = await fetch('/api/donors/reveal', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ donorId, requestId }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      return {
+        success: false,
+        error: data.error || 'যোগাযোগ নম্বর প্রকাশ করা সম্ভব হয়নি।',
+        requireAuth: data.requireAuth || res.status === 401,
+      };
+    }
+
+    return {
+      success: true,
+      phone: data.phone,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || 'সার্ভার যোগাযোগে ব্যর্থ হয়েছে।',
+    };
+  }
 };

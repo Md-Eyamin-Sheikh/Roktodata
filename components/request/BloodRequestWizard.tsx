@@ -98,6 +98,7 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
   const [fileUploadError, setFileUploadError] = useState<string>('');
 
   // Step 4 & 5: Submission & Idempotency
+  const [hasGivenConsent, setHasGivenConsent] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [idempotencyKey, setIdempotencyKey] = useState<string>('');
@@ -203,6 +204,9 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
       errs.push('যোগাযোগের মোবাইল নম্বর প্রদান করুন');
     } else if (!isValidBdPhoneNumber(contactNumber)) {
       errs.push('সঠিক ১১ ডিজিটের বাংলাদেশি নম্বর (০১XXXXXXXXX) দিন');
+    }
+    if (currentStep === 4 && !hasGivenConsent) {
+      errs.push('জরুরি যোগাযোগের জন্য ফোন নম্বর ও অবস্থান প্রদর্শনে সম্মতি দেওয়া আবশ্যক।');
     }
     return errs;
   };
@@ -928,6 +932,11 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
                     প্রেসক্রিপশন দিলে অনুরোধে &quot;যাচাইকৃত রিকুইজিশন&quot; ব্যাজ যুক্ত হবে (সর্বোচ্চ ৫ মেগাবাইট; JPG, PNG, WEBP বা PDF)
                   </p>
 
+                  <div className="p-2.5 rounded-xl bg-[#F0FDF4] border border-[#BBF7D0] flex items-center gap-2 text-[11px] text-[#166534] font-medium">
+                    <ShieldCheck className="w-4 h-4 text-[#16A34A] shrink-0" />
+                    <span>রোগীর সুরক্ষায় ছবির GPS ও EXIF মেটাডেটা স্বয়ংক্রিয়ভাবে মুছে প্রাইভেট ক্লাউড বাকেটে সংরক্ষণ করা হয়।</span>
+                  </div>
+
                   {/* Hidden Real File Input */}
                   <input
                     ref={fileInputRef}
@@ -974,7 +983,7 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
                             {prescriptionFile?.name || 'ডাক্তারের প্রেসক্রিপশন স্লিপ'}
                           </p>
                           <span className="text-[10px] text-[#16A34A] bg-white px-2 py-0.5 rounded-md border border-[#BBF7D0] mt-1 inline-block">
-                            প্রাইভেট স্টোরেজে সংরক্ষিত
+                            প্রাইভেট বাকেট • EXIF মুক্ত • ১৫ মি. সাইনড লিঙ্ক
                           </span>
                         </div>
                       </div>
@@ -1126,6 +1135,19 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* Explicit Consent Checkbox (Legal & Privacy Compliance) */}
+                <label className="flex items-start gap-3 p-3.5 bg-[#FAF9FB] hover:bg-[#F3F2F5] transition-colors rounded-2xl border border-[#E4E6EB] cursor-pointer text-xs text-[#1B1B1F]">
+                  <input
+                    type="checkbox"
+                    checked={hasGivenConsent}
+                    onChange={(e) => setHasGivenConsent(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 text-[#C41E3A] accent-[#C41E3A] rounded border-[#E4E6EB] cursor-pointer shrink-0"
+                  />
+                  <span className="leading-relaxed">
+                    জরুরি রক্তদানের সুবিধার্থে রোগীর সঠিক তথ্যাদি ও যোগাযোগের জন্য আমার প্রদত্ত মোবাইল নম্বর রক্তদাতাদের প্রদর্শনে আমি পূর্ণ সম্মতি প্রদান করছি এবং এর সত্যতার দায়ভার আমার।
+                  </span>
+                </label>
 
                 <div className="p-3 bg-[#EFF6FF] rounded-2xl border border-[#BFDBFE] text-xs text-[#1E3A8A] flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-[#1D4ED8] shrink-0" />

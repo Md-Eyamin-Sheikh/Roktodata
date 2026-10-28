@@ -8,8 +8,8 @@ interface VapidKeys {
 
 export function getVapidKeys(): VapidKeys {
   return {
-    publicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BGgnEH4Oo-V58QV5KjR2WIEechD8nFuunCkPjlIYYo4otbu0Xj143Nayjf4R1lqZIv2qfVBed8SJnXm8yzFlZAQ',
-    privateKey: process.env.VAPID_PRIVATE_KEY || 'T6q-8-YpYvYfSpCcwjRWR5GI5WdCG85OxtQU2LEKve8',
+    publicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
+    privateKey: process.env.VAPID_PRIVATE_KEY || '',
     subject: process.env.VAPID_SUBJECT || 'mailto:support@roktodata.org',
   };
 }
@@ -62,6 +62,9 @@ export async function sendWebPush(
 ): Promise<{ statusCode: number; success: boolean; expired: boolean }> {
   try {
     const keys = getVapidKeys();
+    if (!keys.publicKey || !keys.privateKey) {
+      return { statusCode: 500, success: false, expired: false };
+    }
     const endpointUrl = new URL(endpoint);
     const audience = `${endpointUrl.protocol}//${endpointUrl.host}`;
     const token = createVapidToken(audience, keys);

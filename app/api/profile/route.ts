@@ -1,32 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { getSupabaseServerClient, getAuthenticatedUserFromRequest } from '@/lib/supabase/server';
 import { initialUserProfile } from '@/lib/data';
-
-/**
- * Extracts and verifies the authenticated Supabase user from the request Authorization header
- */
-async function getAuthUser(req: NextRequest, supabase: any) {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.split(' ')[1]?.trim();
-  if (!token) return null;
-
-  try {
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data?.user) return null;
-    return data.user;
-  } catch {
-    return null;
-  }
-}
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = getSupabaseServerClient();
+    const supabase = getSupabaseServerClient(req);
     if (supabase) {
-      const authUser = await getAuthUser(req, supabase);
+      const { user: authUser } = await getAuthenticatedUserFromRequest(req);
 
       // If user is authenticated, retrieve strictly their profile
       if (authUser?.id) {
@@ -87,6 +67,7 @@ export async function GET(req: NextRequest) {
             notificationRadiusKm: 15,
             phoneVisibility: 'all_registered' as const,
             language: 'bn' as const,
+            role: p.role || 'donor',
             textSize: p.text_size_preference || '100%',
             reducedMotion: false,
             isProfileComplete: Boolean(
@@ -137,7 +118,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const authUser = await getAuthUser(req, supabase);
+    const { user: authUser } = await getAuthenticatedUserFromRequest(req);
     if (!authUser?.id) {
       return NextResponse.json(
         { success: false, error: 'অননুমোদিত: আপনি শুধুমাত্র নিজের প্রোফাইল পরিবর্তন করতে পারবেন।' },

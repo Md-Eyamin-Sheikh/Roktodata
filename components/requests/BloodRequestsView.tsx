@@ -257,14 +257,14 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                   </div>
 
                   {/* Prescription Attachment Preview Badge if available */}
-                  {(myRequest.prescriptionImageUrl || (myRequest as any).prescriptionSignedUrl) && (
+                  {(myRequest.prescriptionImageUrl || myRequest.prescriptionSignedUrl) && (
                     <div className="p-2.5 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2 text-[#166534] font-bold">
                         <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
                         <span>ডাক্তারের প্রেসক্রিপশন স্লিপ সংযুক্ত আছে</span>
                       </div>
                       <a
-                        href={myRequest.prescriptionImageUrl || (myRequest as any).prescriptionSignedUrl}
+                        href={myRequest.prescriptionSignedUrl || myRequest.prescriptionImageUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="text-[11px] font-bold text-[#0D58C9] hover:underline"

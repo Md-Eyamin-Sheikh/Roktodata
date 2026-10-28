@@ -1,22 +1,7 @@
 import type { Metadata, Viewport } from 'next';
-import { Noto_Sans_Bengali, Inter } from 'next/font/google';
 import './globals.css';
 import { ToastProvider } from '@/components/ui/ToastNotification';
 import { LanguageProvider } from '@/lib/i18n/LanguageContext';
-
-const notoSansBengali = Noto_Sans_Bengali({
-  subsets: ['bengali'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-noto-bengali',
-  display: 'swap',
-});
-
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['400', '600', '700', '800'],
-  variable: '--font-inter',
-  display: 'swap',
-});
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -47,7 +32,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="bn" className={`${notoSansBengali.variable} ${inter.variable}`}>
+    <html lang="bn">
       <body suppressHydrationWarning className="bg-[#F7F7F9] text-[#1B1B1F] antialiased min-h-screen selection:bg-[#FDECEF] selection:text-[#9E0027]">
         <LanguageProvider>
           <ToastProvider>{children}</ToastProvider>

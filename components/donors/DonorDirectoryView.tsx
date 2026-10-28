@@ -50,6 +50,7 @@ interface DonorDirectoryViewProps {
   onDistrictChange?: (district: string) => void;
   onRequestBloodClick: () => void;
   onSendDirectRequest: (donor: Donor) => void;
+  onOpenAuth?: () => void;
   currentUserId?: string;
 }
 
@@ -59,6 +60,7 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
   onDistrictChange,
   onRequestBloodClick,
   onSendDirectRequest,
+  onOpenAuth,
   currentUserId,
 }) => {
   const { language, t, formatDigits } = useLanguage();
@@ -1324,6 +1326,7 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
         isOpen={Boolean(selectedContactDonor)}
         onClose={() => setSelectedContactDonor(null)}
         onSendDirectRequest={onSendDirectRequest}
+        onOpenAuth={onOpenAuth}
       />
     </div>
   );

@@ -13,7 +13,7 @@ export const HealthEducationView: React.FC<HealthEducationViewProps> = ({
   articles,
   onBack,
 }) => {
-  const [selectedCat, setSelectedCat] = useState<'all' | 'eligibility' | 'before_after' | 'myths'>('all');
+  const [selectedCat, setSelectedCat] = useState<'all' | 'eligibility' | 'before_after' | 'myths' | 'recovery'>('all');
 
   const filtered = articles.filter((a) => selectedCat === 'all' || a.category === selectedCat);
 
@@ -36,6 +36,15 @@ export const HealthEducationView: React.FC<HealthEducationViewProps> = ({
         </div>
       </div>
 
+      {/* Mandatory Medical Disclaimer Banner */}
+      <div className="p-3.5 bg-[#FFF5F6] rounded-2xl border border-[#FFDAD6] text-xs text-[#9E0027] mb-3 flex items-start gap-2.5">
+        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#C41E3A]" />
+        <div className="leading-relaxed">
+          <strong className="block font-bold mb-0.5">জরুরি চিকিৎসা সংক্রান্ত সতর্কতা:</strong>
+          রক্তদাতা প্ল্যাটফর্ম কোনো হাসপাতাল বা চিকিৎসক নয়। এখানে উল্লেখিত স্বাস্থ্য তথ্য প্রাথমিক নির্দেশিকা মাত্র এবং কোনো অবস্থাতেই পেশাদার চিকিৎসা পরামর্শের বিকল্প নয়। রক্তদানের পূর্বে অনুমোদিত স্বাস্থ্যকর্মী দ্বারা স্বাস্থ্য পরীক্ষা (ওজন, রক্তচাপ, হিমোগ্লোবিন) এবং রোগীর জন্য স্ক্রিনিং টেস্ট সম্পন্ন করা বাধ্যতামূলক।
+        </div>
+      </div>
+
       {/* Category Pills */}
       <div className="p-2.5 bg-white rounded-2xl border border-[#E4E6EB]/50 shadow-xs mb-3 flex gap-2 overflow-x-auto no-scrollbar">
         {[
@@ -43,6 +52,7 @@ export const HealthEducationView: React.FC<HealthEducationViewProps> = ({
           { id: 'eligibility', label: 'কারা দিতে পারবেন' },
           { id: 'before_after', label: 'আগে ও পরে' },
           { id: 'myths', label: 'ভুল ধারণা বনাম সত্য' },
+          { id: 'recovery', label: 'হিমোগ্লোবিন রিকভারি' },
         ].map((item) => (
           <button
             key={item.id}
@@ -85,6 +95,16 @@ export const HealthEducationView: React.FC<HealthEducationViewProps> = ({
             </div>
           </article>
         ))}
+      </div>
+
+      {/* Official Guidelines & Authority Citation */}
+      <div className="mt-6 p-4 rounded-2xl bg-white border border-[#E4E6EB] shadow-2xs space-y-2">
+        <h4 className="text-xs font-bold text-[#1B1B1F]">তথ্যসূত্র ও সরকারি নির্দেশিকা:</h4>
+        <p className="text-[11px] text-[#5B5F6B] leading-relaxed">
+          ১. জাতীয় নিরাপদ রক্ত সঞ্চালন গাইডলাইন, <strong>স্বাস্থ্য অধিদপ্তর (DGHS)</strong>, স্বাস্থ্য ও পরিবার কল্যাণ মন্ত্রণালয়, বাংলাদেশ সরকার।<br />
+          ২. নিরাপদ রক্তদান নির্দেশিকা ও যোগ্যতা মানদণ্ড, <strong>বাংলাদেশ রেড ক্রিসেন্ট সোসাইটি (BDRCS)</strong>।<br />
+          ৩. বিশ্ব স্বাস্থ্য সংস্থা (WHO) রক্তদান যোগ্যতা ও হিমোগ্লোবিন পরিমাপ নির্দেশিকা।
+        </p>
       </div>
     </div>
   );

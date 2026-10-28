@@ -501,32 +501,59 @@ erDiagram
 
 ## ৪. লাইভ ভিউ ও ফাংশনসমূহ (Views & Functions)
 
-### ১. `district_live_metrics` (ভিউ)
-৬৪ জেলার জন্য এক ক্যোয়ারিতে সক্রিয় জরুরি অনুরোধ, রক্তদানের জন্য প্রস্তুত ডোনার এবং হাসপাতালের সংখ্যা তাৎক্ষণিকভাবে প্রদান করে।
+### ১. `district_live_metrics` (ভিউ — `WITH (security_invoker = true)`)
+৬৪ জেলার জন্য এক ক্যোয়ারিতে সক্রিয় জরুরি অনুরোধ, রক্তদানের জন্য প্রস্তুত ডোনার এবং হাসপাতালের সংখ্যা তাৎক্ষণিকভাবে প্রদান করে। `security_invoker = true` নিশ্চিত করে ভিউ কোয়েরিকারী ব্যক্তির RLS সম্মান করে এবং ডেটা ফাঁসের সুযোগ বন্ধ করে।
 
 ```sql
 SELECT * FROM public.district_live_metrics WHERE district_id = 'bogura';
 ```
 
-### ২. `find_nearest_district(lat, lng)` (ফাংশন)
+### ২. `donation_records` (ভিউ — `WITH (security_invoker = true)`)
+যাচাইকৃত রক্তদানের ঐতিহাসিক রেকর্ড ভিউ।
+
+### ৩. `find_nearest_district(lat, lng)` (ফাংশন)
 ব্যবহারকারীর ডিভাইস থেকে প্রাপ্ত জিপিএস কোঅর্ডিনেট অনুযায়ী Haversine ফর্মুলা ব্যবহার করে সবচেয়ে কাছের জেলা নির্ণয় করে।
 
 ```sql
 SELECT * FROM public.find_nearest_district(24.8465, 89.3777);
 ```
 
-### ৩. `sync_donor_history_on_donation()` (ট্রিগার)
+### ৪. `sync_donor_history_on_donation()` (ট্রিগার)
 যখন কোনো সফল রক্তদান `donation_history`-তে যুক্ত হয়, ডোনার প্রোফাইলের `total_donations`, `last_donation_date` হালনাগাদ হয় এবং পরবর্তী রক্তদানের তারিখ স্বয়ংক্রিয়ভাবে ৯০ দিন বাড়িয়ে দেওয়া হয়।
+
+### ৫. `claim_blood_stock(hospital_id, blood_group, units)` (অ্যাটমিক RPC)
+`FOR UPDATE` রো-লক সহ স্টক কমানোর নিরাপদ ফাংশন যা সমসাময়িক একাধিক অনুরোধে (Race Condition) স্টক ঋণাত্মক হওয়া সম্পূর্ণরূপে রোধ করে।
+
+### ৬. `fulfill_blood_request(request_id, units, donor_id)` (অ্যাটমিক RPC)
+জরুরি রক্তের আবেদনের বিপরীতে প্রয়োজনীয় ব্যাগের অধিক পূরণ হওয়া বা সম্পন্ন অনুরোধে পুনরায় সাড়া দেওয়া প্রতিরোধ করে।
 
 ---
 
-## ৫. মাইগ্রেশন ফাইলের অবস্থান ও প্রয়োগের নিয়ম
+## ৫. ধাপ ২: ডাটাবেজ ও RLS নিরাপত্তা আর্কিটেকচার (Security Hardening)
 
-* মাইগ্রেশন ফাইল: `supabase/migrations/20261023000000_complete_database_schema.sql`
-* সম্পূর্ণ স্কিমা ফাইল: `supabase/schema.sql`
+* **১৬টি টেবিলেই RLS কার্যকর:** `profiles`, `donor_profiles`, `emergency_requests`, `donor_responses`, `hospitals_and_banks`, `blood_inventory`, `ambulances`, `donation_camps`, `donation_history`, `notifications`, `chat_messages`, `reports`, `donor_bookmarks`, `campaign_rsvps`, `push_subscriptions`, `districts`।
+* **০ Security Warnings:** কোনো টেবিলে ক্ষতিকর ওয়াইল্ডকার্ড রাইট পারমিশন নেই (`WITH CHECK (true)` বর্জিত)।
+* **SECURITY DEFINER কঠোরতা:** প্রতিটি ফাংশনে `SET search_path = ''` এবং অননুমোদিত ইউজার থেকে `REVOKE ALL` প্রয়োগ করা হয়েছে।
+* **ডাটাবেজ কনস্ট্রেইন্ট স্তর:**
+  - `CHECK (bags_needed > 0 AND bags_needed <= 50)`
+  - `CHECK (bags_fulfilled >= 0 AND bags_fulfilled <= bags_needed)`
+  - ফোন নম্বর রেজেক্স: `CHECK (phone_number ~ '^01[3-9][0-9]{8}$')`
+  - হাসপাতাল স্টক: `CHECK (units_available >= 0)`
+  - ইউনিক রেসপন্স: `UNIQUE(request_id, donor_id)`
+* **প্রাইভেট স্টোরেজ বাকেট:**
+  - `prescriptions`: Private, ৫ মেগাবাইট সীমা, অনুমোদিত MIME টাইপ (JPEG, PNG, WebP, PDF), কেবল রোগী ও হাসপাতালের এক্সেস।
+  - `avatars`: Private, ২ মেগাবাইট সীমা।
+
+---
+
+## ৬. মাইগ্রেশন ফাইলের অবস্থান ও প্রয়োগের নিয়ম
+
+* নতুন হার্ডেনিং মাইগ্রেশন: `supabase/migrations/20261028_step2_database_and_rls_hardening.sql`
+* কোর স্কিমা ফাইল: `supabase/schema.sql`
+* আরএলএস পলিসি ফাইল: `supabase/rls_secure_policies.sql`
 
 ### প্রয়োগের পদ্ধতি:
-১. **সুপাবেস ড্যাশবোর্ড (SQL Editor):** `supabase/migrations/20261023000000_complete_database_schema.sql`-এর সম্পূর্ণ কোড কপি করে Supabase SQL Editor-এ রান করুন। এটি সম্পূর্ণ idempotent, তাই বিদ্যমান টেবিলে কোনো এরর হবে না।
+১. **সুপাবেস ড্যাশবোর্ড (SQL Editor):** `supabase/migrations/20261028_step2_database_and_rls_hardening.sql`-এর কোড কপি করে Supabase SQL Editor-এ রান করুন। এটি সম্পূর্ণ idempotent।
 ২. **সুপাবেস সিএলআই (Supabase CLI):**
 ```bash
 supabase db push
