@@ -10,7 +10,11 @@
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_15+-3ECF8E?style=for-the-badge&logo=supabase)](https://supabase.com)
 [![Medical Privacy](https://img.shields.io/badge/Medical_Privacy-Private_Storage-0D58C9?style=for-the-badge&logo=shield)](https://supabase.com/docs/guides/storage)
 [![PWA](https://img.shields.io/badge/PWA-Offline_Ready-5A0FC8?style=for-the-badge&logo=pwa)](https://web.dev/progressive-web-apps/)
+[![Live on Vercel](https://img.shields.io/badge/Live-Vercel_Deployed-000000?style=for-the-badge&logo=vercel)](https://roktodata-01775012014s-projects.vercel.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+
+### 🌐 লাইভ ডেমো | Live Demo
+**[https://roktodata-01775012014s-projects.vercel.app/](https://roktodata-01775012014s-projects.vercel.app/)**
 
 > **রক্তদাতা** হলো বাংলাদেশের ৬৪টি জেলার জরুরি রক্তের সংকট মোকাবেলায় নির্মিত একটি প্রিমিয়াম মোবাইল-ফার্স্ট ও ডেস্কটপ-নেটিভ মানবিক প্ল্যাটফর্ম। এটি সম্পূর্ণ মধ্যস্বত্বভোগীহীন, ১০০% অলাভজনক এবং জীবন বাঁচানোর মুহূর্তে রক্তদাতা ও গ্রহীতাকে রিয়েল-টাইমে সংযুক্ত করে।
 >
@@ -44,9 +48,13 @@
 - [অথেন্টিকেশন আর্কিটেকচার](#-১০০-ফ্রি-অথেন্টিকেশন-আর্কিটেকচার--auth-architecture)
 - [সম্পূর্ণ ফিচার তালিকা](#-সম্পূর্ণ-ফিচার-তালিকা--complete-feature-list)
 - [ডিজাইন সিস্টেম — থিম কালার ও টোকেন](#-ডিজাইন-সিস্টেম--থিম-কালার--design-tokens)
+- [CSS কাস্টম ইউটিলিটি ক্লাস](#-css-কাস্টম-ইউটিলিটি-ক্লাস--custom-css-utilities)
 - [টাইপোগ্রাফি ও ফন্ট ইঞ্জিন](#-টাইপোগ্রাফি-ও-ফন্ট-ইঞ্জিন--typography)
 - [রেসপনসিভ ব্রেকপয়েন্ট ম্যাট্রিক্স](#-রেসপনসিভ-ব্রেকপয়েন্ট-ম্যাট্রিক্স--responsive-matrix)
-- [ডেটা মডেল ও TypeScript ইন্টারফেস](#-ডেটা-মডেল--typescript-interfaces)
+- [TypeScript ডেটা মডেল ও ইন্টারফেস](#-typescript-ডেটা-মডেল-ও-ইন্টারফেস--data-models)
+- [অডিও ইঞ্জিন বিবরণ](#-অডিও-ইঞ্জিন-বিবরণ--audio-engine)
+- [AppShell স্টেট আর্কিটেকচার](#-appshell-স্টেট-আর্কিটেকচার--state-architecture)
+- [SEO ও PWA মেটাডেটা](#-seo-ও-pwa-মেটাডেটা--seo--pwa)
 - [ডেটাবেজ স্কিমা ও SQL পলিসি](#-ডেটাবেজ-স্কিমা-ও-sql-পলিসি--database-schema)
 - [ফাইল স্ট্রাকচার](#-ফাইল-স্ট্রাকচার--file-structure)
 - [এনভায়রনমেন্ট ভ্যারিয়েবল](#-এনভায়রনমেন্ট-ভ্যারিয়েবল--environment-variables)
@@ -674,11 +682,161 @@ npm start
 
 ---
 
+## 🎵 অডিও ইঞ্জিন বিবরণ | Audio Engine
+
+`lib/audioUtils.ts` ফাইলে সম্পূর্ণ নেটিভ **Web Audio API** ব্যবহার করে দুটি সাউন্ড তৈরি করা হয়েছে — কোনো mp3/ogg ফাইল লোড করতে হয় না:
+
+| ফাংশন | সাউন্ড বিবরণ | প্রযুক্তিগত বিস্তারিত |
+|---|---|---|
+| `playNotificationSound()` | মৃদু সাধারণ নোটিফিকেশন চাইম | Sine oscillator: 659.25Hz → 880Hz (E5→A5), duration 0.45s |
+| `playUrgentAlertSound()` | জরুরি রক্তের তীব্র দুই-টোন অ্যালার্ট | Tone 1: Triangle 880Hz (0.15s) + Tone 2: Sine 1174.66Hz (0.27s) |
+| `requestPushPermission()` | ব্রাউজার পুশ পারমিশন অনুরোধ | `Notification.requestPermission()` |
+| `triggerNativeNotification()` | নেটিভ OS নোটিফিকেশন | `new Notification(title, {body, icon, badge, tag})` |
+
+---
+
+## 🏗️ AppShell স্টেট আর্কিটেকচার | State Architecture
+
+`components/layout/AppShell.tsx` হলো অ্যাপের কেন্দ্রীয় স্টেট কন্ট্রোলার। এটি নিম্নলিখিত স্টেট পরিচালনা করে:
+
+### নেভিগেশন স্টেট
+- `activeTab` — URL প্যারামিটার সিঙ্ক (`?tab=requests/donors/profile`) সহ ব্রাউজার ব্যাক-বাটন সাপোর্ট
+- `currentDistrict` — বর্তমান নির্বাচিত জেলা (ডিফল্ট: বগুড়া সদর)
+- **`popstate` ইভেন্ট লিসেনার** — ব্রাউজারের ফরওয়ার্ড/ব্যাক বাটনে সরাসরি ট্যাব পরিবর্তন
+
+### ডেটা স্টেট
+| স্টেট | বিবরণ |
+|---|---|
+| `nearbyRequests` | নিকটস্থ জরুরি রক্তের আবেদনের তালিকা |
+| `myRequest` | বর্তমান ব্যবহারকারীর সক্রিয় আবেদন (localStorage থেকে পুনরুদ্ধারযোগ্য) |
+| `respondingDonors` | আমার আবেদনে সাড়া দেওয়া ডোনারদের তালিকা |
+| `camps` | রক্তদান ক্যাম্পেইনের তালিকা |
+| `donors` | জেলা-ভিত্তিক ডোনার ডিরেক্টরি |
+| `hospitals` | হাসপাতাল ও ব্লাড ব্যাংকের তালিকা |
+| `ambulances` | অ্যাম্বুলেন্স সার্ভিসের তালিকা |
+| `notifications` | ইন-অ্যাপ নোটিফিকেশন (রিয়েল-টাইম আপডেটযোগ্য) |
+| `isOffline` | নেটওয়ার্ক স্ট্যাটাস (`navigator.onLine` মনিটর) |
+
+### হ্যান্ডলার ফাংশনসমূহ
+| হ্যান্ডলার | কাজ |
+|---|---|
+| `handleCreateRequest()` | নতুন রক্তের আবেদন তৈরি ও Supabase-এ সেভ |
+| `handleRespondToRequest()` | ডোনারের সাড়া দেওয়া (ETA ও যাতায়াত মাধ্যম সহ) |
+| `handleConfirmDonor()` | নির্দিষ্ট ডোনারের রক্তদান নিশ্চিত করা |
+| `handleDeclineDonor()` | ডোনারের সাড়া বাতিল |
+| `handleCloseRequest()` | আবেদন সম্পন্ন/আংশিক/বাতিল হিসেবে বন্ধ |
+| `handleRsvpCamp()` | ক্যাম্পেইনে RSVP নিবন্ধন (ডুপ্লিকেট প্রতিরোধ সহ) |
+| `handleShareRequest()` | Web Share API দিয়ে আবেদন শেয়ার |
+| `handleToggleDonorAvailable()` | ডোনার সক্রিয়/বিশ্রামে টগল |
+| `handleSuccessLogin()` | লগইন সফলের পর প্রোফাইল সেটআপ চেক |
+| `handleLogout()` | সম্পূর্ণ ডেটা ক্লিয়ারেন্স সহ লগআউট |
+
+### রিয়েল-টাইম সাবস্ক্রিপশন
+অ্যাপ চালু হওয়ার পরপরই `currentDistrict` পরিবর্তনে তিনটি রিয়েল-টাইম চ্যানেল চালু হয়:
+1. `subscribeToDistrictEvents()` — নতুন রক্তের আবেদন, ডোনার সাড়া ও রিকোয়েস্ট আপডেটের জন্য
+2. `subscribeToNotifications()` — গ্লোবাল নোটিফিকেশন স্ট্রিম
+3. **Service Worker** — PWA অফলাইন ক্যাশিং রেজিস্ট্রেশন
+
+---
+
+## 🔍 SEO ও PWA মেটাডেটা | SEO & PWA
+
+`app/layout.tsx`-এ সম্পূর্ণ Next.js Metadata API ব্যবহার করা হয়েছে:
+
+```typescript
+// Viewport কনফিগারেশন
+viewport: {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,      // নেটিভ মোবাইল অ্যাপ অনুভূতির জন্য
+  viewportFit: 'cover',     // iPhone নচ/Dynamic Island সাপোর্ট
+  themeColor: '#c41e3a',    // ব্রাউজার ক্রোম কালার (ক্রিমসন লাল)
+}
+
+// Open Graph (Facebook, WhatsApp শেয়ারে সুন্দর প্রিভিউ)
+openGraph: { locale: 'bn_BD', type: 'website', ... }
+
+// Twitter Card (X/Twitter শেয়ারে বড় ইমেজ কার্ড)
+twitter: { card: 'summary_large_image', ... }
+```
+
+**PWA Manifest** (`public/manifest.json`):
+- `display: standalone` — পূর্ণ স্ক্রিন অ্যাপ মোড (ব্রাউজার বার লুকানো)
+- `orientation: portrait-primary` — পোর্ট্রেট লক
+- `theme_color: #C41E3A` — অ্যান্ড্রয়েড ট্যাসকবার ও স্প্ল্যাশ স্ক্রিন রঙ
+- `background_color: #F7F7F9` — স্প্ল্যাশ স্ক্রিন ব্যাকগ্রাউন্ড
+
+---
+
+## 🎨 CSS কাস্টম ইউটিলিটি ক্লাস | Custom CSS Utilities
+
+`app/globals.css`-এ কাস্টম ক্লাস:
+
+| ক্লাস | কাজ |
+|---|---|
+| `.no-scrollbar` | স্ক্রলবার লুকানো (মোবাইল নেটিভ ফিল) |
+| `.tabular-nums` | মোনোস্পেস সংখ্যা (টাইমার ও কাউন্টারে কাঁপুনি রোধ) |
+| `.active-press` | ট্যাপে `scale(0.97)` অ্যানিমেশন (নেটিভ বাটন ফিল) |
+| `.interactive-card` | হভারে `-2px translateY` ও বক্স শ্যাডো (ডেস্কটপ এলিভেশন) |
+| `.focus-ring` | কিবোর্ড ফোকাসে ক্রিমসন আউটলাইন (অ্যাক্সেসিবিলিটি) |
+| `.pb-safe` | `env(safe-area-inset-bottom)` — iPhone হোম ইন্ডিকেটর সাপোর্ট |
+| `.pt-safe` | `env(safe-area-inset-top)` — নচ ও Dynamic Island সাপোর্ট |
+
+**অ্যাক্সেসিবিলিটি মিডিয়া কোয়েরি:**
+```css
+@media (prefers-reduced-motion: reduce) {
+  /* সকল animation ও transition বন্ধ — মোশন-সেন্সিটিভ ব্যবহারকারীদের জন্য */
+}
+@media (hover: hover) and (pointer: fine) {
+  /* শুধুমাত্র সত্যিকারের মাউস ডিভাইসে হভার ইফেক্ট */
+}
+```
+
+---
+
+## 🗃️ TypeScript ডেটা মডেল ও ইন্টারফেস | Data Models
+
+`lib/types.ts`-এ সংজ্ঞায়িত সকল TypeScript ইন্টারফেস:
+
+### মূল টাইপ এনাম
+| টাইপ | মান |
+|---|---|
+| `BloodGroup` | `'A+' \| 'A-' \| 'B+' \| 'B-' \| 'O+' \| 'O-' \| 'AB+' \| 'AB-'` |
+| `UrgencyLevel` | `'now' \| 'today' \| '24-48' \| 'scheduled'` |
+| `ComponentType` | `'whole' \| 'platelets' \| 'plasma'` |
+| `StockLevel` | `'adequate' \| 'limited' \| 'empty'` |
+| `TransportMode` | `'walking' \| 'rickshaw' \| 'motorcycle' \| 'car' \| 'public'` |
+| `RequestStatus` | `'open' \| 'active' \| 'partially_fulfilled' \| 'in_progress' \| 'fulfilled' \| 'cancelled' \| 'expired'` |
+| `DonorResponseStatus` | `'accepted' \| 'on_the_way' \| 'confirmed' \| 'declined' \| 'cancelled' \| 'en_route' \| 'pending'` |
+| `ReportStatus` | `'pending' \| 'reviewing' \| 'investigating' \| 'resolved' \| 'dismissed'` |
+
+### মূল ইন্টারফেস সারসংক্ষেপ
+
+| ইন্টারফেস | মূল ক্ষেত্রসমূহ |
+|---|---|
+| `EmergencyRequest` | `id, bloodGroup, hospitalName, location, bagsNeeded, bagsFulfilled, urgency, componentType, patientName, contactNumber, prescriptionImageUrl, trackingStep (1-5), status` |
+| `Donor` | `id, name, bloodGroup, location, isAvailableToday, isVerified, totalDonations, phone, phoneMasked, privacyHidePhone, isFastResponder, isBookmarked` |
+| `RespondingDonor` | `id, bloodGroup, etaMinutes, transportMode, transportLabel, status, distanceKm, isVerified, isFastResponder` |
+| `UserProfile` | `name, email, bloodGroup, donorId, phone, role ('donor'\|'hospital_operator'\|'admin'\|'recipient'), isAvailable, totalDonations, livesImpacted, quietHoursEnabled, textSize, isProfileComplete, badges, donationHistory` |
+| `HospitalBloodBank` | `name, type (7 প্রকার), phone, stocks (৮ গ্রুপের স্টক অবজেক্ট), isVerified, isOpen` |
+| `ChatMessage / SafeChatMessage` | `senderId, receiverId, message, isRead, createdAt, requestId` |
+| `AppNotification` | `category ('urgent'\|'my-req'\|'camps'\|'health'\|'system'), isUnread, actionType, bloodGroup` |
+| `FraudReportPayload` | `reporterId, targetUserId, reason, description, proofFileUrl` |
+| `CreateCampPayload` | `organizer, venue, district, campDate, timeSlot, targetUnits` |
+| `BloodInventoryLog` | `hospitalId, bloodGroup, previousUnits, newUnits, delta, operatorName, reason` |
+
+---
+
 <div align="center">
 
 **রক্তদাতা** — প্রতিটি রক্তের ফোঁটায় একটি অমূল্য মানবজীবন 🩸  
 *১০০% মানবিক, অলাভজনক ও সুরক্ষিত স্বেচ্ছাসেবী উদ্যোগ*
 
 **Made with ❤️ for Bangladesh**
+
+---
+
+🌐 **লাইভ প্রজেক্ট লিংক:** [https://roktodata-01775012014s-projects.vercel.app/](https://roktodata-01775012014s-projects.vercel.app/)
 
 </div>

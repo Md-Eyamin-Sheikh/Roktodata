@@ -6,8 +6,6 @@ import { LanguageProvider } from '@/lib/i18n/LanguageContext';
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: 'cover',
   themeColor: '#c41e3a',
 };
