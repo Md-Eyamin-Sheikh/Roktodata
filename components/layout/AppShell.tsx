@@ -103,16 +103,12 @@ export const AppShell: React.FC<AppShellProps> = ({
   const { language, t, formatDigits } = useLanguage();
 
   // Navigation State with URL parameter synchronization & back-button support
-  const [activeTab, setActiveTabState] = useState<NavTab>(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get('tab') as NavTab;
-      if (tabParam && ['home', 'requests', 'donors', 'profile'].includes(tabParam)) {
-        return tabParam;
-      }
-    }
-    return initialTab;
-  });
+  const [activeTab, setActiveTabState] = useState<NavTab>(initialTab);
+
+  // Synchronize state when initialTab prop updates (e.g., from server router)
+  React.useEffect(() => {
+    setActiveTabState(initialTab);
+  }, [initialTab]);
 
   const setActiveTab = (tab: NavTab) => {
     setActiveTabState(tab);

@@ -1,6 +1,7 @@
 // Roktodata Service Worker for Offline Fallback & Web Push Notifications
-const CACHE_NAME = 'roktodata-v2';
-const STATIC_ASSETS = ['/', '/manifest.json'];
+const CACHE_NAME = 'roktodata-v3';
+const isDev = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+const STATIC_ASSETS = isDev ? ['/manifest.json'] : ['/', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -17,15 +18,34 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   // Don't cache API or supabase requests
   if (event.request.url.includes('/api/') || event.request.url.includes('supabase.co')) {
+    return;
+  }
+  // Intercept and swallow stale woff2 font requests from previous versions
+  if (event.request.url.includes('.woff2')) {
+    event.respondWith(
+      fetch(event.request).then((res) => {
+        if (!res.ok) {
+          return new Response(new Uint8Array([]), {
+            status: 200,
+            headers: { 'Content-Type': 'font/woff2' },
+          });
+        }
+        return res;
+      }).catch(() => {
+        return new Response(new Uint8Array([]), {
+          status: 200,
+          headers: { 'Content-Type': 'font/woff2' },
+        });
+      })
+    );
     return;
   }
   event.respondWith(

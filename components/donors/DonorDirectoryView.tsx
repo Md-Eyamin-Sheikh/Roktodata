@@ -65,81 +65,53 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
 }) => {
   const { language, t, formatDigits } = useLanguage();
 
-  // Helper to read initial state from URL or sessionStorage for persistence across page refresh
-  const getInitialState = () => {
-    if (typeof window === 'undefined') {
-      return {
-        searchQuery: '',
-        selectedGroup: 'all' as BloodGroup | 'all',
-        selectedDistrict: initialDistrictProp || 'বগুড়া সদর',
-        availableOnly: false,
-        verifiedOnly: false,
-        maxDistance: 50,
-        sortBy: 'distance' as 'distance' | 'donations' | 'fastest' | 'recent',
-        activeTab: 'all' as 'all' | 'saved',
-        viewMode: 'list' as 'list' | 'map',
-        currentPage: 1,
-      };
-    }
+  // Initial deterministic filter values for SSR matching
+  const defaultDistrict = initialDistrictProp || 'বগুড়া সদর';
 
+  // Filter & Search State
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [activeTab, setActiveTab] = useState<'all' | 'saved'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState<BloodGroup | 'all'>('all');
+  const [selectedDistrict, setSelectedDistrict] = useState<string>(defaultDistrict);
+  const [availableOnly, setAvailableOnly] = useState<boolean>(false);
+  const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
+  const [maxDistance, setMaxDistance] = useState<number>(50);
+  const [sortBy, setSortBy] = useState<'distance' | 'donations' | 'fastest' | 'recent'>('distance');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 8;
+
+  // Restore filters from URL and sessionStorage safely on client after hydration
+  useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
       const savedStorage = sessionStorage.getItem('roktodata_donor_filters');
       const parsedStorage = savedStorage ? JSON.parse(savedStorage) : {};
 
-      const searchQuery = params.get('q') || parsedStorage.searchQuery || '';
-      const selectedGroup = (params.get('group') as BloodGroup | 'all') || parsedStorage.selectedGroup || 'all';
-      const selectedDistrict = params.get('district') || parsedStorage.selectedDistrict || initialDistrictProp || 'বগুড়া সদর';
-      const availableOnly = params.get('available') === 'true' || parsedStorage.availableOnly || false;
-      const verifiedOnly = params.get('verified') === 'true' || parsedStorage.verifiedOnly || false;
-      const maxDistance = params.get('dist') ? Number(params.get('dist')) : (parsedStorage.maxDistance || 50);
-      const sortBy = (params.get('sort') as any) || parsedStorage.sortBy || 'distance';
-      const activeTab = (params.get('tab') as any) || parsedStorage.activeTab || 'all';
-      const viewMode = (params.get('view') as any) || parsedStorage.viewMode || 'list';
-      const currentPage = params.get('page') ? Number(params.get('page')) : (parsedStorage.currentPage || 1);
-
-      return {
-        searchQuery,
-        selectedGroup,
-        selectedDistrict,
-        availableOnly,
-        verifiedOnly,
-        maxDistance,
-        sortBy,
-        activeTab,
-        viewMode,
-        currentPage,
-      };
+      const q = params.get('q') || parsedStorage.searchQuery;
+      if (q) setSearchQuery(q);
+      const grp = (params.get('group') as BloodGroup | 'all') || parsedStorage.selectedGroup;
+      if (grp) setSelectedGroup(grp);
+      const dist = params.get('district') || parsedStorage.selectedDistrict;
+      if (dist) setSelectedDistrict(dist);
+      const avail = params.has('available') ? params.get('available') === 'true' : parsedStorage.availableOnly;
+      if (avail !== undefined) setAvailableOnly(Boolean(avail));
+      const ver = params.has('verified') ? params.get('verified') === 'true' : parsedStorage.verifiedOnly;
+      if (ver !== undefined) setVerifiedOnly(Boolean(ver));
+      const distKm = params.get('dist') ? Number(params.get('dist')) : parsedStorage.maxDistance;
+      if (distKm) setMaxDistance(distKm);
+      const s = (params.get('sort') as any) || parsedStorage.sortBy;
+      if (s) setSortBy(s);
+      const tab = (params.get('tab') as any) || parsedStorage.activeTab;
+      if (tab) setActiveTab(tab);
+      const view = (params.get('view') as any) || parsedStorage.viewMode;
+      if (view) setViewMode(view);
+      const page = params.get('page') ? Number(params.get('page')) : parsedStorage.currentPage;
+      if (page) setCurrentPage(page);
     } catch {
-      return {
-        searchQuery: '',
-        selectedGroup: 'all' as BloodGroup | 'all',
-        selectedDistrict: initialDistrictProp || 'বগুড়া সদর',
-        availableOnly: false,
-        verifiedOnly: false,
-        maxDistance: 50,
-        sortBy: 'distance' as 'distance' | 'donations' | 'fastest' | 'recent',
-        activeTab: 'all' as 'all' | 'saved',
-        viewMode: 'list' as 'list' | 'map',
-        currentPage: 1,
-      };
+      // Ignore storage errors
     }
-  };
-
-  const initialValues = useMemo(() => getInitialState(), []);
-
-  // Filter & Search State
-  const [viewMode, setViewMode] = useState<'list' | 'map'>(initialValues.viewMode);
-  const [activeTab, setActiveTab] = useState<'all' | 'saved'>(initialValues.activeTab);
-  const [searchQuery, setSearchQuery] = useState(initialValues.searchQuery);
-  const [selectedGroup, setSelectedGroup] = useState<BloodGroup | 'all'>(initialValues.selectedGroup);
-  const [selectedDistrict, setSelectedDistrict] = useState<string>(initialValues.selectedDistrict);
-  const [availableOnly, setAvailableOnly] = useState<boolean>(Boolean(initialValues.availableOnly));
-  const [verifiedOnly, setVerifiedOnly] = useState<boolean>(Boolean(initialValues.verifiedOnly));
-  const [maxDistance, setMaxDistance] = useState<number>(initialValues.maxDistance);
-  const [sortBy, setSortBy] = useState<'distance' | 'donations' | 'fastest' | 'recent'>(initialValues.sortBy);
-  const [currentPage, setCurrentPage] = useState<number>(initialValues.currentPage);
-  const pageSize = 8;
+  }, []);
 
   // UI Modals & Sheets
   const [isFilterOpen, setIsFilterOpen] = useState(false);

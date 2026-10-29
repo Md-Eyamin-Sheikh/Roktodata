@@ -152,11 +152,11 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* Language Switcher Pill - Universal on Mobile & Desktop */}
+            {/* Language Switcher Pill - Hidden on Mobile (<sm), Visible on sm and up */}
             <button
               onClick={toggleLanguage}
               aria-label={language === 'bn' ? 'Switch to English' : 'বাংলা ভাষায় পরিবর্তন করুন'}
-              className="h-8 px-2.5 rounded-full bg-[#F0EDF2] hover:bg-[#E4E6EB] text-[11px] font-black text-[#1B1B1F] flex items-center justify-center transition-all cursor-pointer border border-[#E4E6EB]/80 active:scale-95 shrink-0 shadow-2xs"
+              className="hidden sm:flex h-8 px-2.5 rounded-full bg-[#F0EDF2] hover:bg-[#E4E6EB] text-[11px] font-black text-[#1B1B1F] items-center justify-center transition-all cursor-pointer border border-[#E4E6EB]/80 active:scale-95 shrink-0 shadow-2xs"
               title={language === 'bn' ? 'Switch to English' : 'বাংলা ভাষায় পরিবর্তন করুন'}
             >
               <span className={language === 'bn' ? 'text-[#C41E3A]' : 'text-[#8E929E]'}>বাং</span>

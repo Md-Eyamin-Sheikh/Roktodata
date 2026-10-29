@@ -97,7 +97,7 @@ export const GiveGiftOfLifeHero: React.FC<GiveGiftOfLifeHeroProps> = ({
               src="https://images.unsplash.com/photo-1615461066841-6116e61058f4?q=80&w=1200&auto=format&fit=crop"
               alt="Give the Gift of Life - Blood Donor"
               fill
-              priority
+              loading="eager"
               referrerPolicy="no-referrer"
               className="object-cover object-center"
               sizes="(max-width: 768px) 100vw, 45vw"
