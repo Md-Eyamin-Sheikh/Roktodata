@@ -101,7 +101,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col w-full max-w-7xl xl:max-w-[1440px] 2xl:max-w-[1560px] mx-auto px-3 sm:px-4 md:px-6 2xl:px-8 pb-24 pt-1">
+    <div className="flex flex-col w-full max-w-7xl xl:max-w-[1440px] 2xl:max-w-[1560px] mx-auto px-0 md:px-6 2xl:px-8 pb-24 pt-0 md:pt-1">
       {/* ================= PAGE TITLE & BREADCRUMB (Visible on Tablet/Desktop) ================= */}
       <div className="hidden md:flex items-center justify-between pb-3 mb-2 border-b border-[#E4E6EB]/60">
         <div>
@@ -122,14 +122,14 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
       </div>
 
       {/* ================= SEGMENTED NAVIGATION TABS ================= */}
-      <div className="sticky top-14 md:top-16 z-20 py-2.5 bg-[#F7F7F9]/95 backdrop-blur-md">
-        <div className="flex items-center gap-1.5 p-1 bg-white rounded-2xl shadow-xs border border-[#E4E6EB]/80 max-w-xl">
+      <div className="sticky top-14 md:top-16 z-20 py-2 bg-[#F7F7F9] border-b border-[#E4E6EB] md:border-b-0">
+        <div className="flex items-center gap-1.5 p-1 bg-white md:rounded-2xl border-y md:border border-[#E4E6EB] md:border-[#E4E6EB]/80 max-w-xl md:mx-auto">
           <button
             onClick={() => setActiveSegment('my')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 min-h-[44px] py-2 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               activeSegment === 'my'
                 ? 'bg-[#FDECEF] text-[#C41E3A] shadow-xs'
-                : 'text-[#5B5F6B] hover:text-[#1B1B1F] hover:bg-[#F7F7F9]'
+                : 'text-[#5B5F6B] hover:text-[#1B1B1F] active:bg-[#F7F7F9]'
             }`}
           >
             <span>{t.requests.tabMy}</span>
@@ -142,10 +142,10 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
 
           <button
             onClick={() => setActiveSegment('nearby')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 min-h-[44px] py-2 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
               activeSegment === 'nearby'
                 ? 'bg-[#FDECEF] text-[#C41E3A] shadow-xs'
-                : 'text-[#5B5F6B] hover:text-[#1B1B1F] hover:bg-[#F7F7F9]'
+                : 'text-[#5B5F6B] hover:text-[#1B1B1F] active:bg-[#F7F7F9]'
             }`}
           >
             <span>{t.requests.tabNearby}</span>
@@ -156,10 +156,10 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
 
           <button
             onClick={() => setActiveSegment('regular')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+            className={`flex-1 min-h-[44px] py-2 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
               activeSegment === 'regular'
                 ? 'bg-[#FDECEF] text-[#C41E3A] shadow-xs'
-                : 'text-[#5B5F6B] hover:text-[#1B1B1F] hover:bg-[#F7F7F9]'
+                : 'text-[#5B5F6B] hover:text-[#1B1B1F] active:bg-[#F7F7F9]'
             }`}
           >
             <Calendar className="w-3.5 h-3.5" />
@@ -170,14 +170,14 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
 
       {/* ================= TAB 1: MY ACTIVE REQUEST ================= */}
       {activeSegment === 'my' && (
-        <div className="mt-2 space-y-4 md:space-y-6">
+        <div className="mt-1 md:mt-2 space-y-3.5 md:space-y-6">
           {myRequest ? (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-6 items-start divide-y lg:divide-y-0 divide-[#E4E6EB]">
               
               {/* LEFT COLUMN: Request Card & Real-time Progress Tracking (5 cols on desktop) */}
-              <div className="lg:col-span-5 space-y-4">
+              <div className="lg:col-span-5 space-y-0 lg:space-y-4">
                 {/* Active Request Overview Card */}
-                <div className="bg-white rounded-3xl p-5 shadow-xs border border-[#E4E6EB]/80 relative overflow-hidden space-y-4">
+                <div className="bg-white border-y lg:border border-[#E4E6EB] lg:border-[#E4E6EB]/80 lg:rounded-3xl p-4 sm:p-5 lg:shadow-xs relative overflow-hidden space-y-4">
                   {/* Top Status Gradient Bar */}
                   <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#C41E3A] via-[#E53935] to-[#FF8A80]" />
 
@@ -195,7 +195,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                         ? 'bg-[#DBEAFE] text-[#1E40AF]'
                         : 'bg-[#F3F4F6] text-[#4B5563]'
                     }`}>
-                      {myRequest.status === 'open'
+                      {myRequest.status === 'open' || myRequest.status === 'active'
                         ? '● উন্মুক্ত (Open)'
                         : myRequest.status === 'partially_fulfilled'
                         ? `● আংশিক পূরণ (${toBengaliDigits(myRequest.bagsFulfilled || 1)}/${toBengaliDigits(myRequest.bagsNeeded)} ব্যাগ)`
@@ -617,9 +617,9 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
 
       {/* ================= TAB 2: NEARBY REQUESTS ================= */}
       {activeSegment === 'nearby' && (
-        <div className="mt-2 space-y-4">
+        <div className="mt-1 md:mt-2 space-y-3 md:space-y-4">
           {/* Live Request Flow & Urgency Analytics Bar */}
-          <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-[#E4E6EB]/80 space-y-3.5">
+          <div className="bg-white border-y md:border border-[#E4E6EB] md:border-[#E4E6EB]/80 md:rounded-3xl px-4 max-[360px]:px-3 py-3.5 sm:p-5 md:shadow-xs space-y-3.5">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-[#E4E6EB]/60 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-[#FDECEF] text-[#C41E3A] flex items-center justify-center font-bold">
@@ -675,15 +675,15 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
           </div>
 
           {/* Filter Bar: Blood Group Pills & Distance Filter */}
-          <div className="bg-white rounded-2xl p-3 shadow-xs border border-[#E4E6EB]/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="bg-white border-y md:border border-[#E4E6EB] md:border-[#E4E6EB]/80 md:rounded-2xl px-4 max-[360px]:px-3 py-3 md:shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
             {/* Blood Group Chips */}
             <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 no-scrollbar">
-              <Filter className="w-3.5 h-3.5 text-[#5B5F6B] shrink-0 ml-1 mr-0.5" />
+              <Filter className="w-3.5 h-3.5 text-[#5B5F6B] shrink-0 ml-0.5 mr-0.5" />
               {bloodGroupOptions.map((bg) => (
                 <button
                   key={bg}
                   onClick={() => setSelectedBloodFilter(bg)}
-                  className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  className={`min-h-[36px] px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center ${
                     selectedBloodFilter === bg || (selectedBloodFilter === 'ALL' && bg === allBloodLabel)
                       ? 'bg-[#C41E3A] text-white shadow-xs'
                       : 'bg-[#F7F7F9] text-[#5B5F6B] hover:bg-[#F0EDF2]'
@@ -701,7 +701,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
               </span>
               <button
                 onClick={() => setSelectedDistanceFilter('all')}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                className={`min-h-[36px] px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer flex items-center ${
                   selectedDistanceFilter === 'all'
                     ? 'bg-[#1B1B1F] text-white'
                     : 'bg-[#F7F7F9] text-[#5B5F6B] hover:bg-[#F0EDF2]'
@@ -711,7 +711,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
               </button>
               <button
                 onClick={() => setSelectedDistanceFilter('5km')}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                className={`min-h-[36px] px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer flex items-center ${
                   selectedDistanceFilter === '5km'
                     ? 'bg-[#1B1B1F] text-white'
                     : 'bg-[#F7F7F9] text-[#5B5F6B] hover:bg-[#F0EDF2]'
@@ -721,7 +721,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
               </button>
               <button
                 onClick={() => setSelectedDistanceFilter('10km')}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                className={`min-h-[36px] px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer flex items-center ${
                   selectedDistanceFilter === '10km'
                     ? 'bg-[#1B1B1F] text-white'
                     : 'bg-[#F7F7F9] text-[#5B5F6B] hover:bg-[#F0EDF2]'
@@ -733,7 +733,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
           </div>
 
           {/* Request Count Announcement */}
-          <div className="flex items-center justify-between px-1">
+          <div className="flex items-center justify-between px-4 max-[360px]:px-3 md:px-1">
             <span className="text-xs font-bold text-[#5B5F6B]">
               {language === 'bn'
                 ? `আপনার এলাকায় ${formatDigits(filteredNearby.length)}টি জরুরি রক্তের প্রয়োজন চলমান`
@@ -745,25 +745,25 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
           </div>
 
           {/* Clinical Cross-matching Advisory */}
-          <div className="bg-[#FFF8E1] border border-[#FFE082] rounded-2xl p-3 flex items-start gap-2.5 text-xs text-[#7A4F01]">
+          <div className="bg-[#FFF8E1] border-y md:border border-[#FFE082] md:rounded-2xl px-4 max-[360px]:px-3 py-3 flex items-start gap-2.5 text-xs text-[#7A4F01]">
             <ShieldAlert className="w-4 h-4 text-[#F59E0B] shrink-0 mt-0.5" />
             <p className="leading-relaxed">
               <span className="font-bold">চিকিৎসাগত নির্দেশিকা:</span> রক্তদানের পূর্বে সংশ্লিষ্ট হাসপাতালে চিকিৎসক ও ল্যাবরেটরি কর্তৃক রক্তের ক্রস-ম্যাচিং (Major & Minor Cross-match) সম্পন্ন করা বাধ্যতামূলক। পূর্ববর্তী রক্তদানের পর পুরুষের ক্ষেত্রে ৯০ দিন ও নারীদের ক্ষেত্রে ১২০ দিন অতিবাহিত হতে হবে।
             </p>
           </div>
 
-          {/* Grid of Nearby Requests (1-col mobile, 2-col tablet, 3-col desktop) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Grid of Nearby Requests (Flat list on mobile with hairlines, cards on desktop) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 md:gap-4 divide-y md:divide-y-0 divide-[#E4E6EB] border-y md:border-0 border-[#E4E6EB]">
             {filteredNearby.map((req) => (
               <article
                 key={req.id}
-                className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-[#E4E6EB]/80 hover:border-[#C41E3A]/40 transition-all flex flex-col justify-between"
+                className="bg-white md:rounded-3xl px-4 max-[360px]:px-3 py-4 md:p-5 md:shadow-xs md:border border-[#E4E6EB]/80 md:hover:border-[#C41E3A]/40 transition-all flex flex-col justify-between"
               >
                 <div>
                   {/* Card Header: Group & Urgency */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FDECEF] to-[#FFDAD6] text-[#C41E3A] flex flex-col items-center justify-center shrink-0 font-black text-xl shadow-xs">
+                      <div className="w-13 h-13 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-[#FDECEF] to-[#FFDAD6] text-[#C41E3A] flex flex-col items-center justify-center shrink-0 font-black text-xl shadow-xs">
                         {req.bloodGroup}
                         <span className="text-[10px] text-[#9E0027] font-bold leading-none mt-0.5">
                           {formatDigits(req.bagsNeeded)} {language === 'bn' ? 'ব্যাগ' : 'bags'}
@@ -775,7 +775,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                           {req.hospitalName}
                         </h3>
                         <p className="text-xs text-[#5B5F6B] mt-0.5 flex items-center gap-1 truncate">
-                          <MapPin className="w-3.5 h-3.5 text-[#C41E3A] shrink-0" />
+                          <MapPin className="w-3.5 h-3.5 text-[#5B5F6B] shrink-0" />
                           <span>
                             {formatDigits(req.distanceKm)} {language === 'bn' ? 'কিমি দূরে' : 'km away'}
                           </span>
@@ -815,7 +815,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                   ) : req.hasResponded ? (
                     <button
                       onClick={() => onOpenDonorResponse(req)}
-                      className="h-9 px-3.5 bg-[#EBF3FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] text-[#0D58C9] rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                      className="min-h-[44px] md:h-9 px-3.5 bg-[#EBF3FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] text-[#0D58C9] rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
                     >
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
                       <span>
@@ -827,7 +827,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
                   ) : (
                     <button
                       onClick={() => onOpenDonorResponse(req)}
-                      className="h-9 px-4 bg-gradient-to-r from-[#9E0027] to-[#C41E3A] hover:from-[#80001F] hover:to-[#B01A33] text-white rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                      className="min-h-[44px] md:h-9 px-4 bg-gradient-to-r from-[#9E0027] to-[#C41E3A] hover:from-[#80001F] hover:to-[#B01A33] text-white rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
                     >
                       <Heart className="w-3.5 h-3.5 fill-current" />
                       <span>{language === 'bn' ? 'সাড়া দিন' : 'Respond'}</span>
@@ -839,7 +839,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
           </div>
 
           {filteredNearby.length === 0 && (
-            <div className="bg-white rounded-3xl p-8 text-center border border-[#E4E6EB]/80 space-y-2">
+            <div className="bg-white border-y md:border border-[#E4E6EB] md:border-[#E4E6EB]/80 md:rounded-3xl p-8 text-center space-y-2">
               <p className="text-sm font-bold text-[#1B1B1F]">
                 {language === 'bn' ? 'কোনো অনুরোধ পাওয়া যায়নি' : 'No requests found'}
               </p>
@@ -936,7 +936,7 @@ export const BloodRequestsView: React.FC<BloodRequestsViewProps> = ({
 
       {/* 1.5s Quiet Donation Confirmation Moment (Section 12 requirement) */}
       {showDonationCelebration && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
           <div className="bg-white rounded-3xl p-6 text-center space-y-3 shadow-2xl max-w-xs animate-in zoom-in-95">
             <div className="w-16 h-16 rounded-full bg-[#E8F5E9] text-[#166534] flex items-center justify-center mx-auto shadow-md">
               <Check className="w-8 h-8 stroke-[3]" />

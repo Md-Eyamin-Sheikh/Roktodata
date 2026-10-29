@@ -329,8 +329,8 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
     <div className="flex flex-col w-full pb-24">
       {/* ================= TOP NAVIGATION & PROGRESS HEADER ================= */}
       {currentStep <= 4 && (
-        <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-xl border-b border-[#E4E6EB]/80 shadow-xs">
-          <div className="max-w-5xl mx-auto px-3.5 sm:px-6 py-2.5 sm:py-3.5">
+        <header className="sticky top-0 z-40 w-full bg-white md:bg-white/95 md:backdrop-blur-xl border-b border-[#E4E6EB] shadow-xs">
+          <div className="max-w-5xl mx-auto px-4 max-[360px]:px-3 sm:px-6 py-2.5 sm:py-3.5">
             <div className="flex items-center justify-between gap-2.5 mb-2.5">
               <button
                 onClick={() => (currentStep > 1 ? setCurrentStep((s) => (s - 1) as any) : handleExit())}
@@ -388,7 +388,7 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
       )}
 
       {/* ================= RESPONSIVE LAYOUT ================= */}
-      <div className="w-full max-w-5xl mx-auto px-3 sm:px-4 md:px-6 pt-3 sm:pt-4">
+      <div className="w-full max-w-5xl mx-auto px-4 max-[360px]:px-3 md:px-6 pt-3 sm:pt-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
           {/* PRIMARY FORM COLUMN */}
           <div className={currentStep <= 4 ? 'lg:col-span-7 space-y-4' : 'lg:col-span-12'}>
@@ -618,7 +618,7 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
                       <select
                         value={selectedDivision}
                         onChange={(e) => handleDivisionChange(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-sm text-[#1B1B1F] font-bold outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60 cursor-pointer"
+                        className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-[16px] sm:text-sm text-[#1B1B1F] font-bold outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60 cursor-pointer"
                       >
                         {divisionsList.map((div) => (
                           <option key={div.id} value={div.nameBn}>
@@ -633,7 +633,7 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
                       <select
                         value={selectedDistrict}
                         onChange={(e) => setSelectedDistrict(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-sm text-[#1B1B1F] font-bold outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60 cursor-pointer"
+                        className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-[16px] sm:text-sm text-[#1B1B1F] font-bold outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60 cursor-pointer"
                       >
                         {availableDistricts.map((dist) => (
                           <option key={dist.id} value={dist.nameBn}>
@@ -663,7 +663,7 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
                       value={hospitalName}
                       onChange={(e) => handleHospitalChange(e.target.value)}
                       placeholder="হাসপাতালের নাম লিখুন বা তালিকা থেকে বাছুন..."
-                      className="w-full h-12 pl-11 pr-10 rounded-2xl bg-[#F7F7F9] text-[#1B1B1F] text-sm focus:bg-white focus:ring-2 focus:ring-[#C41E3A] outline-none transition-all border border-[#E4E6EB]/60"
+                      className="w-full h-12 pl-11 pr-10 rounded-2xl bg-[#F7F7F9] text-[#1B1B1F] text-[16px] sm:text-sm focus:bg-white focus:ring-2 focus:ring-[#C41E3A] outline-none transition-all border border-[#E4E6EB]/60"
                     />
                     {hospitalName && (
                       <button
@@ -735,7 +735,7 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
                         value={wardNumber}
                         onChange={(e) => setWardNumber(e.target.value)}
                         placeholder="উদা: ৪ বা সার্জারি"
-                        className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-sm text-[#1B1B1F] outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60"
+                        className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-[16px] sm:text-sm text-[#1B1B1F] outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60"
                       />
                     </div>
                     <div>
@@ -745,7 +745,7 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
                         value={bedNumber}
                         onChange={(e) => setBedNumber(e.target.value)}
                         placeholder="উদা: ১২"
-                        className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-sm text-[#1B1B1F] outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60"
+                        className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-[16px] sm:text-sm text-[#1B1B1F] outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60"
                       />
                     </div>
                     <div>
@@ -755,7 +755,7 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
                         value={cabinNumber}
                         onChange={(e) => setCabinNumber(e.target.value)}
                         placeholder="উদা: ৩০২"
-                        className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-sm text-[#1B1B1F] outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60"
+                        className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-[16px] sm:text-sm text-[#1B1B1F] outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60"
                       />
                     </div>
                   </div>
@@ -834,7 +834,7 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
                         value={patientName}
                         onChange={(e) => setPatientName(e.target.value)}
                         placeholder="রোগীর সম্পূর্ণ নাম"
-                        className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-sm text-[#1B1B1F] outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60 font-semibold"
+                        className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-[16px] sm:text-sm text-[#1B1B1F] outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60 font-semibold"
                       />
                     </div>
 
@@ -843,7 +843,7 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
                       <select
                         value={patientRelation}
                         onChange={(e) => setPatientRelation(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-sm text-[#1B1B1F] outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60 cursor-pointer font-semibold"
+                        className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-[16px] sm:text-sm text-[#1B1B1F] outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60 cursor-pointer font-semibold"
                       >
                         <option value="মা">মা</option>
                         <option value="বাবা">বাবা</option>
@@ -862,7 +862,7 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
                     <select
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
-                      className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-sm text-[#1B1B1F] outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60 cursor-pointer font-semibold"
+                      className="w-full h-11 px-3.5 rounded-2xl bg-[#F7F7F9] text-[16px] sm:text-sm text-[#1B1B1F] outline-none focus:bg-white focus:ring-1 focus:ring-[#C41E3A] border border-[#E4E6EB]/60 cursor-pointer font-semibold"
                     >
                       <option value="জরুরি অপারেশন">জরুরি অপারেশন</option>
                       <option value="প্রসবকালীন জটিলতা (সিজারিয়ান)">প্রসবকালীন জটিলতা (সিজারিয়ান)</option>
@@ -1264,7 +1264,7 @@ export const BloodRequestWizard: React.FC<BloodRequestWizardProps> = ({
 
             {/* Bottom Navigation CTA */}
             {currentStep <= 4 && (
-              <div className="pt-2">
+              <div className="sticky bottom-0 z-30 bg-white/95 md:bg-transparent backdrop-blur-none -mx-4 max-[360px]:-mx-3 md:mx-0 px-4 max-[360px]:px-3 pb-safe pt-2 border-t border-[#E4E6EB] md:border-t-0">
                 <button
                   type="button"
                   onClick={handleNext}

@@ -352,183 +352,212 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     onLogout();
   };
 
+  // Swipe to close bottom sheet handler
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartY(e.touches[0].clientY);
+  };
+  const handleTouchEnd = (e: React.TouchEvent, onClose: () => void) => {
+    if (touchStartY !== null) {
+      const deltaY = e.changedTouches[0].clientY - touchStartY;
+      if (deltaY > 50) {
+        onClose();
+      }
+      setTouchStartY(null);
+    }
+  };
+
   return (
-    <div className="flex flex-col w-full max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 pb-28 pt-2">
-      {/* ================= TOP HEADER BAR ================= */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#E4E6EB]/80 p-3 sm:p-4 mb-4 shadow-xs flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+    <div className="flex flex-col w-full max-w-4xl mx-auto px-0 md:px-6 pb-28 pt-0 md:pt-2">
+      {/* ================= MOBILE NATIVE HEADER (< md) ================= */}
+      <div className="sticky top-0 z-30 bg-[#F7F7F9] border-b border-[#E4E6EB] px-4 max-[360px]:px-3 h-14 flex items-center justify-between gap-2 md:hidden">
+        <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={onBack}
             aria-label={language === 'bn' ? 'ফিরে যান' : 'Go back'}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-[#1B1B1F] hover:bg-[#F7F7F9] active:scale-95 transition-all border border-[#E4E6EB]/70 cursor-pointer shrink-0"
+            className="w-10 h-10 -ml-1.5 rounded-full flex items-center justify-center text-[#1B1B1F] active:bg-[#E4E6EB] transition-colors cursor-pointer shrink-0"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 text-[#5B5F6B]" />
           </button>
           <div className="flex flex-col min-w-0">
-            <h1 className="font-extrabold text-[16px] sm:text-[18px] text-[#1B1B1F] leading-tight truncate">
+            <h1 className="font-extrabold text-[17px] text-[#1B1B1F] leading-tight truncate">
               {cur.title}
             </h1>
-            <span className="text-[11px] sm:text-xs text-[#5B5F6B] mt-0.5 truncate hidden sm:block">
-              {cur.subtitle}
-            </span>
           </div>
         </div>
 
-        {/* Header Right: Language Switcher & 100% Functional Help Button */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="flex p-0.5 bg-[#F5F4F7] rounded-xl border border-[#E4E6EB]">
-            <button
-              onClick={() => handleToggleLanguage('bn')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                language === 'bn'
-                  ? 'bg-white text-[#C41E3A] shadow-xs'
-                  : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
-              }`}
-            >
-              বাংলা
-            </button>
-            <button
-              onClick={() => handleToggleLanguage('en')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                language === 'en'
-                  ? 'bg-white text-[#C41E3A] shadow-xs'
-                  : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
-              }`}
-            >
-              EN
-            </button>
-          </div>
-
-          {/* 100% Functional Help Modal Trigger Button */}
-          <button
-            onClick={() => setShowHelpModal(true)}
-            title={cur.helpBtn}
-            aria-label={cur.helpBtn}
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-[#E4E6EB]/80 bg-[#FAF9FB] hover:bg-[#FDECEF] hover:border-[#FFCDD2] hover:text-[#C41E3A] text-[#5B5F6B] flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
-          >
-            <HelpCircle className="w-5 h-5" />
-          </button>
-        </div>
+        <button
+          onClick={() => setShowHelpModal(true)}
+          title={cur.helpBtn}
+          aria-label={cur.helpBtn}
+          className="w-10 h-10 rounded-full flex items-center justify-center text-[#5B5F6B] hover:bg-black/5 active:bg-black/10 transition-colors cursor-pointer shrink-0"
+        >
+          <HelpCircle className="w-5 h-5" />
+        </button>
       </div>
 
-      {/* ================= USER SUMMARY STATUS BADGE ================= */}
-      <div className="bg-white rounded-2xl p-3 sm:p-3.5 border border-[#E4E6EB]/80 mb-4 shadow-xs flex items-center justify-between">
+      {/* ================= MOBILE USER STATUS BAR (< md) ================= */}
+      <div className="bg-white border-b border-[#E4E6EB] px-4 max-[360px]:px-3 py-3 flex items-center justify-between md:hidden">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-[#C41E3A] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+          <div className="w-10 h-10 rounded-xl bg-[#C41E3A] text-white flex items-center justify-center font-black text-sm shrink-0">
             {userProfile.bloodGroup || 'AB+'}
           </div>
           <div className="min-w-0">
-            <span className="text-xs sm:text-sm font-bold text-[#1B1B1F] block truncate">
+            <span className="text-sm font-bold text-[#1B1B1F] block truncate">
               {userProfile.name || (language === 'bn' ? 'রক্তদাতা সদস্য' : 'Donor Member')}
             </span>
-            <span className="text-[11px] text-[#5B5F6B] flex items-center gap-1">
-              <MapPin className="w-3 h-3 text-[#C41E3A]" />
+            <span className="text-xs text-[#5B5F6B] flex items-center gap-1 mt-0.5">
+              <MapPin className="w-3.5 h-3.5 text-[#5B5F6B]" />
               <span className="truncate">{userProfile.location || (language === 'bn' ? 'বগুড়া সদর' : 'Bogura Sadar')}</span>
             </span>
           </div>
         </div>
 
         <span
-          className={`text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shrink-0 ${
+          className={`text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5 shrink-0 ${
             isAvailable
               ? 'bg-[#E8F5E9] text-[#005938]'
               : 'bg-[#F0EDF2] text-[#5B5F6B]'
           }`}
         >
-          <span className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-[#00744B] animate-pulse' : 'bg-[#5B5F6B]'}`} />
+          <span className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-[#00744B]' : 'bg-[#5B5F6B]'}`} />
           <span>{isAvailable ? cur.statusActive : cur.statusInactive}</span>
         </span>
       </div>
 
-      {/* ================= SETTINGS CONTENT: CLEAN, MOBILE-FIRST CARDS ================= */}
-      <div className="flex flex-col gap-4">
-        {/* ================= 1. DONOR AVAILABILITY & CONTROL ================= */}
-        <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-[#E4E6EB]/80 space-y-4">
-          <div className="flex items-center gap-2.5 pb-2.5 border-b border-[#E4E6EB]/60">
-            <div className="w-8 h-8 rounded-xl bg-[#FDECEF] text-[#C41E3A] flex items-center justify-center font-bold">
-              <Heart className="w-4.5 h-4.5 fill-current" />
+      {/* ================= MOBILE GROUPED LIST (< md) ================= */}
+      <div className="flex flex-col md:hidden">
+        {/* Section: Language */}
+        <div className="px-4 max-[360px]:px-3 pt-4 pb-1.5">
+          <h3 className="text-[12px] font-bold uppercase tracking-wider text-[#5B5F6B]">{cur.secPref}</h3>
+        </div>
+        <div className="bg-white border-y border-[#E4E6EB] divide-y divide-[#E4E6EB]">
+          <div className="flex items-center justify-between px-4 max-[360px]:px-3 min-h-[56px] py-2">
+            <div className="flex items-center gap-3">
+              <Languages className="w-5 h-5 text-[#5B5F6B] shrink-0" />
+              <span className="text-sm font-semibold text-[#1B1B1F]">{cur.langTitle}</span>
             </div>
-            <div>
-              <h2 className="font-extrabold text-[15px] sm:text-[16px] text-[#1B1B1F] leading-tight">
-                {cur.secAvailability}
-              </h2>
-              <p className="text-[11px] text-[#5B5F6B] mt-0.5">
-                {language === 'bn' ? 'জরুরি রক্তের অনুরোধ পাওয়ার নিয়ন্ত্রণ সেটিংস' : 'Emergency matching and notification controls'}
-              </p>
+            {/* 2-Segment Control */}
+            <div className="flex p-0.5 bg-[#F0EDF2] rounded-xl border border-[#E4E6EB]">
+              <button
+                type="button"
+                onClick={() => handleToggleLanguage('bn')}
+                className={`min-w-[56px] min-h-[38px] px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  language === 'bn'
+                    ? 'bg-white text-[#C41E3A] shadow-xs'
+                    : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
+                }`}
+              >
+                বাংলা
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleLanguage('en')}
+                className={`min-w-[56px] min-h-[38px] px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  language === 'en'
+                    ? 'bg-white text-[#C41E3A] shadow-xs'
+                    : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
+                }`}
+              >
+                EN
+              </button>
             </div>
           </div>
+        </div>
 
-          {/* Master Availability Switch */}
-          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF9FB] border border-[#E4E6EB]/70">
-            <div className="space-y-0.5 pr-3">
+        {/* Section: Donor Availability */}
+        <div className="px-4 max-[360px]:px-3 pt-5 pb-1.5">
+          <h3 className="text-[12px] font-bold uppercase tracking-wider text-[#5B5F6B]">{cur.secAvailability}</h3>
+        </div>
+        <div className="bg-white border-y border-[#E4E6EB] divide-y divide-[#E4E6EB]">
+          {/* Ready to Donate Toggle */}
+          <div className="flex items-center justify-between px-4 max-[360px]:px-3 min-h-[56px] py-3 gap-3">
+            <div className="space-y-0.5 flex-1 min-w-0 pr-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F]">
-                  {cur.readyTitle}
-                </span>
+                <Heart className="w-4.5 h-4.5 text-[#5B5F6B] shrink-0" />
+                <span className="text-sm font-bold text-[#1B1B1F] truncate">{cur.readyTitle}</span>
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    isAvailable
-                      ? 'bg-[#E8F5E9] text-[#005938]'
-                      : 'bg-[#F0EDF2] text-[#5B5F6B]'
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                    isAvailable ? 'bg-[#E8F5E9] text-[#005938]' : 'bg-[#F0EDF2] text-[#5B5F6B]'
                   }`}
                 >
                   {isAvailable ? cur.statusActive : cur.statusInactive}
                 </span>
               </div>
-              <p className="text-[11px] text-[#5B5F6B] leading-relaxed">
+              <p className="text-xs text-[#5B5F6B] leading-relaxed line-clamp-2">
                 {cur.readyDesc}
               </p>
             </div>
-
             <button
               onClick={handleToggleAvailable}
               role="switch"
               aria-checked={isAvailable}
-              className={`w-12 h-7 rounded-full p-0.5 flex items-center transition-colors cursor-pointer shrink-0 ${
-                isAvailable ? 'bg-[#00744B]' : 'bg-[#E4E1E7]'
-              }`}
+              className="min-w-[48px] min-h-[48px] flex items-center justify-center cursor-pointer shrink-0"
             >
               <span
-                className={`w-6 h-6 rounded-full bg-white shadow-xs transform transition-transform ${
-                  isAvailable ? 'translate-x-5' : 'translate-x-0'
+                className={`w-12 h-7 rounded-full p-0.5 flex items-center transition-colors ${
+                  isAvailable ? 'bg-[#00744B]' : 'bg-[#E4E1E7]'
                 }`}
-              />
+              >
+                <span
+                  className={`w-6 h-6 rounded-full bg-white shadow-xs transform transition-transform ${
+                    isAvailable ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </span>
             </button>
           </div>
 
-          {/* Temporary Pause */}
-          <div className="p-3.5 rounded-2xl bg-[#FAF9FB] border border-[#E4E6EB]/70 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Moon className="w-4 h-4 text-amber-600" />
-                <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F]">
-                  {cur.pauseTitle}
-                </span>
+          {/* Quiet Hours */}
+          <div className="flex items-center justify-between px-4 max-[360px]:px-3 min-h-[56px] py-3 gap-3">
+            <div className="flex items-start gap-3 flex-1 min-w-0 pr-2">
+              <Moon className="w-4.5 h-4.5 text-[#5B5F6B] shrink-0 mt-0.5" />
+              <div>
+                <span className="text-sm font-bold text-[#1B1B1F] block">{cur.quietTitle}</span>
+                <span className="text-xs text-[#5B5F6B] mt-0.5 block">{cur.quietTime}</span>
               </div>
-              <span className="text-[10px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full font-bold">
-                {cur.pauseSubtitle}
-              </span>
             </div>
+            <button
+              onClick={handleToggleQuietHours}
+              role="switch"
+              aria-checked={quietHours}
+              className="min-w-[48px] min-h-[48px] flex items-center justify-center cursor-pointer shrink-0"
+            >
+              <span
+                className={`w-12 h-7 rounded-full p-0.5 flex items-center transition-colors ${
+                  quietHours ? 'bg-[#00744B]' : 'bg-[#E4E1E7]'
+                }`}
+              >
+                <span
+                  className={`w-6 h-6 rounded-full bg-white shadow-xs transform transition-transform ${
+                    quietHours ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </span>
+            </button>
+          </div>
 
-            <p className="text-[11px] text-[#5B5F6B]">
-              {cur.pauseDesc}
-            </p>
-
+          {/* Temporary Pause Requests */}
+          <div className="px-4 max-[360px]:px-3 py-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-[#1B1B1F]">{cur.pauseTitle}</span>
+              <span className="text-[11px] text-[#5B5F6B]">{cur.pauseSubtitle}</span>
+            </div>
+            <p className="text-xs text-[#5B5F6B]">{cur.pauseDesc}</p>
             {pauseDays !== null && (
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between">
-                <span className="text-xs font-bold text-amber-900">
+              <div className="p-2.5 bg-[#FFF8E1] rounded-xl border border-[#FFE082] flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-[#7A4F01]">
                   {cur.pauseActiveNotice.replace('{days}', toBengaliDigits(pauseDays))}
                 </span>
                 <button
                   onClick={handleResumeNow}
-                  className="px-3 py-1 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 cursor-pointer shadow-xs"
+                  className="px-3 min-h-[36px] bg-[#E89A00] text-white rounded-lg text-xs font-bold hover:bg-[#C98400] cursor-pointer"
                 >
                   {cur.resumeNow}
                 </button>
               </div>
             )}
-
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-2 pt-1">
               {[
                 { days: 1, label: cur.pauseDay1 },
                 { days: 7, label: cur.pauseDay7 },
@@ -537,10 +566,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <button
                   key={item.days}
                   onClick={() => handleSetPauseDays(item.days)}
-                  className={`h-10 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                  className={`min-h-[44px] rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                     pauseDays === item.days
-                      ? 'bg-[#C41E3A] text-white border-[#C41E3A] shadow-xs'
-                      : 'bg-white border-[#E4E6EB] text-[#1B1B1F] hover:bg-[#F7F7F9]'
+                      ? 'bg-[#C41E3A] text-white border-[#C41E3A]'
+                      : 'bg-white border-[#E4E6EB] text-[#1B1B1F] active:bg-[#F7F7F9]'
                   }`}
                 >
                   {item.label}
@@ -548,7 +577,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               ))}
               <button
                 onClick={() => setIsCustomPauseOpen(true)}
-                className="h-10 rounded-xl text-xs font-bold bg-white border border-[#E4E6EB] text-[#1B1B1F] hover:bg-[#F7F7F9] transition-all cursor-pointer"
+                className="min-h-[44px] rounded-xl text-xs font-bold bg-white border border-[#E4E6EB] text-[#1B1B1F] active:bg-[#F7F7F9] cursor-pointer"
               >
                 {cur.pauseCustom}
               </button>
@@ -556,19 +585,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </div>
 
           {/* Notification Radius */}
-          <div className="p-3.5 rounded-2xl bg-[#FAF9FB] border border-[#E4E6EB]/70 space-y-2.5">
+          <div className="px-4 max-[360px]:px-3 py-3 space-y-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#C41E3A]" />
-                <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F]">
-                  {cur.radiusTitle}
-                </span>
-              </div>
-              <span className="text-xs font-black text-[#C41E3A] bg-[#FDECEF] px-2.5 py-0.5 rounded-full">
+              <span className="text-sm font-bold text-[#1B1B1F]">{cur.radiusTitle}</span>
+              <span className="text-xs font-bold text-[#C41E3A] bg-[#FDECEF] px-2.5 py-0.5 rounded-full">
                 {cur.radiusKm.replace('{rad}', toBengaliDigits(selectedRadius))}
               </span>
             </div>
-
             <div className="grid grid-cols-3 gap-2">
               {[
                 { km: 5, label: cur.radiusSadar },
@@ -578,10 +601,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <button
                   key={item.km}
                   onClick={() => handleSelectRadius(item.km)}
-                  className={`p-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border text-center ${
+                  className={`min-h-[44px] px-2 rounded-xl text-xs font-bold transition-all cursor-pointer border text-center ${
                     selectedRadius === item.km
-                      ? 'bg-[#FDECEF] text-[#C41E3A] border-[#C41E3A] shadow-2xs'
-                      : 'bg-white border-[#E4E6EB] text-[#5B5F6B] hover:text-[#1B1B1F]'
+                      ? 'bg-[#FDECEF] text-[#C41E3A] border-[#C41E3A]'
+                      : 'bg-white border-[#E4E6EB] text-[#5B5F6B] active:text-[#1B1B1F]'
                   }`}
                 >
                   <span>{item.label}</span>
@@ -589,281 +612,666 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               ))}
             </div>
           </div>
+        </div>
 
-          {/* Quiet Hours */}
-          <div className="p-3.5 rounded-2xl bg-[#FAF9FB] border border-[#E4E6EB]/70 flex items-center justify-between">
-            <div>
-              <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F] block">
-                {cur.quietTitle}
-              </span>
-              <span className="text-[11px] text-[#5B5F6B] mt-0.5 block">
-                {cur.quietTime}
-              </span>
+        {/* Section: Privacy & Transparency */}
+        <div className="px-4 max-[360px]:px-3 pt-5 pb-1.5">
+          <h3 className="text-[12px] font-bold uppercase tracking-wider text-[#5B5F6B]">{cur.secPrivacy}</h3>
+        </div>
+        <div className="bg-white border-y border-[#E4E6EB] divide-y divide-[#E4E6EB]">
+          <label
+            onClick={() => handleSetPhoneVisibility('verified_family')}
+            className="flex items-start gap-3 px-4 max-[360px]:px-3 min-h-[56px] py-3 cursor-pointer active:bg-[#F7F7F9]"
+          >
+            <input
+              type="radio"
+              name="phone_visibility_mobile"
+              checked={phoneVisibility === 'verified_family'}
+              onChange={() => handleSetPhoneVisibility('verified_family')}
+              className="accent-[#C41E3A] w-5 h-5 mt-0.5 shrink-0 cursor-pointer"
+            />
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-bold text-[#1B1B1F] block">{cur.phoneVisVerified}</span>
+              <p className="text-xs text-[#5B5F6B] mt-0.5">{cur.phoneVisVerifiedDesc}</p>
             </div>
+          </label>
 
-            <button
-              onClick={handleToggleQuietHours}
-              role="switch"
-              aria-checked={quietHours}
-              className={`w-12 h-7 rounded-full p-0.5 flex items-center transition-colors cursor-pointer shrink-0 ${
-                quietHours ? 'bg-[#00744B]' : 'bg-[#E4E1E7]'
-              }`}
-            >
-              <span
-                className={`w-6 h-6 rounded-full bg-white shadow-xs transform transition-transform ${
-                  quietHours ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
+          <label
+            onClick={() => handleSetPhoneVisibility('all_registered')}
+            className="flex items-start gap-3 px-4 max-[360px]:px-3 min-h-[56px] py-3 cursor-pointer active:bg-[#F7F7F9]"
+          >
+            <input
+              type="radio"
+              name="phone_visibility_mobile"
+              checked={phoneVisibility === 'all_registered'}
+              onChange={() => handleSetPhoneVisibility('all_registered')}
+              className="accent-[#C41E3A] w-5 h-5 mt-0.5 shrink-0 cursor-pointer"
+            />
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-bold text-[#1B1B1F] block">{cur.phoneVisAll}</span>
+              <p className="text-xs text-[#5B5F6B] mt-0.5">{cur.phoneVisAllDesc}</p>
+            </div>
+          </label>
+
+          <div className="px-4 max-[360px]:px-3 py-3 flex items-center gap-2 text-xs text-[#5B5F6B]">
+            <Lock className="w-4 h-4 text-[#5B5F6B] shrink-0" />
+            <span>{cur.privacyNote}</span>
           </div>
         </div>
 
-        {/* ================= 2. PRIVACY & TRANSPARENCY ================= */}
-        <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-[#E4E6EB]/80 space-y-4">
-          <div className="flex items-center gap-2.5 pb-2.5 border-b border-[#E4E6EB]/60">
-            <div className="w-8 h-8 rounded-xl bg-[#E8F0FE] text-[#0D58C9] flex items-center justify-center font-bold">
-              <ShieldCheck className="w-4.5 h-4.5" />
-            </div>
+        {/* Section: Support & Safety */}
+        <div className="px-4 max-[360px]:px-3 pt-5 pb-1.5">
+          <h3 className="text-[12px] font-bold uppercase tracking-wider text-[#5B5F6B]">{cur.secSupport}</h3>
+        </div>
+        <div className="bg-white border-y border-[#E4E6EB] divide-y divide-[#E4E6EB]">
+          {/* Voluntary Policy Hairline Row */}
+          <div className="px-4 max-[360px]:px-3 py-3 flex items-start gap-3">
+            <Scale className="w-5 h-5 text-[#5B5F6B] shrink-0 mt-0.5" />
             <div>
-              <h2 className="font-extrabold text-[15px] sm:text-[16px] text-[#1B1B1F] leading-tight">
-                {cur.secPrivacy}
-              </h2>
-              <p className="text-[11px] text-[#5B5F6B] mt-0.5">
-                {cur.secPrivacyDesc}
-              </p>
+              <h4 className="text-xs font-bold text-[#1B1B1F]">{cur.policyTitle}</h4>
+              <p className="text-xs text-[#5B5F6B] mt-0.5 leading-relaxed">{cur.policyDesc}</p>
             </div>
           </div>
 
-          {/* Phone Visibility Options */}
-          <div className="space-y-2.5 pt-1">
-            <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F] block">
-              {cur.phoneVisTitle}
+          {/* Helpline Row */}
+          <a
+            href="tel:16263"
+            className="flex items-center justify-between px-4 max-[360px]:px-3 min-h-[56px] py-3 active:bg-[#F7F7F9] cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <Headphones className="w-5 h-5 text-[#5B5F6B] shrink-0" />
+              <div>
+                <span className="text-sm font-bold text-[#1B1B1F] block">{cur.helplineTitle}</span>
+                <span className="text-xs text-[#5B5F6B]">{cur.helplineDesc}</span>
+              </div>
+            </div>
+            <span className="min-h-[38px] px-3 rounded-full bg-[#E8F5E9] text-[#005938] font-bold text-xs flex items-center gap-1.5 shrink-0">
+              <PhoneCall className="w-3.5 h-3.5 text-[#00744B]" />
+              ১৬২৬৩
             </span>
+          </a>
 
-            <div className="bg-[#FAF9FB] rounded-2xl p-3 border border-[#E4E6EB]/70 space-y-2.5">
-              <label
-                onClick={() => handleSetPhoneVisibility('verified_family')}
-                className="flex items-start gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition-colors"
-              >
-                <input
-                  type="radio"
-                  name="phone_visibility"
-                  checked={phoneVisibility === 'verified_family'}
-                  onChange={() => handleSetPhoneVisibility('verified_family')}
-                  className="accent-[#C41E3A] w-4 h-4 mt-0.5 cursor-pointer"
-                />
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs sm:text-sm font-bold text-[#1B1B1F] block">
-                    {cur.phoneVisVerified}
-                  </span>
-                  <p className="text-[11px] text-[#5B5F6B] mt-0.5">
-                    {cur.phoneVisVerifiedDesc}
-                  </p>
-                </div>
-              </label>
-
-              <label
-                onClick={() => handleSetPhoneVisibility('all_registered')}
-                className="flex items-start gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition-colors"
-              >
-                <input
-                  type="radio"
-                  name="phone_visibility"
-                  checked={phoneVisibility === 'all_registered'}
-                  onChange={() => handleSetPhoneVisibility('all_registered')}
-                  className="accent-[#C41E3A] w-4 h-4 mt-0.5 cursor-pointer"
-                />
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs sm:text-sm font-bold text-[#1B1B1F] block">
-                    {cur.phoneVisAll}
-                  </span>
-                  <p className="text-[11px] text-[#5B5F6B] mt-0.5">
-                    {cur.phoneVisAllDesc}
-                  </p>
-                </div>
-              </label>
+          {/* Report Row */}
+          <button
+            onClick={() => setShowReportModal(true)}
+            className="flex items-center justify-between px-4 max-[360px]:px-3 min-h-[56px] py-3 active:bg-[#F7F7F9] cursor-pointer w-full text-left"
+          >
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-[#5B5F6B] shrink-0" />
+              <div>
+                <span className="text-sm font-bold text-[#1B1B1F] block">{cur.reportTitle}</span>
+                <span className="text-xs text-[#5B5F6B]">{cur.reportDesc}</span>
+              </div>
             </div>
-
-            <div className="p-2.5 rounded-xl bg-[#E8F5E9]/60 border border-[#C8EAD9] flex items-center gap-2 text-[11px] text-[#005938] font-medium">
-              <Lock className="w-4 h-4 text-[#00744B] shrink-0" />
-              <span>{cur.privacyNote}</span>
-            </div>
-          </div>
+            <ChevronRight className="w-5 h-5 text-[#5B5F6B] shrink-0" />
+          </button>
         </div>
 
-        {/* ================= 3. SUPPORT & SAFETY POLICY ================= */}
-        <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-[#E4E6EB]/80 space-y-4">
-          <div className="flex items-center gap-2.5 pb-2.5 border-b border-[#E4E6EB]/60">
-            <div className="w-8 h-8 rounded-xl bg-[#FFF3E0] text-[#E65100] flex items-center justify-center font-bold">
-              <Scale className="w-4.5 h-4.5" />
-            </div>
-            <div>
-              <h2 className="font-extrabold text-[15px] sm:text-[16px] text-[#1B1B1F] leading-tight">
-                {cur.secSupport}
-              </h2>
-              <p className="text-[11px] text-[#5B5F6B] mt-0.5">
-                {cur.secSupportDesc}
-              </p>
-            </div>
-          </div>
-
-          {/* Legal Warning Policy Banner */}
-          <div className="bg-[#FFF5F6] rounded-2xl p-3.5 border border-[#FFDADA] flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#C41E3A] text-white flex items-center justify-center shrink-0 shadow-xs">
-              <Scale className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-xs sm:text-sm font-extrabold text-[#9E0027]">
-                {cur.policyTitle}
-              </h4>
-              <p className="text-[11px] text-[#5B4040] mt-1 leading-relaxed">
-                {cur.policyDesc}
-              </p>
-            </div>
-          </div>
-
-          {/* Action Grid: Direct Helpline & Report Form */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <a
-              href="tel:16263"
-              className="p-3.5 bg-[#F2FBF7] hover:bg-[#E8F5E9] rounded-2xl border border-[#C8EAD9] flex items-center justify-between transition-colors group cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#00744B] text-white flex items-center justify-center shadow-xs">
-                  <Headphones className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-extrabold text-xs sm:text-sm text-[#003922]">
-                    {cur.helplineTitle}
-                  </h4>
-                  <p className="text-[11px] text-[#00744B] mt-0.5">
-                    {cur.helplineBtn}
-                  </p>
-                </div>
-              </div>
-              <PhoneCall className="w-4.5 h-4.5 text-[#00744B] group-hover:scale-110 transition-transform" />
-            </a>
-
-            <button
-              onClick={() => setShowReportModal(true)}
-              className="p-3.5 bg-[#FFF5F6] hover:bg-[#FDECEF] rounded-2xl border border-[#FFDADA] flex items-center justify-between transition-colors group cursor-pointer text-left"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#C41E3A] text-white flex items-center justify-center shadow-xs">
-                  <AlertTriangle className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-extrabold text-xs sm:text-sm text-[#9E0027]">
-                    {cur.reportTitle}
-                  </h4>
-                  <p className="text-[11px] text-[#C41E3A] mt-0.5">
-                    {cur.reportBtn}
-                  </p>
-                </div>
-              </div>
-              <ChevronRight className="w-4.5 h-4.5 text-[#C41E3A] group-hover:translate-x-0.5 transition-transform" />
-            </button>
-          </div>
+        {/* Section: Account Actions */}
+        <div className="px-4 max-[360px]:px-3 pt-5 pb-1.5">
+          <h3 className="text-[12px] font-bold uppercase tracking-wider text-[#5B5F6B]">
+            {language === 'bn' ? 'অ্যাকাউন্ট' : 'Account'}
+          </h3>
         </div>
-
-        {/* ================= 4. DISPLAY & MOTION ================= */}
-        <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-[#E4E6EB]/80 space-y-3">
-          <div className="flex items-center gap-2.5 pb-2.5 border-b border-[#E4E6EB]/60">
-            <div className="w-8 h-8 rounded-xl bg-[#F3E5F5] text-[#7B1FA2] flex items-center justify-center font-bold">
-              <Languages className="w-4.5 h-4.5" />
-            </div>
-            <div>
-              <h2 className="font-extrabold text-[15px] sm:text-[16px] text-[#1B1B1F] leading-tight">
-                {cur.secPref}
-              </h2>
-            </div>
-          </div>
-
-          {/* Bilingual Language Selection */}
-          <div className="p-3.5 rounded-2xl bg-[#FAF9FB] border border-[#E4E6EB]/70 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Languages className="w-4 h-4 text-[#7B1FA2]" />
-                <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F]">
-                  {cur.langTitle}
-                </span>
-              </div>
-              <span className="text-xs font-bold text-[#7B1FA2] bg-[#F3E5F5] px-2.5 py-0.5 rounded-full">
-                {language === 'bn' ? 'বাংলা' : 'English'}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleToggleLanguage('bn')}
-                className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center justify-center gap-1.5 ${
-                  language === 'bn'
-                    ? 'bg-[#C41E3A] text-white border-[#C41E3A] shadow-xs'
-                    : 'bg-white border-[#E4E6EB] text-[#1B1B1F] hover:bg-[#F7F7F9]'
-                }`}
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span>বাংলা (BN)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleToggleLanguage('en')}
-                className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center justify-center gap-1.5 ${
-                  language === 'en'
-                    ? 'bg-[#C41E3A] text-white border-[#C41E3A] shadow-xs'
-                    : 'bg-white border-[#E4E6EB] text-[#1B1B1F] hover:bg-[#F7F7F9]'
-                }`}
-              >
-                <span className="w-2 h-2 rounded-full bg-blue-400" />
-                <span>English (EN)</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* ================= 5. ACCOUNT ACTIONS ================= */}
-        <div className="space-y-3 pt-2">
+        <div className="bg-white border-y border-[#E4E6EB] divide-y divide-[#E4E6EB]">
+          {/* Logout Row */}
           <button
             onClick={onLogout}
-            className="w-full h-12 rounded-2xl bg-white hover:bg-[#FDECEF]/40 border border-[#E4E6EB] text-[#C41E3A] font-extrabold text-xs flex items-center justify-center gap-2 shadow-xs active:scale-98 transition-all cursor-pointer"
+            className="flex items-center gap-3 px-4 max-[360px]:px-3 min-h-[56px] py-3 active:bg-[#F7F7F9] cursor-pointer w-full text-left"
           >
-            <LogOut className="w-4 h-4" />
-            <span>{cur.logout}</span>
+            <LogOut className="w-5 h-5 text-[#5B5F6B] shrink-0" />
+            <span className="text-sm font-bold text-[#1B1B1F]">{cur.logout}</span>
           </button>
 
+          {/* Delete Account Row */}
           <button
             onClick={() => setShowDeleteModal(true)}
-            className="w-full py-2.5 text-center text-[#BA1A1A] text-xs font-bold hover:underline flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="flex items-center gap-3 px-4 max-[360px]:px-3 min-h-[56px] py-3 active:bg-[#FDECEF]/50 cursor-pointer w-full text-left"
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>{cur.deleteAccount}</span>
+            <Trash2 className="w-5 h-5 text-[#BA1A1A] shrink-0" />
+            <span className="text-sm font-bold text-[#BA1A1A]">{cur.deleteAccount}</span>
           </button>
+        </div>
 
-          <div className="text-center text-[11px] text-[#5B5F6B] pt-3 space-y-2">
-            <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-[#5B5F6B]">
-              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-[#C41E3A] hover:underline">
-                {language === 'bn' ? 'প্রাইভেসি পলিসি' : 'Privacy Policy'}
-              </a>
-              <span>•</span>
-              <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-[#C41E3A] hover:underline">
-                {language === 'bn' ? 'শর্তাবলী' : 'Terms of Service'}
-              </a>
-              <span>•</span>
-              <a href="/data-deletion" target="_blank" rel="noopener noreferrer" className="hover:text-[#C41E3A] hover:underline">
-                {language === 'bn' ? 'ডেটা অপসারণ' : 'Data Deletion'}
-              </a>
+        {/* Mobile Footer */}
+        <div className="px-4 max-[360px]:px-3 pt-6 pb-4 text-center space-y-2">
+          <div className="flex flex-wrap items-center justify-center gap-3 text-[13px] text-[#5B5F6B]">
+            <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-[#C41E3A] hover:underline">
+              {language === 'bn' ? 'প্রাইভেসি পলিসি' : 'Privacy Policy'}
+            </a>
+            <span>•</span>
+            <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-[#C41E3A] hover:underline">
+              {language === 'bn' ? 'শর্তাবলী' : 'Terms of Service'}
+            </a>
+            <span>•</span>
+            <a href="/data-deletion" target="_blank" rel="noopener noreferrer" className="hover:text-[#C41E3A] hover:underline">
+              {language === 'bn' ? 'ডেটা অপসারণ' : 'Data Deletion'}
+            </a>
+          </div>
+          <p className="text-[13px] text-[#5B5F6B] font-semibold">{cur.footer1}</p>
+          <p className="text-[13px] text-[#5B5F6B] opacity-80">{cur.footer2}</p>
+        </div>
+      </div>
+
+      {/* ================= DESKTOP VIEW (md+ KEEP UNCHANGED) ================= */}
+      <div className="hidden md:flex flex-col">
+        {/* ================= TOP HEADER BAR ================= */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-[#E4E6EB]/80 p-3 sm:p-4 mb-4 shadow-xs flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <button
+              onClick={onBack}
+              aria-label={language === 'bn' ? 'ফিরে যান' : 'Go back'}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-[#1B1B1F] hover:bg-[#F7F7F9] active:scale-95 transition-all border border-[#E4E6EB]/70 cursor-pointer shrink-0"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex flex-col min-w-0">
+              <h1 className="font-extrabold text-[16px] sm:text-[18px] text-[#1B1B1F] leading-tight truncate">
+                {cur.title}
+              </h1>
+              <span className="text-[11px] sm:text-xs text-[#5B5F6B] mt-0.5 truncate hidden sm:block">
+                {cur.subtitle}
+              </span>
             </div>
-            <p className="font-semibold">{cur.footer1}</p>
-            <p className="opacity-80">{cur.footer2}</p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex p-0.5 bg-[#F5F4F7] rounded-xl border border-[#E4E6EB]">
+              <button
+                onClick={() => handleToggleLanguage('bn')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  language === 'bn'
+                    ? 'bg-white text-[#C41E3A] shadow-xs'
+                    : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
+                }`}
+              >
+                বাংলা
+              </button>
+              <button
+                onClick={() => handleToggleLanguage('en')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  language === 'en'
+                    ? 'bg-white text-[#C41E3A] shadow-xs'
+                    : 'text-[#5B5F6B] hover:text-[#1B1B1F]'
+                }`}
+              >
+                EN
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowHelpModal(true)}
+              title={cur.helpBtn}
+              aria-label={cur.helpBtn}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-[#E4E6EB]/80 bg-[#FAF9FB] hover:bg-[#FDECEF] hover:border-[#FFCDD2] hover:text-[#C41E3A] text-[#5B5F6B] flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-2xs"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* ================= USER SUMMARY STATUS BADGE ================= */}
+        <div className="bg-white rounded-2xl p-3 sm:p-3.5 border border-[#E4E6EB]/80 mb-4 shadow-xs flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-[#C41E3A] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs">
+              {userProfile.bloodGroup || 'AB+'}
+            </div>
+            <div className="min-w-0">
+              <span className="text-xs sm:text-sm font-bold text-[#1B1B1F] block truncate">
+                {userProfile.name || (language === 'bn' ? 'রক্তদাতা সদস্য' : 'Donor Member')}
+              </span>
+              <span className="text-[11px] text-[#5B5F6B] flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-[#C41E3A]" />
+                <span className="truncate">{userProfile.location || (language === 'bn' ? 'বগুড়া সদর' : 'Bogura Sadar')}</span>
+              </span>
+            </div>
+          </div>
+
+          <span
+            className={`text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 shrink-0 ${
+              isAvailable
+                ? 'bg-[#E8F5E9] text-[#005938]'
+                : 'bg-[#F0EDF2] text-[#5B5F6B]'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-[#00744B] animate-pulse' : 'bg-[#5B5F6B]'}`} />
+            <span>{isAvailable ? cur.statusActive : cur.statusInactive}</span>
+          </span>
+        </div>
+
+        {/* ================= SETTINGS CONTENT: CLEAN, DESKTOP CARDS ================= */}
+        <div className="flex flex-col gap-4">
+          {/* 1. DONOR AVAILABILITY & CONTROL */}
+          <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-[#E4E6EB]/80 space-y-4">
+            <div className="flex items-center gap-2.5 pb-2.5 border-b border-[#E4E6EB]/60">
+              <div className="w-8 h-8 rounded-xl bg-[#FDECEF] text-[#C41E3A] flex items-center justify-center font-bold">
+                <Heart className="w-4.5 h-4.5 fill-current" />
+              </div>
+              <div>
+                <h2 className="font-extrabold text-[15px] sm:text-[16px] text-[#1B1B1F] leading-tight">
+                  {cur.secAvailability}
+                </h2>
+                <p className="text-[11px] text-[#5B5F6B] mt-0.5">
+                  {language === 'bn' ? 'জরুরি রক্তের অনুরোধ পাওয়ার নিয়ন্ত্রণ সেটিংস' : 'Emergency matching and notification controls'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF9FB] border border-[#E4E6EB]/70">
+              <div className="space-y-0.5 pr-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F]">
+                    {cur.readyTitle}
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      isAvailable ? 'bg-[#E8F5E9] text-[#005938]' : 'bg-[#F0EDF2] text-[#5B5F6B]'
+                    }`}
+                  >
+                    {isAvailable ? cur.statusActive : cur.statusInactive}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#5B5F6B] leading-relaxed">
+                  {cur.readyDesc}
+                </p>
+              </div>
+
+              <button
+                onClick={handleToggleAvailable}
+                role="switch"
+                aria-checked={isAvailable}
+                className={`w-12 h-7 rounded-full p-0.5 flex items-center transition-colors cursor-pointer shrink-0 ${
+                  isAvailable ? 'bg-[#00744B]' : 'bg-[#E4E1E7]'
+                }`}
+              >
+                <span
+                  className={`w-6 h-6 rounded-full bg-white shadow-xs transform transition-transform ${
+                    isAvailable ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-[#FAF9FB] border border-[#E4E6EB]/70 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Moon className="w-4 h-4 text-amber-600" />
+                  <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F]">
+                    {cur.pauseTitle}
+                  </span>
+                </div>
+                <span className="text-[10px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full font-bold">
+                  {cur.pauseSubtitle}
+                </span>
+              </div>
+
+              <p className="text-[11px] text-[#5B5F6B]">
+                {cur.pauseDesc}
+              </p>
+
+              {pauseDays !== null && (
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-900">
+                    {cur.pauseActiveNotice.replace('{days}', toBengaliDigits(pauseDays))}
+                  </span>
+                  <button
+                    onClick={handleResumeNow}
+                    className="px-3 py-1 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 cursor-pointer shadow-xs"
+                  >
+                    {cur.resumeNow}
+                  </button>
+                </div>
+              )}
+
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { days: 1, label: cur.pauseDay1 },
+                  { days: 7, label: cur.pauseDay7 },
+                  { days: 30, label: cur.pauseDay30 },
+                ].map((item) => (
+                  <button
+                    key={item.days}
+                    onClick={() => handleSetPauseDays(item.days)}
+                    className={`h-10 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                      pauseDays === item.days
+                        ? 'bg-[#C41E3A] text-white border-[#C41E3A] shadow-xs'
+                        : 'bg-white border-[#E4E6EB] text-[#1B1B1F] hover:bg-[#F7F7F9]'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setIsCustomPauseOpen(true)}
+                  className="h-10 rounded-xl text-xs font-bold bg-white border border-[#E4E6EB] text-[#1B1B1F] hover:bg-[#F7F7F9] transition-all cursor-pointer"
+                >
+                  {cur.pauseCustom}
+                </button>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-[#FAF9FB] border border-[#E4E6EB]/70 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-[#C41E3A]" />
+                  <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F]">
+                    {cur.radiusTitle}
+                  </span>
+                </div>
+                <span className="text-xs font-black text-[#C41E3A] bg-[#FDECEF] px-2.5 py-0.5 rounded-full">
+                  {cur.radiusKm.replace('{rad}', toBengaliDigits(selectedRadius))}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { km: 5, label: cur.radiusSadar },
+                  { km: 15, label: cur.radiusDistrict },
+                  { km: 25, label: cur.radiusDivision },
+                ].map((item) => (
+                  <button
+                    key={item.km}
+                    onClick={() => handleSelectRadius(item.km)}
+                    className={`p-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border text-center ${
+                      selectedRadius === item.km
+                        ? 'bg-[#FDECEF] text-[#C41E3A] border-[#C41E3A] shadow-2xs'
+                        : 'bg-white border-[#E4E6EB] text-[#5B5F6B] hover:text-[#1B1B1F]'
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-[#FAF9FB] border border-[#E4E6EB]/70 flex items-center justify-between">
+              <div>
+                <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F] block">
+                  {cur.quietTitle}
+                </span>
+                <span className="text-[11px] text-[#5B5F6B] mt-0.5 block">
+                  {cur.quietTime}
+                </span>
+              </div>
+
+              <button
+                onClick={handleToggleQuietHours}
+                role="switch"
+                aria-checked={quietHours}
+                className={`w-12 h-7 rounded-full p-0.5 flex items-center transition-colors cursor-pointer shrink-0 ${
+                  quietHours ? 'bg-[#00744B]' : 'bg-[#E4E1E7]'
+                }`}
+              >
+                <span
+                  className={`w-6 h-6 rounded-full bg-white shadow-xs transform transition-transform ${
+                    quietHours ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* 2. PRIVACY & TRANSPARENCY */}
+          <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-[#E4E6EB]/80 space-y-4">
+            <div className="flex items-center gap-2.5 pb-2.5 border-b border-[#E4E6EB]/60">
+              <div className="w-8 h-8 rounded-xl bg-[#E8F0FE] text-[#0D58C9] flex items-center justify-center font-bold">
+                <ShieldCheck className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <h2 className="font-extrabold text-[15px] sm:text-[16px] text-[#1B1B1F] leading-tight">
+                  {cur.secPrivacy}
+                </h2>
+                <p className="text-[11px] text-[#5B5F6B] mt-0.5">
+                  {cur.secPrivacyDesc}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 pt-1">
+              <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F] block">
+                {cur.phoneVisTitle}
+              </span>
+
+              <div className="bg-[#FAF9FB] rounded-2xl p-3 border border-[#E4E6EB]/70 space-y-2.5">
+                <label
+                  onClick={() => handleSetPhoneVisibility('verified_family')}
+                  className="flex items-start gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition-colors"
+                >
+                  <input
+                    type="radio"
+                    name="phone_visibility"
+                    checked={phoneVisibility === 'verified_family'}
+                    onChange={() => handleSetPhoneVisibility('verified_family')}
+                    className="accent-[#C41E3A] w-4 h-4 mt-0.5 cursor-pointer"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs sm:text-sm font-bold text-[#1B1B1F] block">
+                      {cur.phoneVisVerified}
+                    </span>
+                    <p className="text-[11px] text-[#5B5F6B] mt-0.5">
+                      {cur.phoneVisVerifiedDesc}
+                    </p>
+                  </div>
+                </label>
+
+                <label
+                  onClick={() => handleSetPhoneVisibility('all_registered')}
+                  className="flex items-start gap-3 cursor-pointer p-2 rounded-xl hover:bg-white transition-colors"
+                >
+                  <input
+                    type="radio"
+                    name="phone_visibility"
+                    checked={phoneVisibility === 'all_registered'}
+                    onChange={() => handleSetPhoneVisibility('all_registered')}
+                    className="accent-[#C41E3A] w-4 h-4 mt-0.5 cursor-pointer"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs sm:text-sm font-bold text-[#1B1B1F] block">
+                      {cur.phoneVisAll}
+                    </span>
+                    <p className="text-[11px] text-[#5B5F6B] mt-0.5">
+                      {cur.phoneVisAllDesc}
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-[#E8F5E9]/60 border border-[#C8EAD9] flex items-center gap-2 text-[11px] text-[#005938] font-medium">
+                <Lock className="w-4 h-4 text-[#00744B] shrink-0" />
+                <span>{cur.privacyNote}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. SUPPORT & SAFETY POLICY */}
+          <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-[#E4E6EB]/80 space-y-4">
+            <div className="flex items-center gap-2.5 pb-2.5 border-b border-[#E4E6EB]/60">
+              <div className="w-8 h-8 rounded-xl bg-[#FFF3E0] text-[#E65100] flex items-center justify-center font-bold">
+                <Scale className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <h2 className="font-extrabold text-[15px] sm:text-[16px] text-[#1B1B1F] leading-tight">
+                  {cur.secSupport}
+                </h2>
+                <p className="text-[11px] text-[#5B5F6B] mt-0.5">
+                  {cur.secSupportDesc}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-[#FFF5F6] rounded-2xl p-3.5 border border-[#FFDADA] flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#C41E3A] text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Scale className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-extrabold text-[#9E0027]">
+                  {cur.policyTitle}
+                </h4>
+                <p className="text-[11px] text-[#5B4040] mt-1 leading-relaxed">
+                  {cur.policyDesc}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <a
+                href="tel:16263"
+                className="p-3.5 bg-[#F2FBF7] hover:bg-[#E8F5E9] rounded-2xl border border-[#C8EAD9] flex items-center justify-between transition-colors group cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#00744B] text-white flex items-center justify-center shadow-xs">
+                    <Headphones className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-xs sm:text-sm text-[#003922]">
+                      {cur.helplineTitle}
+                    </h4>
+                    <p className="text-[11px] text-[#00744B] mt-0.5">
+                      {cur.helplineBtn}
+                    </p>
+                  </div>
+                </div>
+                <PhoneCall className="w-4.5 h-4.5 text-[#00744B] group-hover:scale-110 transition-transform" />
+              </a>
+
+              <button
+                onClick={() => setShowReportModal(true)}
+                className="p-3.5 bg-[#FFF5F6] hover:bg-[#FDECEF] rounded-2xl border border-[#FFDADA] flex items-center justify-between transition-colors group cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#C41E3A] text-white flex items-center justify-center shadow-xs">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-xs sm:text-sm text-[#9E0027]">
+                      {cur.reportTitle}
+                    </h4>
+                    <p className="text-[11px] text-[#C41E3A] mt-0.5">
+                      {cur.reportBtn}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4.5 h-4.5 text-[#C41E3A] group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
+          </div>
+
+          {/* 4. DISPLAY & MOTION */}
+          <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-xs border border-[#E4E6EB]/80 space-y-3">
+            <div className="flex items-center gap-2.5 pb-2.5 border-b border-[#E4E6EB]/60">
+              <div className="w-8 h-8 rounded-xl bg-[#F3E5F5] text-[#7B1FA2] flex items-center justify-center font-bold">
+                <Languages className="w-4.5 h-4.5" />
+              </div>
+              <div>
+                <h2 className="font-extrabold text-[15px] sm:text-[16px] text-[#1B1B1F] leading-tight">
+                  {cur.secPref}
+                </h2>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-[#FAF9FB] border border-[#E4E6EB]/70 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Languages className="w-4 h-4 text-[#7B1FA2]" />
+                  <span className="text-xs sm:text-sm font-extrabold text-[#1B1B1F]">
+                    {cur.langTitle}
+                  </span>
+                </div>
+                <span className="text-xs font-bold text-[#7B1FA2] bg-[#F3E5F5] px-2.5 py-0.5 rounded-full">
+                  {language === 'bn' ? 'বাংলা' : 'English'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleToggleLanguage('bn')}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center justify-center gap-1.5 ${
+                    language === 'bn'
+                      ? 'bg-[#C41E3A] text-white border-[#C41E3A] shadow-xs'
+                      : 'bg-white border-[#E4E6EB] text-[#1B1B1F] hover:bg-[#F7F7F9]'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span>বাংলা (BN)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleLanguage('en')}
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center justify-center gap-1.5 ${
+                    language === 'en'
+                      ? 'bg-[#C41E3A] text-white border-[#C41E3A] shadow-xs'
+                      : 'bg-white border-[#E4E6EB] text-[#1B1B1F] hover:bg-[#F7F7F9]'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-blue-400" />
+                  <span>English (EN)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. ACCOUNT ACTIONS */}
+          <div className="space-y-3 pt-2">
+            <button
+              onClick={onLogout}
+              className="w-full h-12 rounded-2xl bg-white hover:bg-[#FDECEF]/40 border border-[#E4E6EB] text-[#C41E3A] font-extrabold text-xs flex items-center justify-center gap-2 shadow-xs active:scale-98 transition-all cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>{cur.logout}</span>
+            </button>
+
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="w-full py-2.5 text-center text-[#BA1A1A] text-xs font-bold hover:underline flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{cur.deleteAccount}</span>
+            </button>
+
+            <div className="text-center text-[11px] text-[#5B5F6B] pt-3 space-y-2">
+              <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-[#5B5F6B]">
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-[#C41E3A] hover:underline">
+                  {language === 'bn' ? 'প্রাইভেসি পলিসি' : 'Privacy Policy'}
+                </a>
+                <span>•</span>
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-[#C41E3A] hover:underline">
+                  {language === 'bn' ? 'শর্তাবলী' : 'Terms of Service'}
+                </a>
+                <span>•</span>
+                <a href="/data-deletion" target="_blank" rel="noopener noreferrer" className="hover:text-[#C41E3A] hover:underline">
+                  {language === 'bn' ? 'ডেটা অপসারণ' : 'Data Deletion'}
+                </a>
+              </div>
+              <p className="font-semibold">{cur.footer1}</p>
+              <p className="opacity-80">{cur.footer2}</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ================= MODAL 1: 100% FUNCTIONAL HELP & INFO CENTER ================= */}
+      {/* ================= MODAL / BOTTOM SHEET 1: HELP & INFO CENTER ================= */}
       {showHelpModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="w-full max-w-md bg-white rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 animate-in slide-in-from-bottom-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+          {/* Backdrop (no blur on mobile for low-end device performance) */}
+          <div
+            className="fixed inset-0 bg-black/50 transition-opacity"
+            onClick={() => setShowHelpModal(false)}
+          />
+
+          {/* Bottom Sheet on Mobile / Centered Card on Desktop */}
+          <div
+            className="relative z-10 w-full md:max-w-md bg-white rounded-t-3xl md:rounded-3xl p-5 sm:p-6 shadow-2xl max-h-[85dvh] md:max-h-[90vh] overflow-y-auto pb-safe animate-in slide-in-from-bottom duration-200"
+          >
+            {/* Drag Handle on Mobile */}
+            <div
+              onTouchStart={handleTouchStart}
+              onTouchEnd={(e) => handleTouchEnd(e, () => setShowHelpModal(false))}
+              className="flex justify-center -mt-2 pb-3 md:hidden cursor-grab active:cursor-grabbing"
+            >
+              <div className="w-10 h-1.5 rounded-full bg-[#D1D5DB]" />
+            </div>
+
             <div className="flex items-center justify-between pb-3 border-b border-[#E4E6EB]">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-[#FDECEF] text-[#C41E3A] flex items-center justify-center font-black">
@@ -880,38 +1288,38 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </div>
               <button
                 onClick={() => setShowHelpModal(false)}
-                className="w-8 h-8 rounded-full bg-[#F7F7F9] text-[#5B5F6B] flex items-center justify-center hover:bg-[#E4E6EB] cursor-pointer"
+                className="w-9 h-9 rounded-full bg-[#F7F7F9] text-[#5B5F6B] flex items-center justify-center hover:bg-[#E4E6EB] cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Emergency Hotline Direct Call Cards */}
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-2.5 my-3">
               <a
                 href="tel:16263"
-                className="p-3 bg-[#E8F5E9] hover:bg-[#D4F4DF] rounded-2xl border border-[#A7E8BD] flex flex-col items-center text-center cursor-pointer transition-colors"
+                className="min-h-[56px] p-3 bg-[#E8F5E9] hover:bg-[#D4F4DF] rounded-2xl border border-[#A7E8BD] flex flex-col items-center justify-center text-center cursor-pointer transition-colors"
               >
-                <Phone className="w-5 h-5 text-[#00744B] mb-1" />
+                <Phone className="w-5 h-5 text-[#00744B] mb-0.5" />
                 <span className="font-extrabold text-sm text-[#005938]">১৬২৬৩</span>
-                <span className="text-[10px] text-[#00744B] font-semibold mt-0.5">স্বাস্থ্য বাতায়ন (২৪/৭)</span>
+                <span className="text-[10px] text-[#00744B] font-semibold">স্বাস্থ্য বাতায়ন (২৪/৭)</span>
               </a>
 
               <a
                 href="tel:999"
-                className="p-3 bg-[#FDECEF] hover:bg-[#FFDAD6] rounded-2xl border border-[#FFCDD2] flex flex-col items-center text-center cursor-pointer transition-colors"
+                className="min-h-[56px] p-3 bg-[#FDECEF] hover:bg-[#FFDAD6] rounded-2xl border border-[#FFCDD2] flex flex-col items-center justify-center text-center cursor-pointer transition-colors"
               >
-                <ShieldAlert className="w-5 h-5 text-[#C41E3A] mb-1" />
+                <ShieldAlert className="w-5 h-5 text-[#C41E3A] mb-0.5" />
                 <span className="font-extrabold text-sm text-[#9E0027]">৯৯৯</span>
-                <span className="text-[10px] text-[#C41E3A] font-semibold mt-0.5">জাতীয় জরুরি সেবা</span>
+                <span className="text-[10px] text-[#C41E3A] font-semibold">জাতীয় জরুরি সেবা</span>
               </a>
             </div>
 
             {/* Quick Guidance FAQ */}
-            <div className="space-y-2.5 pt-1 text-xs">
+            <div className="space-y-2 text-xs">
               <div className="p-3 bg-[#FAF9FB] rounded-2xl border border-[#E4E6EB]">
                 <h4 className="font-extrabold text-[#1B1B1F] flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-[#00744B]" />
+                  <CheckCircle2 className="w-4 h-4 text-[#00744B] shrink-0" />
                   <span>{language === 'bn' ? 'রক্তদানের প্রাপ্যতা কীভাবে কাজ করে?' : 'How does Availability work?'}</span>
                 </h4>
                 <p className="text-[11px] text-[#5B5F6B] mt-1 leading-relaxed">
@@ -923,7 +1331,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
               <div className="p-3 bg-[#FAF9FB] rounded-2xl border border-[#E4E6EB]">
                 <h4 className="font-extrabold text-[#1B1B1F] flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-[#00744B]" />
+                  <CheckCircle2 className="w-4 h-4 text-[#00744B] shrink-0" />
                   <span>{language === 'bn' ? 'আমার ফোন নম্বর কে দেখতে পাবে?' : 'Who can see my phone number?'}</span>
                 </h4>
                 <p className="text-[11px] text-[#5B5F6B] mt-1 leading-relaxed">
@@ -935,7 +1343,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
               <div className="p-3 bg-[#FAF9FB] rounded-2xl border border-[#E4E6EB]">
                 <h4 className="font-extrabold text-[#1B1B1F] flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-[#00744B]" />
+                  <CheckCircle2 className="w-4 h-4 text-[#00744B] shrink-0" />
                   <span>{language === 'bn' ? 'রক্ত কেনাবেচা প্রতিরোধে আমাদের অবস্থান' : 'Zero tolerance on blood trade'}</span>
                 </h4>
                 <p className="text-[11px] text-[#5B5F6B] mt-1 leading-relaxed">
@@ -948,7 +1356,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
             <button
               onClick={() => setShowHelpModal(false)}
-              className="w-full h-11 rounded-xl bg-[#C41E3A] text-white font-bold text-xs shadow-xs cursor-pointer hover:bg-[#A3182F] transition-colors"
+              className="w-full min-h-[48px] mt-4 rounded-xl bg-[#C41E3A] text-white font-bold text-xs shadow-xs cursor-pointer hover:bg-[#A3182F] active:scale-[0.99] transition-all"
             >
               {language === 'bn' ? 'বুঝেছি / বন্ধ করুন' : 'Got it / Close'}
             </button>
@@ -956,10 +1364,26 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
       )}
 
-      {/* ================= MODAL 2: CUSTOM PAUSE DURATION ================= */}
+      {/* ================= MODAL / BOTTOM SHEET 2: CUSTOM PAUSE DURATION ================= */}
       {isCustomPauseOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+          <div
+            className="fixed inset-0 bg-black/50 transition-opacity"
+            onClick={() => setIsCustomPauseOpen(false)}
+          />
+
+          <div
+            className="relative z-10 w-full md:max-w-sm bg-white rounded-t-3xl md:rounded-3xl p-5 shadow-2xl space-y-4 max-h-[85dvh] overflow-y-auto pb-safe animate-in slide-in-from-bottom duration-200"
+          >
+            {/* Drag Handle on Mobile */}
+            <div
+              onTouchStart={handleTouchStart}
+              onTouchEnd={(e) => handleTouchEnd(e, () => setIsCustomPauseOpen(false))}
+              className="flex justify-center -mt-2 pb-2 md:hidden cursor-grab"
+            >
+              <div className="w-10 h-1.5 rounded-full bg-[#D1D5DB]" />
+            </div>
+
             <div className="flex items-center justify-between pb-2 border-b border-[#E4E6EB]">
               <h3 className="font-extrabold text-sm text-[#1B1B1F]">
                 {cur.customPauseTitle}
@@ -980,20 +1404,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               <label className="text-xs font-bold text-[#1B1B1F]">
                 {cur.customDaysLabel}
               </label>
+              {/* 16px font to prevent iOS zoom */}
               <input
                 type="number"
                 min="1"
                 max="365"
                 value={customDaysInput}
                 onChange={(e) => setCustomDaysInput(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-xl border border-[#E4E6EB] bg-[#FAF9FB] text-[#1B1B1F] font-bold text-sm focus:outline-none focus:border-[#C41E3A] focus:bg-white"
+                className="w-full h-12 px-3.5 rounded-xl border border-[#E4E6EB] bg-[#FAF9FB] text-[#1B1B1F] font-bold text-[16px] focus:outline-none focus:border-[#C41E3A] focus:bg-white"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-2 pt-2">
               <button
                 onClick={() => setIsCustomPauseOpen(false)}
-                className="h-11 rounded-xl bg-[#F0EDF2] text-[#5B5F6B] font-bold text-xs cursor-pointer"
+                className="min-h-[48px] rounded-xl bg-[#F0EDF2] text-[#5B5F6B] font-bold text-xs cursor-pointer active:bg-[#E4E1E7]"
               >
                 {cur.cancel}
               </button>
@@ -1005,7 +1430,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                     setIsCustomPauseOpen(false);
                   }
                 }}
-                className="h-11 rounded-xl bg-[#C41E3A] text-white font-bold text-xs shadow-xs cursor-pointer"
+                className="min-h-[48px] rounded-xl bg-[#C41E3A] text-white font-bold text-xs shadow-xs cursor-pointer active:bg-[#A3182F]"
               >
                 {cur.save}
               </button>
@@ -1014,10 +1439,26 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
       )}
 
-      {/* ================= MODAL 3: GRIEVANCE & REPORT MODAL ================= */}
+      {/* ================= MODAL / BOTTOM SHEET 3: GRIEVANCE & REPORT ================= */}
       {showReportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="w-full max-w-md bg-white rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+          <div
+            className="fixed inset-0 bg-black/50 transition-opacity"
+            onClick={() => setShowReportModal(false)}
+          />
+
+          <div
+            className="relative z-10 w-full md:max-w-md bg-white rounded-t-3xl md:rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[85dvh] overflow-y-auto pb-safe animate-in slide-in-from-bottom duration-200"
+          >
+            {/* Drag Handle on Mobile */}
+            <div
+              onTouchStart={handleTouchStart}
+              onTouchEnd={(e) => handleTouchEnd(e, () => setShowReportModal(false))}
+              className="flex justify-center -mt-2 pb-2 md:hidden cursor-grab"
+            >
+              <div className="w-10 h-1.5 rounded-full bg-[#D1D5DB]" />
+            </div>
+
             <div className="flex items-center justify-between pb-3 border-b border-[#E4E6EB]">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-[#C41E3A]" />
@@ -1038,10 +1479,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <label className="text-xs font-bold text-[#1B1B1F]">
                   {language === 'bn' ? 'অভিযোগের ধরন নির্বাচন করুন:' : 'Select issue type:'}
                 </label>
+                {/* 16px font to prevent mobile zoom */}
                 <select
                   value={reportType}
                   onChange={(e) => setReportType(e.target.value)}
-                  className="w-full h-11 px-3 rounded-xl border border-[#E4E6EB] bg-[#FAF9FB] text-xs font-bold text-[#1B1B1F]"
+                  className="w-full h-12 px-3 rounded-xl border border-[#E4E6EB] bg-[#FAF9FB] text-[16px] font-medium text-[#1B1B1F]"
                 >
                   <option value="false_info">
                     {language === 'bn' ? 'ভুল বা অসত্য তথ্য প্রদান' : 'False or misleading information'}
@@ -1062,6 +1504,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <label className="text-xs font-bold text-[#1B1B1F]">
                   {language === 'bn' ? 'বিস্তারিত বিবরণ লিখুন:' : 'Detailed description:'}
                 </label>
+                {/* 16px font to prevent mobile zoom */}
                 <textarea
                   rows={3}
                   required
@@ -1072,7 +1515,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                       ? 'ঘটনা বা ব্যক্তির বিস্তারিত তথ্য দিন...'
                       : 'Provide details about the incident or person...'
                   }
-                  className="w-full p-3 rounded-xl border border-[#E4E6EB] bg-[#FAF9FB] text-xs font-medium text-[#1B1B1F] focus:outline-none focus:border-[#C41E3A] focus:bg-white resize-none"
+                  className="w-full p-3 rounded-xl border border-[#E4E6EB] bg-[#FAF9FB] text-[16px] font-medium text-[#1B1B1F] focus:outline-none focus:border-[#C41E3A] focus:bg-white resize-none"
                 />
               </div>
 
@@ -1080,14 +1523,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowReportModal(false)}
-                  className="h-11 rounded-xl bg-[#F0EDF2] text-[#5B5F6B] font-bold text-xs cursor-pointer"
+                  className="min-h-[48px] rounded-xl bg-[#F0EDF2] text-[#5B5F6B] font-bold text-xs cursor-pointer active:bg-[#E4E1E7]"
                 >
                   {cur.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingReport}
-                  className="h-11 rounded-xl bg-[#C41E3A] text-white font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="min-h-[48px] rounded-xl bg-[#C41E3A] text-white font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:bg-[#A3182F] disabled:opacity-50"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>
@@ -1102,10 +1545,26 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
       )}
 
-      {/* ================= MODAL 5: DELETE ACCOUNT CONFIRMATION ================= */}
+      {/* ================= MODAL / BOTTOM SHEET 4: DELETE ACCOUNT CONFIRMATION ================= */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl space-y-4 text-center">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+          <div
+            className="fixed inset-0 bg-black/50 transition-opacity"
+            onClick={() => setShowDeleteModal(false)}
+          />
+
+          <div
+            className="relative z-10 w-full md:max-w-sm bg-white rounded-t-3xl md:rounded-3xl p-5 shadow-2xl space-y-4 text-center pb-safe animate-in slide-in-from-bottom duration-200"
+          >
+            {/* Drag Handle on Mobile */}
+            <div
+              onTouchStart={handleTouchStart}
+              onTouchEnd={(e) => handleTouchEnd(e, () => setShowDeleteModal(false))}
+              className="flex justify-center -mt-2 pb-2 md:hidden cursor-grab"
+            >
+              <div className="w-10 h-1.5 rounded-full bg-[#D1D5DB]" />
+            </div>
+
             <div className="w-14 h-14 rounded-full bg-[#FFDAD6] text-[#BA1A1A] mx-auto flex items-center justify-center">
               <Trash2 className="w-7 h-7" />
             </div>
@@ -1122,13 +1581,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <div className="grid grid-cols-2 gap-2 pt-2">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="h-11 rounded-xl bg-[#F0EDF2] text-[#5B5F6B] font-bold text-xs cursor-pointer"
+                className="min-h-[48px] rounded-xl bg-[#F0EDF2] text-[#5B5F6B] font-bold text-xs cursor-pointer active:bg-[#E4E1E7]"
               >
                 {cur.cancel}
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="h-11 rounded-xl bg-[#BA1A1A] text-white font-bold text-xs shadow-xs cursor-pointer"
+                className="min-h-[48px] rounded-xl bg-[#BA1A1A] text-white font-bold text-xs shadow-xs cursor-pointer active:bg-[#93000A]"
               >
                 {cur.deleteConfirmBtn}
               </button>

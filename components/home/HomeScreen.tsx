@@ -106,10 +106,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const isOperator = userRole === 'hospital_operator' || userRole === 'admin';
 
   return (
-    <div className="flex flex-col w-full max-w-lg md:max-w-none mx-auto px-3 sm:px-4 md:px-0 space-y-4 md:space-y-6 pb-24 pt-2">
-      {/* Profile Incomplete Reminder Card: Compact & Dismissible */}
+    <div className="flex flex-col w-full max-w-lg md:max-w-none mx-auto px-0 md:px-0 space-y-3.5 md:space-y-6 pb-24 pt-0 md:pt-2">
+      {/* Profile Incomplete Reminder Card: Full-bleed on mobile, card on desktop */}
       {showIncompleteNotice && (
-        <div className="w-full bg-[#D9E2FF]/30 border border-[#D9E2FF] rounded-2xl px-3 py-2 sm:px-3.5 sm:py-2.5 flex items-center justify-between gap-2 shadow-xs transition-all">
+        <div className="w-full bg-[#D9E2FF]/30 border-y md:border border-[#D9E2FF] md:rounded-2xl px-4 max-[360px]:px-3 py-2.5 sm:px-3.5 sm:py-2.5 flex items-center justify-between gap-2 md:shadow-xs transition-all">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0D58C9] text-white flex items-center justify-center font-bold text-xs shrink-0">
               {formatDigits('2/4')}
@@ -126,38 +126,40 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={onOpenDonorSetup}
-              className="px-2.5 py-1 rounded-lg bg-[#0D58C9] hover:bg-[#094196] text-white text-xs font-bold shadow-2xs cursor-pointer transition-colors"
+              className="min-h-[38px] px-3 py-1 rounded-lg bg-[#0D58C9] hover:bg-[#094196] text-white text-xs font-bold shadow-2xs cursor-pointer transition-colors flex items-center"
             >
               {language === 'bn' ? 'সম্পূর্ণ করুন' : 'Complete'}
             </button>
             <button
               onClick={() => setShowIncompleteNotice(false)}
               aria-label={t.common.close}
-              className="p-1 rounded-lg text-[#5B5F6B] hover:text-[#001946] hover:bg-black/5 cursor-pointer transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-[#5B5F6B] hover:text-[#001946] hover:bg-black/5 cursor-pointer transition-colors"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* Primary "Give the Gift of Life" Hero Banner (User Reference Style) */}
-      <GiveGiftOfLifeHero
-        onFindBloodDrive={() => {
-          const el = document.getElementById('donation-camps-section');
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth' });
-          } else {
-            onViewAllCampsClick();
-          }
-        }}
-        onRegisterDonor={onOpenDonorSetup}
-        onRequestBlood={onRequestBloodClick}
-        isLoggedIn={Boolean(userName)}
-      />
+      {/* Primary "Give the Gift of Life" Hero Banner */}
+      <div className="px-4 max-[360px]:px-3 md:px-0">
+        <GiveGiftOfLifeHero
+          onFindBloodDrive={() => {
+            const el = document.getElementById('donation-camps-section');
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth' });
+            } else {
+              onViewAllCampsClick();
+            }
+          }}
+          onRegisterDonor={onOpenDonorSetup}
+          onRequestBlood={onRequestBloodClick}
+          isLoggedIn={Boolean(userName)}
+        />
+      </div>
 
-      {/* Live Regional Blood Pulse & Speedometer Glanceable Bar (Real Aggregates & Helplines) */}
-      <div className="w-full bg-white rounded-3xl p-3.5 sm:p-4 shadow-xs border border-[#E4E6EB]/80 grid grid-cols-3 gap-2 divide-x divide-[#E4E6EB]/60">
+      {/* Live Regional Blood Pulse & Speedometer Glanceable Bar: Full-bleed on mobile, card on desktop */}
+      <div className="w-full bg-white border-y md:border border-[#E4E6EB] md:border-[#E4E6EB]/80 md:rounded-3xl p-3.5 sm:p-4 md:shadow-xs grid grid-cols-3 gap-2 divide-x divide-[#E4E6EB]/60">
         {/* Pillar 1: Real Active Requests */}
         <div className="flex flex-col items-center text-center px-1">
           <div className="flex items-center gap-1 text-[11px] font-bold text-[#C41E3A] mb-0.5">
@@ -217,9 +219,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </div>
 
       {/* Hero Section: Welcome & Donor Status (Left) + Primary Action (Right on Desktop) */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 md:gap-4 items-stretch">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-0 md:gap-4 items-stretch divide-y md:divide-y-0 divide-[#E4E6EB]">
         {/* 1. Welcome & Donor Status Card */}
-        <div className="md:col-span-7 bg-white rounded-2xl p-4 md:p-5 shadow-xs border border-[#E4E6EB]/60 flex flex-col justify-between">
+        <div className="md:col-span-7 bg-white border-y md:border border-[#E4E6EB] md:border-[#E4E6EB]/60 md:rounded-2xl px-4 max-[360px]:px-3 py-4 md:p-5 md:shadow-xs flex flex-col justify-between">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <span className="text-[13px] text-[#5B5F6B] font-medium block">
@@ -246,20 +248,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 aria-checked={isDonorAvailable}
                 aria-label={t.home.toggleStatus}
                 role="switch"
-                className={`w-12 h-7 rounded-full p-0.5 flex items-center transition-colors duration-200 cursor-pointer shadow-inner ${
-                  isDonorAvailable ? 'bg-[#0B7A50]' : 'bg-[#E4E1E7]'
-                }`}
+                className="min-w-[48px] min-h-[48px] flex items-center justify-center cursor-pointer"
               >
                 <span
-                  className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-200 flex items-center justify-center ${
-                    isDonorAvailable ? 'translate-x-5' : 'translate-x-0'
+                  className={`w-12 h-7 rounded-full p-0.5 flex items-center transition-colors duration-200 shadow-inner ${
+                    isDonorAvailable ? 'bg-[#0B7A50]' : 'bg-[#E4E1E7]'
                   }`}
                 >
-                  {isDonorAvailable ? (
-                    <Check className="w-3.5 h-3.5 text-[#0B7A50] stroke-[3]" />
-                  ) : (
-                    <span className="w-2 h-0.5 bg-[#5B5F6B] rounded-full" />
-                  )}
+                  <span
+                    className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-200 flex items-center justify-center ${
+                      isDonorAvailable ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  >
+                    {isDonorAvailable ? (
+                      <Check className="w-3.5 h-3.5 text-[#0B7A50] stroke-[3]" />
+                    ) : (
+                      <span className="w-2 h-0.5 bg-[#5B5F6B] rounded-full" />
+                    )}
+                  </span>
                 </span>
               </button>
               <span
@@ -272,10 +278,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
           </div>
 
-          {/* Small Notice / Caption */}
-          <div className="mt-4 pt-3 border-t border-[#E4E6EB]/50 flex items-center justify-between text-[#5B5F6B] text-[12px]">
+          {/* Notice Caption */}
+          <div className="mt-3.5 pt-3 border-t border-[#E4E6EB]/50 flex items-center justify-between text-[#5B5F6B] text-[12px]">
             <span className="flex items-center gap-1.5 font-medium">
-              <Clock className="w-4 h-4 text-[#0B7A50] shrink-0" />
+              <Clock className="w-4 h-4 text-[#5B5F6B] shrink-0" />
               <span>
                 {language === 'bn'
                   ? 'পরবর্তী রক্তদানের যোগ্যতা অর্জন করেছেন ১৫ দিন আগে।'
@@ -289,7 +295,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
 
         {/* 2. Hero Primary Action Button */}
-        <div className="md:col-span-5 bg-white rounded-2xl p-4 md:p-5 shadow-xs border border-[#E4E6EB]/60 flex flex-col justify-between gap-3">
+        <div className="md:col-span-5 bg-white border-b md:border border-[#E4E6EB] md:border-[#E4E6EB]/60 md:rounded-2xl px-4 max-[360px]:px-3 py-4 md:p-5 md:shadow-xs flex flex-col justify-between gap-3">
           <div>
             <span className="text-[12px] font-bold text-[#C41E3A] uppercase tracking-wider block">
               {t.home.emergencyHeadline}
@@ -302,7 +308,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <div className="space-y-2">
             <button
               onClick={onRequestBloodClick}
-              className="w-full h-[52px] bg-[#C41E3A] hover:bg-[#A3182F] text-white rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(196,30,58,0.25)] active:scale-[0.98] transition-all cursor-pointer"
+              className="w-full min-h-[52px] bg-[#C41E3A] hover:bg-[#A3182F] text-white rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 shadow-[0_4px_14px_rgba(196,30,58,0.25)] active:scale-[0.98] transition-all cursor-pointer"
             >
               <Droplet className="w-5 h-5 fill-current" />
               <span>{t.home.btnRequestBlood}</span>
@@ -310,7 +316,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
             <button
               onClick={onViewMyRequestsClick}
-              className="w-full inline-flex items-center justify-center gap-1 text-[13px] text-[#C41E3A] font-semibold hover:underline cursor-pointer py-1"
+              className="w-full min-h-[44px] inline-flex items-center justify-center gap-1 text-[13px] text-[#C41E3A] font-semibold hover:underline cursor-pointer py-1"
             >
               <span>{t.home.btnMyRequests}</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -321,15 +327,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* 3. Live Alert / Ongoing Request Strip */}
       {showActiveBanner && activeRequestCount > 0 && (
-        <div className="w-full bg-[#FDECEF] border border-[#FFDADA] rounded-2xl p-3.5 sm:p-4 flex items-center justify-between gap-3 shadow-xs">
+        <div className="w-full bg-white border-y md:border border-[#E4E6EB] md:bg-[#FDECEF] md:border-[#FFDADA] md:rounded-2xl px-4 max-[360px]:px-3 py-3 md:p-4 flex items-center justify-between gap-3 md:shadow-xs">
           <div className="flex items-center gap-3 min-w-0 cursor-pointer flex-1" onClick={onViewMyRequestsClick}>
             <span className="relative flex h-3 w-3 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C41E3A] opacity-75" />
               <span className="relative inline-flex rounded-full h-3 w-3 bg-[#C41E3A]" />
             </span>
-            <p className="text-[13px] md:text-sm text-[#9E0027] font-medium leading-relaxed truncate sm:whitespace-normal">
+            <p className="text-[13px] md:text-sm text-[#1B1B1F] md:text-[#9E0027] font-medium leading-relaxed truncate sm:whitespace-normal">
               {language === 'bn' ? 'আপনার একটি চলমান অনুরোধ সক্রিয় আছে:' : 'Active emergency request in progress:'}{' '}
-              <strong className="font-extrabold text-[14px]">B+</strong>{' '}
+              <strong className="font-extrabold text-[14px] text-[#C41E3A]">B+</strong>{' '}
               ({language === 'bn' ? 'শহীদ জিয়াউর রহমান মেডিকেল কলেজ' : 'SZMCH Hospital'}) •{' '}
               <span className="underline font-bold text-[#C41E3A]">
                 {language === 'bn' ? '২ জন ডোনার' : '2 donors'}
@@ -340,7 +346,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={onViewMyRequestsClick}
-              className="text-xs font-bold text-[#C41E3A] hover:underline hidden sm:inline-flex items-center gap-1 cursor-pointer whitespace-nowrap"
+              className="text-xs font-bold text-[#C41E3A] hover:underline hidden sm:inline-flex items-center gap-1 cursor-pointer whitespace-nowrap min-h-[44px]"
             >
               <span>{t.home.trackRequest}</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -348,7 +354,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <button
               onClick={() => setShowActiveBanner(false)}
               aria-label={t.common.close}
-              className="text-[#5B5F6B] hover:text-[#9E0027] transition-colors p-1 cursor-pointer"
+              className="w-10 h-10 flex items-center justify-center text-[#5B5F6B] hover:text-[#9E0027] transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -357,53 +363,55 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       )}
 
       {/* Role-based Quick Access Utility Bar */}
-      <div className={`grid ${isOperator ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-2 md:gap-3`}>
-        <button
-          onClick={onOpenHospitalDirectory}
-          className="bg-white hover:bg-[#FDECEF] p-3 rounded-2xl border border-[#E4E6EB]/70 flex flex-col items-center text-center transition-all shadow-xs active:scale-95 cursor-pointer interactive-card group"
-        >
-          <div className="w-9 h-9 rounded-xl bg-[#FDECEF] text-[#C41E3A] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
-            <Building className="w-4.5 h-4.5" />
-          </div>
-          <span className="text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickStock}</span>
-          <span className="hidden sm:inline text-xs text-[#5B5F6B] mt-0.5">{t.home.quickStockSub}</span>
-        </button>
-
-        <button
-          onClick={onOpenAmbulanceDirectory}
-          className="bg-white hover:bg-[#FDECEF] p-3 rounded-2xl border border-[#E4E6EB]/70 flex flex-col items-center text-center transition-all shadow-xs active:scale-95 cursor-pointer interactive-card group"
-        >
-          <div className="w-9 h-9 rounded-xl bg-[#E8F5E9] text-[#0B7A50] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
-            <Truck className="w-4.5 h-4.5" />
-          </div>
-          <span className="text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickAmbulance}</span>
-          <span className="hidden sm:inline text-xs text-[#5B5F6B] mt-0.5">{t.home.quickAmbulanceSub}</span>
-        </button>
-
-        <button
-          onClick={onOpenHealthEducation}
-          className="bg-white hover:bg-[#FDECEF] p-3 rounded-2xl border border-[#E4E6EB]/70 flex flex-col items-center text-center transition-all shadow-xs active:scale-95 cursor-pointer interactive-card group"
-        >
-          <div className="w-9 h-9 rounded-xl bg-[#E3F2FD] text-[#1D5FD0] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
-            <BookOpen className="w-4.5 h-4.5" />
-          </div>
-          <span className="text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickHealthEd}</span>
-          <span className="hidden sm:inline text-xs text-[#5B5F6B] mt-0.5">{t.home.quickHealthEdSub}</span>
-        </button>
-
-        {/* Hospital Dashboard is role-based: only visible to hospital operators / admins */}
-        {isOperator && (
+      <div className="px-4 max-[360px]:px-3 md:px-0">
+        <div className={`grid ${isOperator ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-2 md:gap-3`}>
           <button
-            onClick={onOpenHospitalDashboard}
-            className="bg-white hover:bg-[#FFF8E1] p-3 rounded-2xl border border-amber-200 flex flex-col items-center text-center transition-all shadow-xs active:scale-95 cursor-pointer interactive-card group"
+            onClick={onOpenHospitalDirectory}
+            className="min-h-[56px] bg-white hover:bg-[#FDECEF] p-3 rounded-2xl border border-[#E4E6EB]/70 flex flex-col items-center text-center transition-all md:shadow-xs active:scale-95 cursor-pointer md:interactive-card group"
           >
-            <div className="w-9 h-9 rounded-xl bg-[#FFF8E1] text-[#9A5B00] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
-              <LayoutDashboard className="w-4.5 h-4.5" />
+            <div className="w-9 h-9 rounded-xl bg-[#FDECEF] text-[#5B5F6B] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+              <Building className="w-4.5 h-4.5" />
             </div>
-            <span className="text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickDashboard}</span>
-            <span className="hidden sm:inline text-xs text-[#5B5F6B] mt-0.5">{t.home.quickDashboardSub}</span>
+            <span className="text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickStock}</span>
+            <span className="hidden sm:inline text-xs text-[#5B5F6B] mt-0.5">{t.home.quickStockSub}</span>
           </button>
-        )}
+
+          <button
+            onClick={onOpenAmbulanceDirectory}
+            className="min-h-[56px] bg-white hover:bg-[#FDECEF] p-3 rounded-2xl border border-[#E4E6EB]/70 flex flex-col items-center text-center transition-all md:shadow-xs active:scale-95 cursor-pointer md:interactive-card group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-[#E8F5E9] text-[#5B5F6B] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+              <Truck className="w-4.5 h-4.5" />
+            </div>
+            <span className="text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickAmbulance}</span>
+            <span className="hidden sm:inline text-xs text-[#5B5F6B] mt-0.5">{t.home.quickAmbulanceSub}</span>
+          </button>
+
+          <button
+            onClick={onOpenHealthEducation}
+            className="min-h-[56px] bg-white hover:bg-[#FDECEF] p-3 rounded-2xl border border-[#E4E6EB]/70 flex flex-col items-center text-center transition-all md:shadow-xs active:scale-95 cursor-pointer md:interactive-card group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-[#E3F2FD] text-[#5B5F6B] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+              <BookOpen className="w-4.5 h-4.5" />
+            </div>
+            <span className="text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickHealthEd}</span>
+            <span className="hidden sm:inline text-xs text-[#5B5F6B] mt-0.5">{t.home.quickHealthEdSub}</span>
+          </button>
+
+          {/* Hospital Dashboard is role-based */}
+          {isOperator && (
+            <button
+              onClick={onOpenHospitalDashboard}
+              className="min-h-[56px] bg-white hover:bg-[#FFF8E1] p-3 rounded-2xl border border-amber-200 flex flex-col items-center text-center transition-all md:shadow-xs active:scale-95 cursor-pointer md:interactive-card group"
+            >
+              <div className="w-9 h-9 rounded-xl bg-[#FFF8E1] text-[#5B5F6B] flex items-center justify-center mb-1 group-hover:scale-105 transition-transform">
+                <LayoutDashboard className="w-4.5 h-4.5" />
+              </div>
+              <span className="text-xs font-bold text-[#1B1B1F] leading-tight">{t.home.quickDashboard}</span>
+              <span className="hidden sm:inline text-xs text-[#5B5F6B] mt-0.5">{t.home.quickDashboardSub}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Desktop-Native Regional Demand vs Supply Live Data Strip (Visible on Desktop lg+) */}
@@ -478,15 +486,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </section>
 
       {/* 4. Emergency Requests Nearby (Section 9) */}
-      <section className="w-full space-y-3">
-        <div className="flex items-center justify-between px-0.5">
+      <section className="w-full space-y-2.5 md:space-y-3">
+        <div className="flex items-center justify-between px-4 max-[360px]:px-3 md:px-0.5">
           <div className="flex items-center gap-2">
-            <h2 className="font-bold text-[18px] text-[#1B1B1F]">{t.home.nearbyRequestsTitle}</h2>
+            <h2 className="font-bold text-[17px] md:text-[18px] text-[#1B1B1F]">{t.home.nearbyRequestsTitle}</h2>
             <span className="w-2 h-2 rounded-full bg-[#C41E3A]" />
           </div>
           <button
             onClick={onViewAllRequestsClick}
-            className="text-xs sm:text-[13px] text-[#C41E3A] font-semibold hover:underline cursor-pointer"
+            className="text-xs sm:text-[13px] text-[#C41E3A] font-semibold hover:underline cursor-pointer min-h-[36px] flex items-center"
           >
             {language === 'bn'
               ? `সব দেখুন (${toBengaliDigits(nearbyRequests.length + 1)})`
@@ -494,21 +502,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </button>
         </div>
 
-        {/* Desktop xl:grid-cols-2 layout as requested */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-3.5 md:gap-4">
+        {/* Flat list with 1px hairlines on mobile, grid cards on desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-0 md:gap-4 divide-y md:divide-y-0 divide-[#E4E6EB] border-y md:border-y-0 border-[#E4E6EB]">
           {nearbyRequests.slice(0, 4).map((req) => {
             const isUrgentNow = req.urgency === 'now';
             return (
               <article
                 key={req.id}
-                className="w-full bg-white rounded-2xl p-4 shadow-xs border border-[#E4E6EB]/70 flex flex-col justify-between gap-3 interactive-card group"
+                className="w-full bg-white md:rounded-2xl px-4 max-[360px]:px-3 py-3.5 md:p-4 md:shadow-xs md:border border-[#E4E6EB]/70 flex flex-col justify-between gap-3 md:interactive-card group"
               >
                 <div className="flex items-start gap-3">
                   {/* 1. Blood Group Badge */}
                   <div
-                    className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 shadow-xs font-extrabold text-[22px] leading-none ${
+                    className={`w-13 h-13 md:w-14 md:h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 font-extrabold text-[20px] md:text-[22px] leading-none ${
                       isUrgentNow
-                        ? 'bg-[#C41E3A] text-white'
+                        ? 'bg-[#C41E3A] text-white shadow-xs'
                         : 'bg-[#FDECEF] text-[#C41E3A]'
                     }`}
                   >
@@ -548,7 +556,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     {/* 3. Distance & 4. Bags Needed */}
                     <div className="flex items-center gap-2 mt-1 text-xs text-[#5B5F6B]">
                       <span className="inline-flex items-center gap-1 font-semibold text-[#1B1B1F]">
-                        <MapPin className="w-3 h-3 text-[#C41E3A]" />
+                        <MapPin className="w-3 h-3 text-[#5B5F6B]" />
                         {formatDigits(req.distanceKm)} {language === 'bn' ? 'কিমি দূরে' : 'km away'}
                       </span>
                       <span>•</span>
@@ -560,16 +568,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   </div>
                 </div>
 
-                {/* Bottom Action Row: 5. Countdown & 6. Respond Button */}
+                {/* Bottom Action Row: Countdown & Respond Button */}
                 <div className="pt-2.5 border-t border-[#E4E6EB]/50 flex items-center justify-between gap-2">
                   <span className="text-xs text-[#5B5F6B] flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-[#E89A00]" />
+                    <Clock className="w-3.5 h-3.5 text-[#5B5F6B]" />
                     <span className="font-semibold text-[#9A5B00]">{req.timeTarget}</span>
                     <span className="opacity-70">({req.createdAt})</span>
                   </span>
                   <button
                     onClick={() => onOpenDonorResponse(req)}
-                    className="h-9 px-4 bg-[#C41E3A] hover:bg-[#A3182F] text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer focus-ring"
+                    className="min-h-[44px] md:h-9 px-4 bg-[#C41E3A] hover:bg-[#A3182F] text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer focus-ring flex items-center justify-center"
                   >
                     {language === 'bn' ? 'সাড়া দিন' : 'Respond'}
                   </button>
@@ -582,13 +590,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* 5. Upcoming Blood Donation Camps (Desktop xl:grid-cols-3) */}
       <section id="donation-camps-section" className="w-full space-y-3 pt-2">
-        <div className="flex items-center justify-between px-0.5">
-          <h2 className="font-bold text-[18px] text-[#1B1B1F]">{t.home.donationCampsTitle}</h2>
+        <div className="flex items-center justify-between px-4 max-[360px]:px-3 md:px-0.5">
+          <h2 className="font-bold text-[17px] md:text-[18px] text-[#1B1B1F]">{t.home.donationCampsTitle}</h2>
           <div className="flex items-center gap-2">
             {onOpenCreateCamp && (
               <button
                 onClick={onOpenCreateCamp}
-                className="px-2.5 py-1 rounded-xl bg-[#FDECEF] hover:bg-[#FCD8DF] text-[#C41E3A] font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                className="min-h-[38px] px-2.5 py-1 rounded-xl bg-[#FDECEF] hover:bg-[#FCD8DF] text-[#C41E3A] font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>{language === 'bn' ? 'ক্যাম্পেইন যোগ করুন' : 'Add Camp'}</span>
@@ -596,7 +604,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             )}
             <button
               onClick={onViewAllCampsClick}
-              className="text-xs sm:text-[13px] text-[#C41E3A] font-semibold hover:underline cursor-pointer"
+              className="text-xs sm:text-[13px] text-[#C41E3A] font-semibold hover:underline cursor-pointer min-h-[38px] flex items-center"
             >
               {language === 'bn' ? 'সব দেখুন' : 'View All'}
             </button>
@@ -604,11 +612,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
 
         {/* Responsive Camps: Scrollable on mobile, xl:grid-cols-3 on desktop */}
-        <div className="flex md:grid md:grid-cols-2 xl:grid-cols-3 gap-3.5 md:gap-4 overflow-x-auto md:overflow-visible pb-2 -mx-3 px-3 md:mx-0 md:px-0 no-scrollbar snap-x snap-mandatory">
+        <div className="flex md:grid md:grid-cols-2 xl:grid-cols-3 gap-3.5 md:gap-4 overflow-x-auto md:overflow-visible pb-2 px-4 max-[360px]:px-3 md:px-0 no-scrollbar snap-x snap-mandatory">
           {camps.map((camp) => (
             <div
               key={camp.id}
-              className="min-w-[270px] max-w-[280px] md:min-w-0 md:max-w-none bg-white rounded-2xl p-4 shadow-xs border border-[#E4E6EB]/60 snap-start flex flex-col justify-between shrink-0 interactive-card"
+              className="min-w-[270px] max-w-[280px] md:min-w-0 md:max-w-none bg-white rounded-2xl p-4 md:shadow-xs border border-[#E4E6EB]/60 snap-start flex flex-col justify-between shrink-0 md:interactive-card"
             >
               <div className="space-y-2.5">
                 <div className="flex items-center gap-2.5">
@@ -638,7 +646,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
               <button
                 onClick={() => onRsvpCamp(camp.id)}
-                className={`mt-3 w-full h-9 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 active:scale-98 cursor-pointer focus-ring ${
+                className={`mt-3 w-full min-h-[48px] md:h-9 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 active:scale-98 cursor-pointer focus-ring ${
                   camp.isRsvp
                     ? 'bg-[#0B7A50] text-white shadow-xs'
                     : 'bg-[#F0EDF2] text-[#1B1B1F] hover:bg-[#FDECEF] hover:text-[#C41E3A]'
@@ -666,7 +674,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* 6. Community Impact Strip & Health Tip: Stack on mobile, 2 columns on tablet/desktop */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-stretch">
         {/* Community Impact Strip */}
-        <div className="w-full bg-[#F6F2F8] border border-[#E4E6EB]/50 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
+        <div className="w-full bg-[#F6F2F8] border-y md:border border-[#E4E6EB]/50 md:rounded-2xl px-4 max-[360px]:px-3 py-4 md:p-4 md:shadow-xs flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-2xl bg-[#FDECEF] text-[#C41E3A] flex items-center justify-center shrink-0 shadow-xs">
             <Heart className="w-5 h-5 fill-current" />
           </div>
@@ -694,11 +702,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         {/* 7. Health Tip Card */}
         {showHealthTip && (
-          <div className="w-full bg-white rounded-2xl p-4 shadow-xs border border-[#E4E6EB]/60 relative transition-all">
+          <div className="w-full bg-white border-y md:border border-[#E4E6EB]/60 md:rounded-2xl px-4 max-[360px]:px-3 py-4 md:p-4 md:shadow-xs relative transition-all">
             <button
               onClick={() => setShowHealthTip(false)}
               aria-label={t.common.close}
-              className="absolute top-2.5 right-2.5 w-7 h-7 flex items-center justify-center rounded-full text-[#5B5F6B] hover:bg-[#F7F7F9] cursor-pointer"
+              className="absolute top-2.5 right-2.5 w-8 h-8 flex items-center justify-center rounded-full text-[#5B5F6B] hover:bg-[#F7F7F9] cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -717,7 +725,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </p>
                 <button
                   onClick={onOpenHealthEducation}
-                  className="inline-flex items-center gap-0.5 text-[12px] text-[#1D5FD0] font-bold mt-1.5 hover:underline cursor-pointer"
+                  className="min-h-[44px] inline-flex items-center gap-0.5 text-[12px] text-[#1D5FD0] font-bold mt-1 hover:underline cursor-pointer"
                 >
                   <span>{language === 'bn' ? 'আরও টিপস পড়ুন' : 'Read more tips'}</span>
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -728,10 +736,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         )}
       </div>
 
-      {/* 8. App Overview & Humanitarian Mission Card (Target for 'অ্যাপ পরিচয়') */}
+      {/* 8. App Overview & Humanitarian Mission Card */}
       <section
         id="app-info-section"
-        className="w-full bg-white rounded-3xl p-5 md:p-6 shadow-xs border border-[#E4E6EB]/80 space-y-4"
+        className="w-full bg-white border-y md:border border-[#E4E6EB] md:border-[#E4E6EB]/80 md:rounded-3xl px-4 max-[360px]:px-3 py-5 md:p-6 md:shadow-xs space-y-4"
       >
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-[#E4E6EB]/60">
           <div className="flex items-center gap-3">

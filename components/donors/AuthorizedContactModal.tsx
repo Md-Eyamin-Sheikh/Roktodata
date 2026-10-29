@@ -100,11 +100,11 @@ export const AuthorizedContactModal: React.FC<AuthorizedContactModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="authorized-contact-title"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-200"
     >
       <div className="absolute inset-0" onClick={handleClose} />
 
-      <div className="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden border border-[#E4E6EB]/80 z-10 animate-in slide-in-from-bottom duration-300 max-h-[92vh] flex flex-col">
+      <div className="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden border border-[#E4E6EB]/80 z-10 animate-in slide-in-from-bottom duration-300 max-h-[92vh] flex flex-col pb-safe sm:pb-0">
         {/* Mobile handle indicator */}
         <div className="sm:hidden pt-3 pb-1 flex justify-center">
           <div className="w-12 h-1.5 rounded-full bg-[#E4E6EB]" />

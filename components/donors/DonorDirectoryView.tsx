@@ -410,9 +410,9 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
   const totalRestingCount = Object.values(groupStats).reduce((acc, g) => acc + (g.total - g.available), 0);
 
   return (
-    <div className="flex flex-col w-full pb-36 sm:pb-32">
+    <div className="flex flex-col w-full pb-36 md:pb-32">
       {/* ================= TOP STICKY SEARCH & NAVIGATION BAR ================= */}
-      <div className="px-3 sm:px-4 pt-2.5 pb-2 flex flex-col gap-2 bg-white/98 backdrop-blur-md border-b border-[#E4E6EB]/70 sticky top-14 md:top-16 z-20 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+      <div className="px-4 max-[360px]:px-3 pt-2.5 pb-2 flex flex-col gap-2 bg-white md:backdrop-blur-md border-b border-[#E4E6EB] sticky top-14 md:top-16 z-20 md:shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
         
         {/* Row 1: Search Bar with Integrated Clear, Voice & Filter CTA */}
         <div className="flex items-center gap-2 w-full">
@@ -426,7 +426,7 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
                 setCurrentPage(1);
               }}
               placeholder={t.donors.searchPlaceholder}
-              className="w-full h-11 pl-10 pr-18 bg-[#F7F7F9] text-[#1B1B1F] placeholder:text-[#8E929E] rounded-2xl text-xs sm:text-sm focus:outline-hidden focus:bg-white focus:ring-2 focus:ring-[#C41E3A]/25 focus:border-[#C41E3A] transition-all border border-[#E4E6EB]/80"
+              className="w-full h-12 pl-10 pr-18 bg-[#F7F7F9] text-[#1B1B1F] placeholder:text-[#8E929E] rounded-2xl text-[16px] md:text-sm focus:outline-hidden focus:bg-white focus:ring-2 focus:ring-[#C41E3A]/25 focus:border-[#C41E3A] transition-all border border-[#E4E6EB]/80"
             />
 
             <div className="absolute right-2 flex items-center gap-1">
@@ -436,10 +436,10 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
                     setSearchQuery('');
                     setCurrentPage(1);
                   }}
-                  className="w-6.5 h-6.5 flex items-center justify-center text-[#5B5F6B] hover:text-[#1B1B1F] rounded-full hover:bg-[#E4E6EB] transition-all cursor-pointer"
+                  className="w-7 h-7 flex items-center justify-center text-[#5B5F6B] hover:text-[#1B1B1F] rounded-full hover:bg-[#E4E6EB] transition-all cursor-pointer"
                   title={language === 'bn' ? 'মুছে ফেলুন' : 'Clear'}
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               )}
 
@@ -464,9 +464,9 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
                   recognition.start();
                 }}
                 aria-label={language === 'bn' ? 'ভয়েস সার্চ' : 'Voice Search'}
-                className="w-7.5 h-7.5 flex items-center justify-center text-[#5B5F6B] hover:text-[#C41E3A] rounded-full hover:bg-[#FDECEF] active:scale-95 transition-all cursor-pointer"
+                className="w-8 h-8 flex items-center justify-center text-[#5B5F6B] hover:text-[#C41E3A] rounded-full hover:bg-[#FDECEF] active:scale-95 transition-all cursor-pointer"
               >
-                <Mic className="w-4 h-4" />
+                <Mic className="w-4.5 h-4.5" />
               </button>
             </div>
           </div>
@@ -475,7 +475,7 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
           <button
             onClick={() => setIsFilterOpen(true)}
             aria-label={t.donors.filterBtn}
-            className={`h-11 px-3 rounded-2xl flex items-center justify-center gap-1.5 text-xs font-bold border transition-all cursor-pointer active:scale-95 shrink-0 ${
+            className={`h-12 min-w-[48px] px-3.5 rounded-2xl flex items-center justify-center gap-1.5 text-xs font-bold border transition-all cursor-pointer active:scale-95 shrink-0 ${
               (availableOnly || verifiedOnly || selectedGroup !== 'all' || maxDistance < 50 || sortBy !== 'distance')
                 ? 'bg-[#FDECEF] border-[#C41E3A] text-[#C41E3A] ring-1 ring-[#C41E3A]/40'
                 : 'bg-[#F7F7F9] hover:bg-[#F0EDF2] border-[#E4E6EB] text-[#1B1B1F]'
@@ -610,7 +610,7 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
       </div>
 
       {/* ================= QUICK HORIZONTAL FILTER CHIPS ================= */}
-      <div className="w-full overflow-x-auto py-2 px-3 sm:px-4 bg-white border-b border-[#E4E6EB]/50 flex items-center gap-1.5 no-scrollbar">
+      <div className="w-full overflow-x-auto py-2 px-4 max-[360px]:px-3 bg-white border-b border-[#E4E6EB] flex items-center gap-1.5 no-scrollbar">
         {/* All Blood Groups Chip */}
         <button
           onClick={() => {
@@ -682,7 +682,7 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
       </div>
 
       {/* ================= INTERACTIVE DONOR ANALYTICS ACCORDION ================= */}
-      <div className="mx-3 sm:mx-4 my-2 p-3 bg-white rounded-2xl border border-[#E4E6EB]/80 shadow-2xs transition-all">
+      <div className="mx-0 md:mx-4 my-2 p-4 max-[360px]:p-3 bg-white md:rounded-2xl border-y md:border border-[#E4E6EB] md:shadow-2xs transition-all">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-7 h-7 rounded-lg bg-[#FDECEF] text-[#C41E3A] flex items-center justify-center font-bold shrink-0">
@@ -764,7 +764,7 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
       </div>
 
       {/* ================= RESULTS SUMMARY & BREADCRUMB BAR ================= */}
-      <div className="px-4 py-2 flex items-center justify-between text-xs text-[#5B5F6B]">
+      <div className="px-4 max-[360px]:px-3 py-2.5 flex items-center justify-between text-xs text-[#5B5F6B]">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="w-1.5 h-1.5 rounded-full bg-[#C41E3A]" />
           <span>
@@ -951,12 +951,12 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
 
           {/* ================= VIEW MODE: LIST FEED ================= */}
           {viewMode === 'list' && (
-            <div className="px-3 sm:px-4 grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div className="px-0 md:px-4 grid grid-cols-1 md:grid-cols-2 md:gap-3.5 divide-y divide-[#E4E6EB] md:divide-y-0">
               {donorsList.map((donor, idx) => (
                 <React.Fragment key={donor.id}>
                   {/* Safe Harbor Privacy card after 2nd donor */}
                   {idx === 2 && (
-                    <div className="md:col-span-2 p-3.5 rounded-2xl bg-[#D9E2FF]/30 border border-[#D9E2FF] text-[#1B1B1F] flex items-start gap-3">
+                    <div className="md:col-span-2 p-4 max-[360px]:px-3 md:rounded-2xl bg-[#D9E2FF]/20 border-b md:border border-[#D9E2FF] text-[#1B1B1F] flex items-start gap-3">
                       <ShieldCheck className="w-5 h-5 text-[#0D58C9] shrink-0 mt-0.5" />
                       <div className="flex flex-col gap-0.5 text-xs">
                         <span className="font-bold text-[#0D58C9]">
@@ -972,7 +972,7 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
                   )}
 
                   {/* Donor Card */}
-                  <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-[#E4E6EB]/80 flex flex-col justify-between gap-3.5 transition-all hover:shadow-md hover:border-[#D5D8E0]">
+                  <div className="bg-white md:rounded-3xl p-4 max-[360px]:px-3 sm:p-5 md:shadow-[0_2px_12px_rgba(0,0,0,0.03)] border-b md:border border-[#E4E6EB] flex flex-col justify-between gap-3.5 transition-all md:hover:shadow-md md:hover:border-[#D5D8E0]">
                     {/* Top Row: Avatar, Name, Location & Blood Group Badge */}
                     <div className="flex items-start justify-between gap-2.5">
                       <div className="flex items-center gap-3 min-w-0">
@@ -1004,7 +1004,7 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
                           </div>
 
                           <div className="flex items-center gap-1 text-xs text-[#5B5F6B] mt-1 truncate">
-                            <MapPin className="w-3.5 h-3.5 text-[#C41E3A] shrink-0" />
+                            <MapPin className="w-3.5 h-3.5 text-[#5B5F6B] shrink-0" />
                             <span className="truncate">
                               {language === 'bn' ? 'প্রায়' : 'Approx.'} {formatDigits(donor.distanceKm)}{' '}
                               {language === 'bn' ? 'কিমি' : 'km'} • {donor.location}
@@ -1038,7 +1038,7 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
                       )}
 
                       <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#F7F7F9] text-[#5B5F6B] text-xs font-medium border border-[#E4E6EB]/50">
-                        <Clock className="w-3 h-3 text-gray-400" />
+                        <Clock className="w-3 h-3 text-[#5B5F6B]" />
                         <span>
                           {language === 'bn' ? 'শেষ রক্তদান:' : 'Last donation:'} {donor.lastDonationDate}
                         </span>
@@ -1123,7 +1123,7 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
 
           {/* ================= PAGINATION BAR ================= */}
           {totalPages > 1 && (
-            <div className="px-4 py-3.5 flex items-center justify-between border-t border-[#E4E6EB]/60 bg-white rounded-2xl mx-3 sm:mx-4 mt-3 shadow-2xs">
+            <div className="px-4 py-3.5 flex items-center justify-between border-y md:border border-[#E4E6EB] bg-white md:rounded-2xl mx-0 md:mx-4 mt-3 md:shadow-2xs">
               <button
                 disabled={currentPage <= 1}
                 onClick={() => {
@@ -1183,8 +1183,8 @@ export const DonorDirectoryView: React.FC<DonorDirectoryViewProps> = ({
 
       {/* ================= FILTER BOTTOM SHEET DRAWER ================= */}
       {isFilterOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-md bg-white rounded-t-3xl p-5 shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-300 max-h-[85vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 animate-in fade-in">
+          <div className="w-full max-w-md bg-white rounded-t-3xl p-5 pb-safe shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-300 max-h-[85vh] overflow-y-auto">
             {/* Sheet Handle */}
             <div className="w-10 h-1.5 bg-[#E4E6EB] rounded-full mx-auto -mt-2 mb-2" />
 

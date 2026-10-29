@@ -173,13 +173,13 @@ export const DistrictSelectorModal: React.FC<DistrictSelectorModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="district-modal-title"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:backdrop-blur-sm animate-in fade-in duration-200 p-0 sm:p-4"
     >
       {/* Backdrop Click Dismiss */}
       <div className="absolute inset-0" onClick={handleDismiss} />
 
       {/* Main Bottom Sheet / Centered Card */}
-      <div className="relative w-full max-w-2xl bg-white rounded-t-[28px] sm:rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] sm:max-h-[88vh] flex flex-col z-10 animate-in slide-in-from-bottom duration-300 border border-[#E4E6EB]/80">
+      <div className="relative w-full max-w-2xl bg-white rounded-t-[28px] sm:rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] sm:max-h-[88vh] flex flex-col z-10 animate-in slide-in-from-bottom duration-300 border border-[#E4E6EB]/80 pb-safe sm:pb-0">
         
         {/* Mobile Drag Indicator Handle */}
         <div className="sm:hidden pt-3 pb-1 flex justify-center">
@@ -267,7 +267,7 @@ export const DistrictSelectorModal: React.FC<DistrictSelectorModalProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="জেলা বা থানা খুঁজুন (যেমন: বগুড়া, মিরপুর, শেরপুর, ধানমন্ডি...)"
-              className="w-full h-10 pl-10 pr-9 rounded-xl bg-[#F7F7F9] border border-[#E4E6EB] text-xs sm:text-sm text-[#1B1B1F] placeholder:text-[#8E929E] focus:bg-white focus:outline-hidden focus:border-[#C41E3A] transition-all"
+              className="w-full h-11 pl-10 pr-9 rounded-xl bg-[#F7F7F9] border border-[#E4E6EB] text-[16px] sm:text-sm text-[#1B1B1F] placeholder:text-[#8E929E] focus:bg-white focus:outline-hidden focus:border-[#C41E3A] transition-all"
             />
             {searchQuery && (
               <button
